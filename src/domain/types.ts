@@ -71,6 +71,9 @@ export interface Food {
   readonly per100: NutrientValues
 }
 
+/** A product the user entered from a label. `basedOn` is the generic catalog food whose APN equivalents it borrows. */
+export type CustomFood = Food & { readonly source: 'custom'; readonly basedOn: FoodId | null }
+
 export interface EquivalenceGroup {
   readonly id: string
   readonly name: string

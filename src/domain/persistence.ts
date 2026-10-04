@@ -5,9 +5,9 @@ import type { EntryId, FoodId, Meal, MealId, MealPlan, PlanId } from './types.ts
 export const STORAGE_KEY = 'nutrition-tracking:plans'
 export const SCHEMA_VERSION = 1
 
-type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
+export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
 
-function defaultStorage(): StorageLike | null {
+export function defaultStorage(): StorageLike | null {
   try {
     return globalThis.localStorage ?? null
   } catch {
@@ -15,7 +15,7 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+export const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const isId = (v: unknown): v is string => typeof v === 'string' && v.length > 0
 
 function parseMeal(raw: unknown): Meal | null {

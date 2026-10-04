@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGrams, formatKcal, formatMacro, formatPercent, formatPortions, formatSigned } from './format.ts'
+import { formatAmount, formatGrams, formatKcal, formatMacro, formatPercent, formatPortionCount, formatSigned } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -14,10 +14,10 @@ describe('pt-PT formatting', () => {
     expect(formatKcal(326.5)).toBe('327')
   })
 
-  it('formats portions with singular and plural', () => {
-    expect(formatPortions(1)).toBe('1 porção')
-    expect(formatPortions(2)).toBe('2 porções')
-    expect(formatPortions(1.5)).toBe('1,5 porções')
+  it('formats portion counts to one decimal', () => {
+    expect(formatPortionCount(1)).toBe('1')
+    expect(formatPortionCount(1.44)).toBe('1,4')
+    expect(formatPortionCount(4.16)).toBe('4,2')
   })
 
   it('signs deltas and avoids a signed zero', () => {

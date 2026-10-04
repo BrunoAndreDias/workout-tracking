@@ -34,14 +34,22 @@ export default function App() {
   const panelOpen = Boolean(selectedMeal && selectedEntry && selectedFood)
 
   return (
-    <div className="app">
-      <header className="top">
-        <h1 className="brand">Plano alimentar</h1>
-        <PlanSwitcher state={state} dispatch={dispatch} />
-      </header>
-      <DaySummary totals={totals} planName={plan.name} />
+    <div className={`app ${panelOpen ? 'with-panel' : ''}`}>
+      <div className="page">
+        <header className="top">
+          <h1 className="brand">Plano alimentar</h1>
+          <PlanSwitcher state={state} dispatch={dispatch} />
+        </header>
+        <div className="band">
+          <DaySummary totals={totals} planName={plan.name} />
+          <div className="cols" aria-hidden="true">
+            <span>Alimento</span>
+            <span>Porções</span>
+            <span>g</span>
+            <span>kcal</span>
+          </div>
+        </div>
 
-      <div className={`layout ${panelOpen ? 'with-panel' : ''}`}>
         <main className="meals">
           {plan.meals.map((meal, i) => (
             <MealSection
@@ -67,26 +75,26 @@ export default function App() {
           </button>
           <NutrientDetail totals={totals} />
         </main>
-
-        {panelOpen && selectedMeal && selectedEntry && selectedFood && (
-          <>
-            <div className="scrim" onClick={() => setSelection(null)} aria-hidden="true" />
-            <ReplacementPanel
-              key={selectedEntry.id}
-              plan={plan}
-              mealId={selectedMeal.id}
-              entry={selectedEntry}
-              food={selectedFood}
-              foods={foodsById}
-              table={table}
-              searchIndex={searchIndex}
-              dispatch={dispatch}
-              onClose={() => setSelection(null)}
-            />
-          </>
-        )}
+        <Footer />
       </div>
-      <Footer />
+
+      {panelOpen && selectedMeal && selectedEntry && selectedFood && (
+        <>
+          <div className="scrim" onClick={() => setSelection(null)} aria-hidden="true" />
+          <ReplacementPanel
+            key={selectedEntry.id}
+            plan={plan}
+            mealId={selectedMeal.id}
+            entry={selectedEntry}
+            food={selectedFood}
+            foods={foodsById}
+            table={table}
+            searchIndex={searchIndex}
+            dispatch={dispatch}
+            onClose={() => setSelection(null)}
+          />
+        </>
+      )}
     </div>
   )
 }

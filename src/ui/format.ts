@@ -22,7 +22,4 @@ export function formatAmount(v: number, unit: string): string {
   return two.format(v)
 }
 
-export function formatPortions(p: number): string {
-  const text = one.format(Math.round(p * 10) / 10)
-  return `${text} ${text === '1' ? 'porção' : 'porções'}`
-}
+export const formatPortionCount = (p: number) => one.format(Math.round(p * 10) / 10)

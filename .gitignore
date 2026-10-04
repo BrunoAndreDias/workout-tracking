@@ -27,3 +27,6 @@ dist-ssr
 data/raw/
 decisions.tsv
 e2e/shots/
+
+# Claude Code agent worktrees
+.claude/worktrees/

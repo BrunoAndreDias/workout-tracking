@@ -12,6 +12,8 @@ describe('pt-PT formatting', () => {
   it('rounds kcal to integers', () => {
     expect(formatKcal(326.4)).toBe('326')
     expect(formatKcal(326.5)).toBe('327')
+    expect(formatKcal(1203)).toBe('1\u202F203')
+    expect(formatKcal(12030.4)).toBe('12\u202F030')
   })
 
   it('formats portion counts to one decimal', () => {
@@ -23,13 +25,14 @@ describe('pt-PT formatting', () => {
   it('signs deltas and avoids a signed zero', () => {
     expect(formatSigned(51.4, formatKcal)).toBe('+51')
     expect(formatSigned(-51.4, formatKcal)).toBe('−51')
-    expect(formatSigned(-0.2, formatKcal)).toBe('0')
+    expect(formatSigned(-0.2, formatKcal)).toBe('±0')
+    expect(formatSigned(0.04, formatMacro)).toBe('±0,0')
   })
 
   it('formats amounts by magnitude and percent', () => {
     expect(formatAmount(1234.5, 'mg')).toBe('1235')
     expect(formatAmount(12.34, 'mg')).toBe('12,3')
     expect(formatAmount(0.125, 'g')).toBe('0,13')
-    expect(formatPercent(0.254)).toBe('25 %')
+    expect(formatPercent(0.254)).toBe('25%')
   })
 })

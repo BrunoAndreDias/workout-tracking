@@ -1,17 +1,19 @@
 const int = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 })
+// pt-PT only groups from 10 000; the design groups thousands too, with a narrow no-break space.
+const grouped = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0, useGrouping: 'always' })
 const one = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
 const oneFixed = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const two = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
-export const formatKcal = (v: number) => int.format(v)
+export const formatKcal = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
 export const formatGrams = (v: number) => one.format(v)
 /** Fixed one decimal, for macro columns where aligned digits matter. */
 export const formatMacro = (v: number) => oneFixed.format(v)
-export const formatPercent = (fraction: number) => `${int.format(fraction * 100)} %`
+export const formatPercent = (fraction: number) => `${int.format(fraction * 100)}%`
 
 export function formatSigned(v: number, format: (n: number) => string): string {
   const rounded = Number(format(Math.abs(v)).replace(',', '.').replace(/\s/g, ''))
-  if (rounded === 0) return format(0)
+  if (rounded === 0) return `±${format(0)}`
   return `${v > 0 ? '+' : '−'}${format(Math.abs(v))}`
 }
 

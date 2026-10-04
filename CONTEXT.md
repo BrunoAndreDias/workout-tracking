@@ -29,8 +29,12 @@ A named, reusable set of Foods and quantities that can be appended to a Meal in 
 _Avoid_: Preset, pre-added meal, meal template
 
 **Nutrition Summary**:
-A visual account of the calories, macronutrients, and micronutrients contained in a Meal and a Meal Plan; it is descriptive rather than prescriptive in the initial release. Missing nutrient values remain unavailable rather than being treated as zero, and the Summary discloses incomplete totals.
+A visual account of the calories, macronutrients, and micronutrients contained in a Meal and a Meal Plan, compared against the Meal Plan's Daily Goals. Missing nutrient values remain unavailable rather than being treated as zero, and the Summary discloses incomplete totals.
 _Avoid_: Nutrition target, goal summary
+
+**Daily Goals**:
+The day's aims stored with each Meal Plan: energy, protein, carbohydrate and fat are targets to reach, fiber is a minimum, and salt is a limit. A new Meal Plan starts at 2 000 kcal, 130 g protein, 220 g carbohydrate, 65 g fat, 30 g fiber and 5 g salt, and a duplicate keeps the original's goals.
+_Avoid_: Targets, macros plan, budget
 
 **Equivalent**:
 A row of the APN "Manual de Equivalentes Alimentares" (2023): the grams of a Food that make one Portion of an Equivalence Group. Foods in the same group are interchangeable portion for portion.

@@ -1,9 +1,13 @@
-import { useEffect, useReducer, useState } from 'react'
-import { foodsById, searchIndex, table } from './data/catalog.ts'
+import { useEffect, useMemo, useReducer, useState } from 'react'
+import { foods as catalogFoods, foodsById as catalogById, searchIndex as catalogIndex, table as catalogTable } from './data/catalog.ts'
+import { customFoodsReducer, withCustomEquivalents } from './domain/customFoods.ts'
+import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
 import { planTotals } from './domain/nutrition.ts'
 import { loadState, saveState } from './domain/persistence.ts'
-import { newId, planReducer } from './domain/plans.ts'
-import type { EntryId, MealId } from './domain/types.ts'
+import { countEntries, newId, planReducer } from './domain/plans.ts'
+import { buildSearchIndex } from './domain/search.ts'
+import type { EntryId, Food, FoodId, MealId } from './domain/types.ts'
+import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DaySummary } from './ui/DaySummary.tsx'
 import { Footer } from './ui/Footer.tsx'
 import { MealSection } from './ui/MealSection.tsx'
@@ -19,11 +23,24 @@ interface Selection {
 
 export default function App() {
   const [state, dispatch] = useReducer(planReducer, undefined, () => loadState())
+  const [customFoods, dispatchFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
   const [selection, setSelection] = useState<Selection | null>(null)
 
   useEffect(() => {
     saveState(state)
   }, [state])
+  useEffect(() => {
+    saveCustomFoods(customFoods)
+  }, [customFoods])
+
+  const { foodsById, searchIndex, table } = useMemo(
+    () => ({
+      foodsById: new Map<FoodId, Food>([...catalogById, ...customFoods.map((f) => [f.id, f] as const)]),
+      searchIndex: buildSearchIndex([...customFoods, ...catalogFoods]),
+      table: withCustomEquivalents(catalogTable, customFoods, catalogById),
+    }),
+    [customFoods],
+  )
 
   const plan = state.plans.find((p) => p.id === state.selectedId)!
   const totals = planTotals(plan, foodsById)
@@ -60,10 +77,12 @@ export default function App() {
               count={plan.meals.length}
               foods={foodsById}
               searchIndex={searchIndex}
+              catalogIndex={catalogIndex}
               table={table}
               selectedEntryId={selectedMeal?.id === meal.id ? (selectedEntry?.id ?? null) : null}
               onSelectEntry={(entryId) => setSelection({ planId: plan.id, mealId: meal.id, entryId })}
               dispatch={dispatch}
+              dispatchFoods={dispatchFoods}
             />
           ))}
           <button
@@ -74,6 +93,13 @@ export default function App() {
             + Adicionar refeição
           </button>
           <NutrientDetail totals={totals} />
+          <CustomFoodsSection
+            customFoods={customFoods}
+            catalogIndex={catalogIndex}
+            baseName={(id) => catalogById.get(id)?.name}
+            usage={(id) => countEntries(state.plans, id)}
+            dispatchFoods={dispatchFoods}
+          />
         </main>
         <Footer />
       </div>

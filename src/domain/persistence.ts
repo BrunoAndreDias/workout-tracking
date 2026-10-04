@@ -1,9 +1,10 @@
-import { initialState } from './plans.ts'
+import { GOALS, isValidGoals } from './goals.ts'
+import { DEFAULT_GOALS, initialState } from './plans.ts'
 import type { PlanState } from './plans.ts'
-import type { EntryId, FoodId, Meal, MealId, MealPlan, PlanId } from './types.ts'
+import type { EntryId, FoodId, Goals, Meal, MealId, MealPlan, PlanId } from './types.ts'
 
 export const STORAGE_KEY = 'nutrition-tracking:plans'
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
 
@@ -29,6 +30,18 @@ function parseMeal(raw: unknown): Meal | null {
   return { id: raw.id as MealId, name: raw.name, entries }
 }
 
+// Version 1 had no goals; a bad goals object costs only the goals, never the plan's meals.
+function parseGoals(raw: unknown): Goals {
+  if (!isRecord(raw)) return DEFAULT_GOALS
+  const goals: Record<keyof Goals, number> = { ...DEFAULT_GOALS }
+  for (const { key } of GOALS) {
+    const v = raw[key]
+    if (typeof v !== 'number') return DEFAULT_GOALS
+    goals[key] = v
+  }
+  return isValidGoals(goals) ? goals : DEFAULT_GOALS
+}
+
 function parsePlan(raw: unknown): MealPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !Array.isArray(raw.meals)) return null
   const meals = []
@@ -37,12 +50,12 @@ function parsePlan(raw: unknown): MealPlan | null {
     if (!meal) return null
     meals.push(meal)
   }
-  return { id: raw.id as PlanId, name: raw.name, meals }
+  return { id: raw.id as PlanId, name: raw.name, goals: parseGoals(raw.goals), meals }
 }
 
-/** Returns null for anything that is not a valid current-version document. */
+/** Reads version 1 (no goals) and the current version; null for anything else. */
 export function parseState(raw: unknown): PlanState | null {
-  if (!isRecord(raw) || raw.version !== SCHEMA_VERSION || !isRecord(raw.state)) return null
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== SCHEMA_VERSION) || !isRecord(raw.state)) return null
   const { plans: rawPlans, selectedId } = raw.state
   if (!Array.isArray(rawPlans) || rawPlans.length === 0) return null
   const plans = []

@@ -105,9 +105,20 @@ export interface Meal {
   readonly entries: readonly FoodEntry[]
 }
 
+/** What one Meal Plan aims for in a day. Grams, except energy in kcal. */
+export interface Goals {
+  readonly energyKcal: number
+  readonly protein: number
+  readonly carbohydrate: number
+  readonly fat: number
+  readonly fiber: number
+  readonly salt: number
+}
+
 export interface MealPlan {
   readonly id: PlanId
   readonly name: string
+  readonly goals: Goals
   readonly meals: readonly Meal[]
 }
 

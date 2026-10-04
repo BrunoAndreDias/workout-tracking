@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
-    "import:portfir": "node scripts/import-portfir.ts"
+    "import:portfir": "node scripts/import-portfir.ts",
+    "build:equivalents": "node scripts/build-equivalents.ts",
+    "check:equivalents": "node scripts/build-equivalents.ts --check"
   },
   "dependencies": {
     "react": "^19.2.8",

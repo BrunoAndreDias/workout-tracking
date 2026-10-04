@@ -26,3 +26,4 @@ dist-ssr
 # copyrighted source files, personal use only
 data/raw/
 decisions.tsv
+e2e/shots/

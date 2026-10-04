@@ -1,122 +1,92 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useReducer, useState } from 'react'
+import { foodsById, searchIndex, table } from './data/catalog.ts'
+import { planTotals } from './domain/nutrition.ts'
+import { loadState, saveState } from './domain/persistence.ts'
+import { newId, planReducer } from './domain/plans.ts'
+import type { EntryId, MealId } from './domain/types.ts'
+import { DaySummary } from './ui/DaySummary.tsx'
+import { Footer } from './ui/Footer.tsx'
+import { MealSection } from './ui/MealSection.tsx'
+import { NutrientDetail } from './ui/NutrientDetail.tsx'
+import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
+import { ReplacementPanel } from './ui/ReplacementPanel.tsx'
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface Selection {
+  planId: string
+  mealId: MealId
+  entryId: EntryId
 }
 
-export default App
+export default function App() {
+  const [state, dispatch] = useReducer(planReducer, undefined, () => loadState())
+  const [selection, setSelection] = useState<Selection | null>(null)
+
+  useEffect(() => {
+    saveState(state)
+  }, [state])
+
+  const plan = state.plans.find((p) => p.id === state.selectedId)!
+  const totals = planTotals(plan, foodsById)
+
+  const selectedMeal = selection?.planId === plan.id ? plan.meals.find((m) => m.id === selection.mealId) : undefined
+  const selectedEntry = selectedMeal?.entries.find((e) => e.id === selection?.entryId)
+  const selectedFood = selectedEntry && foodsById.get(selectedEntry.foodId)
+  const panelOpen = Boolean(selectedMeal && selectedEntry && selectedFood)
+
+  return (
+    <div className="app">
+      <header className="top">
+        <h1 className="brand">Plano alimentar</h1>
+        <PlanSwitcher state={state} dispatch={dispatch} />
+      </header>
+      <DaySummary totals={totals} planName={plan.name} />
+
+      <div className={`layout ${panelOpen ? 'with-panel' : ''}`}>
+        <main className="meals">
+          {plan.meals.map((meal, i) => (
+            <MealSection
+              key={meal.id}
+              planId={plan.id}
+              meal={meal}
+              index={i}
+              count={plan.meals.length}
+              foods={foodsById}
+              searchIndex={searchIndex}
+              table={table}
+              selectedEntryId={selectedMeal?.id === meal.id ? (selectedEntry?.id ?? null) : null}
+              onSelectEntry={(entryId) => setSelection({ planId: plan.id, mealId: meal.id, entryId })}
+              dispatch={dispatch}
+            />
+          ))}
+          <button
+            type="button"
+            className="add-meal"
+            onClick={() => dispatch({ type: 'addMeal', planId: plan.id, mealId: newId<MealId>(), name: `Refeição ${plan.meals.length + 1}` })}
+          >
+            + Adicionar refeição
+          </button>
+          <NutrientDetail totals={totals} />
+        </main>
+
+        {panelOpen && selectedMeal && selectedEntry && selectedFood && (
+          <>
+            <div className="scrim" onClick={() => setSelection(null)} aria-hidden="true" />
+            <ReplacementPanel
+              key={selectedEntry.id}
+              plan={plan}
+              mealId={selectedMeal.id}
+              entry={selectedEntry}
+              food={selectedFood}
+              foods={foodsById}
+              table={table}
+              searchIndex={searchIndex}
+              dispatch={dispatch}
+              onClose={() => setSelection(null)}
+            />
+          </>
+        )}
+      </div>
+      <Footer />
+    </div>
+  )
+}

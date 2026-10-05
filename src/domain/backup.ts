@@ -41,23 +41,39 @@ const STORES = [
   { name: 'days', key: DAYS_STORAGE_KEY, label: 'dias', parse: parseDays },
 ] as const
 
-function readDocument(storage: StorageLike, key: string): unknown {
-  try {
-    const text = storage.getItem(key)
-    return text ? JSON.parse(text) : undefined
-  } catch {
-    return undefined
-  }
+export type StoreName = (typeof STORES)[number]['name']
+
+export const storeLabel = (name: StoreName): string => STORES.find((s) => s.name === name)!.label
+
+/** `skipped` names the stores that hold a document the app can no longer read: they are not in the file. A store never saved is not skipped. */
+export interface Exported {
+  readonly file: BackupFile
+  readonly skipped: readonly StoreName[]
 }
 
-/** A store that is missing or no longer readable is left out, as the app would start it empty. */
-export function exportBackup(storage: StorageLike, now: Date = new Date()): BackupFile {
+export function exportBackup(storage: StorageLike, now: Date = new Date()): Exported {
   const stores: Record<string, unknown> = {}
+  const skipped: StoreName[] = []
   for (const { name, key, parse } of STORES) {
-    const doc = readDocument(storage, key)
-    if (doc !== undefined && parse(doc) !== null) stores[name] = doc
+    let text: string | null = null
+    try {
+      text = storage.getItem(key)
+    } catch {
+      // blocked storage reads as empty
+    }
+    if (!text) continue
+    try {
+      const doc: unknown = JSON.parse(text)
+      if (parse(doc) !== null) {
+        stores[name] = doc
+        continue
+      }
+    } catch {
+      // corrupt JSON is skipped like any other unreadable document
+    }
+    skipped.push(name)
   }
-  return { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), stores }
+  return { file: { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), stores }, skipped }
 }
 
 /** Rejects the whole file when any store present fails its own parser. */

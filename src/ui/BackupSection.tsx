@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, writeAll } from '../domain/backup.ts'
+import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, storeLabel, writeAll } from '../domain/backup.ts'
 import type { BackupData } from '../domain/backup.ts'
 import { toIsoDate } from '../domain/days.ts'
 import { defaultStorage } from '../domain/persistence.ts'
@@ -23,11 +23,13 @@ const reloadApp = () => window.location.reload()
 export function BackupSection() {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [incoming, setIncoming] = useState<BackupData | null>(null)
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
     setError(null)
+    setWarning(null)
     try {
       const result = parseBackup(JSON.parse(await file.text()))
       if (result.ok) setIncoming(result.data)
@@ -40,7 +42,9 @@ export function BackupSection() {
   const exportData = () => {
     const storage = defaultStorage()
     if (!storage) return setError('O armazenamento do navegador não está disponível.')
-    download(`plano-alimentar-${toIsoDate(new Date())}.json`, JSON.stringify(exportBackup(storage), null, 2))
+    const { file, skipped } = exportBackup(storage)
+    download(`plano-alimentar-${toIsoDate(new Date())}.json`, JSON.stringify(file, null, 2))
+    setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map(storeLabel).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
   }
 
   const apply = (mode: 'merge' | 'replace') => {
@@ -78,6 +82,11 @@ export function BackupSection() {
       {error && (
         <p className="backup-error" role="alert">
           {error}
+        </p>
+      )}
+      {warning && (
+        <p className="backup-error" role="status">
+          {warning}
         </p>
       )}
       {incoming && (

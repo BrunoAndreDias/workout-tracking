@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup } from './backup.ts'
 import type { BackupData } from './backup.ts'
 import { saveCustomFoods } from './customFoodsStorage.ts'
-import { saveDays } from './daysStorage.ts'
+import { DAYS_STORAGE_KEY, saveDays } from './daysStorage.ts'
 import { saveState, STORAGE_KEY } from './persistence.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
 import type { CustomFoodDef, DayLog, EntryId, FoodId, IsoDate, MealId, NutrientValues, PlanId } from './types.ts'
-import { saveUnits } from './unitsStorage.ts'
+import { saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = { ...initial }
-  return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v) }
+  return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v), removeItem: (k: string) => void delete data[k] }
 }
 
 const per100 = Object.fromEntries(NUTRIENTS.map(({ key }) => [key, key === 'energyKcal' ? 250 : null])) as NutrientValues
@@ -53,7 +53,8 @@ const NO_PLANS = { plans: null, foods: [], units: [], days: { days: {} } } satis
 describe('backup', () => {
   it('round-trips every store through export and parse', () => {
     const storage = filled()
-    const file = exportBackup(storage, new Date('2026-06-01T10:00:00Z'))
+    const { file, skipped } = exportBackup(storage, new Date('2026-06-01T10:00:00Z'))
+    expect(skipped).toEqual([])
     expect(file.app).toBe('plano-alimentar')
     expect(file.version).toBe(1)
     expect(file.exportedAt).toBe('2026-06-01T10:00:00.000Z')
@@ -64,7 +65,7 @@ describe('backup', () => {
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
-    const file = exportBackup(memoryStorage())
+    const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
     expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias')
   })
@@ -98,7 +99,7 @@ describe('backup', () => {
 
   it('merges: appends plans, a taken id gets a fresh one, and a taken name also gets the suffix', () => {
     const current = loadAll(filled())
-    const incoming = parsed(exportBackup(filled()))
+    const incoming = parsed(exportBackup(filled()).file)
     const descanso = withEntry('b' as PlanId, 'Descanso').plans[0]
     const { data } = mergeBackup(current, { ...incoming, plans: { plans: [...incoming.plans!.plans, descanso], selectedId: A } }, () => 'new-id' as PlanId)
     expect(data.plans.plans.map((p) => [p.id, p.name])).toEqual([
@@ -138,7 +139,7 @@ describe('backup', () => {
   })
 
   it('entries of an imported plan still resolve to the imported custom food after merging', () => {
-    const { data } = mergeBackup(loadAll(memoryStorage()), parsed(exportBackup(filled())))
+    const { data } = mergeBackup(loadAll(memoryStorage()), parsed(exportBackup(filled()).file))
     const ids = new Set(data.foods.map((f) => f.id))
     const entries = data.plans.plans.flatMap((p) => p.meals.flatMap((m) => m.options.flatMap((o) => o.entries)))
     expect(entries.map((e) => e.foodId)).toEqual(['custom:skyr'])
@@ -159,5 +160,21 @@ describe('backup', () => {
     const before = { ...storage.data }
     expect(parseBackup({ app: 'plano-alimentar', version: 1, stores: { plans: { version: 3 } } }).ok).toBe(false)
     expect(storage.data).toEqual(before)
+  })
+
+  describe('export reports what it left out', () => {
+    it('lists a store whose document does not parse, and keeps the others', () => {
+      const storage = filled()
+      storage.data[UNITS_STORAGE_KEY] = JSON.stringify({ version: 99, units: [] })
+      const { file, skipped } = exportBackup(storage)
+      expect(skipped).toEqual(['units'])
+      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days'])
+    })
+
+    it('lists corrupt JSON too, but not a store that was never saved', () => {
+      const storage = memoryStorage({ [DAYS_STORAGE_KEY]: '{nope' })
+      expect(exportBackup(storage).skipped).toEqual(['days'])
+      expect(exportBackup(memoryStorage()).skipped).toEqual([])
+    })
   })
 })

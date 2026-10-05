@@ -32,7 +32,9 @@ node scripts/unmapped-candidates.ts   # PortFIR candidates for APN labels mapped
 npm test                 # vitest: domain logic and generated data
 npm run typecheck
 npm run lint
-npm run dev & npm run e2e   # drives the core loop in headless Chromium, screenshots in e2e/shots/
+npm run e2e              # every e2e/*.mjs against its own dev server (E2E_PORT, default 5199); screenshots in e2e/shots/
+npm run e2e -- units     # one script
+npm run check            # all of the above plus vite build: run before every commit
 ```
 
 `CONTEXT.md` holds the domain vocabulary.

@@ -15,12 +15,9 @@
     "derive:unsalted": "node scripts/derive-unsalted.ts",
     "build:equivalents": "node scripts/build-equivalents.ts",
     "check:equivalents": "node scripts/build-equivalents.ts --check",
-    "e2e": "mkdir -p e2e/shots && node e2e/core-loop.mjs",
-    "e2e:custom": "mkdir -p e2e/shots && node e2e/custom-food.mjs",
-    "e2e:mobile": "mkdir -p e2e/shots && node e2e/mobile.mjs",
-    "e2e:recipe": "mkdir -p e2e/shots && node e2e/recipe.mjs",
+    "e2e": "node scripts/e2e.mjs",
     "eval:search": "node scripts/search-eval.ts",
-    "e2e:day-log": "mkdir -p e2e/shots && node e2e/day-log.mjs"
+    "check": "npm run typecheck && npm run lint && npm test && vite build && npm run e2e"
   },
   "dependencies": {
     "react": "^19.2.8",

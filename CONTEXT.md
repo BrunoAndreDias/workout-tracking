@@ -26,7 +26,7 @@ A Food and quantity recorded within a Meal Option. Quantity is stored in grams, 
 _Avoid_: Item, food item
 
 **Household Unit**:
-A named everyday measure of one Food and its weight in grams, for example "ovo M" at 50 g. A Food Entry or Recipe quantity reads as "2 × ovo M" when its grams are a whole or half count of the unit, and is always stored as grams. The app ships approximate units the APN manual and PortFIR do not give, and the user may add their own for any Food. Deleting a user Food deletes its units.
+A named everyday measure of one Food and its weight in grams, for example "ovo M" at 50 g. A Food Entry or Recipe quantity is always stored and first shown in grams, and the user may switch its field to a unit to read or type "2 × ovo M". A field never opens in a unit, even one that fits its grams. The app ships approximate units the APN manual and PortFIR do not give, and the user may add their own for any Food. Deleting a user Food deletes its units.
 _Avoid_: Serving, Portion (the APN term)
 
 **Food**:

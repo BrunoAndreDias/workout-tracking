@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { addFood } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const W = 390
@@ -14,13 +15,7 @@ await page.reload()
 const dialog = page.getByRole('dialog')
 const fits = async (where) => assert(await page.evaluate((w) => document.documentElement.scrollWidth <= w, W), `no horizontal scroll at ${W} px (${where})`)
 
-async function add(mealName, query, pick) {
-  await page.getByRole('button', { name: `Adicionar alimento ao ${mealName}`, exact: true }).click()
-  await dialog.getByRole('searchbox', { name: 'Pesquisar alimento' }).fill(query)
-  await dialog.locator('.result', { hasText: pick }).first().click()
-  await dialog.getByRole('button', { name: `Adicionar ao ${mealName}` }).click()
-  await dialog.waitFor({ state: 'detached' })
-}
+const add = (mealName, query, pick, grams) => addFood(page, mealName, query, pick, grams)
 
 await add('Pequeno-almoço', 'flocos de aveia', 'Flocos de aveia')
 await add('Pequeno-almoço', 'banana', 'Banana')

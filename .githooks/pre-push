@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs the full check before a push, locally instead of in paid CI minutes.
+# Enable once per clone: git config core.hooksPath .githooks   (skip a push with --no-verify)
+exec npm run check

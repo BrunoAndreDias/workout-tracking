@@ -37,4 +37,6 @@ npm run e2e -- units     # one script
 npm run check            # all of the above plus vite build: run before every commit
 ```
 
+`git config core.hooksPath .githooks` makes every `git push` run `npm run check` first. There is no CI, so private GitHub Actions minutes stay unused.
+
 `CONTEXT.md` holds the domain vocabulary.

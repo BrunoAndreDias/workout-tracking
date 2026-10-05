@@ -11,7 +11,7 @@ Each rule names what enforces it. When the user corrects a mistake, fix it and a
 | Rule | Enforced by |
 |---|---|
 | Every quantity field opens in grams, never in a household unit, even one that fits the grams. Adding a food defaults to its APN portion in grams. | Architecture: `QuantityStepper` starts at `'g'` and the unit-picking `unitView` is deleted. Test: `e2e/units.mjs` "meal row opens in g although 50 g is exactly 1 × ovo M". |
-| A browser flow shared by several scripts (adding a food) lives once, in `e2e/_driver.mjs`. Import it from e2e scripts and from the verify-plano `session.mjs`; don't copy it. | Architecture: one module. |
+| A browser flow shared by several scripts (adding or swapping a food, setting goals) lives once, in `e2e/_driver.mjs`. Import it from e2e scripts, the verify-plano `session.mjs` and the `scripts/plano.mjs` CLI; don't copy it. | Architecture: one module. `e2e/cli.mjs` proves the CLI and the driver reach the same state. |
 | A change must build, not just typecheck. Dev mode drops CSS syntax errors that `vite build` rejects. | `npm run check` runs `vite build`, and the pre-push hook runs `npm run check`. |
 | A behaviour change updates the browser checks in the same commit. | `npm run check` runs every `e2e/*.mjs`, found by directory listing, not a hand-kept list. |
 | A behaviour change updates the verify-plano feature map (`.claude/skills/verify-plano/features/`) and any `CONTEXT.md` line that describes it. | Docs. Run `/pstack:maintain-verification-skill` after a feature lands. |

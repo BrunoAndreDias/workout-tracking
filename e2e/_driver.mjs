@@ -16,7 +16,7 @@ export class FlowError extends Error {
 export const readStored = (page) =>
   page.evaluate((keys) => Object.fromEntries(keys.map((k) => [k, JSON.parse(localStorage.getItem(`nutrition-tracking:${k}`) ?? 'null')])), STORAGE_KEYS)
 
-/** Makes the next page load boot from `state` (the readStored shape). Call before page.goto. */
+/** Makes every load of this page boot from `state` (the readStored shape), reloads included. Call before page.goto. */
 export const seedStored = (page, state) =>
   page.addInitScript((entries) => {
     for (const [key, value] of entries) localStorage.setItem(`nutrition-tracking:${key}`, JSON.stringify(value))

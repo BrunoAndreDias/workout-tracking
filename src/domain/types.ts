@@ -4,6 +4,7 @@ export type FoodId = Brand<string, 'FoodId'>
 export type PlanId = Brand<string, 'PlanId'>
 export type MealId = Brand<string, 'MealId'>
 export type EntryId = Brand<string, 'EntryId'>
+export type OptionId = Brand<string, 'OptionId'>
 /** A local calendar day, 'YYYY-MM-DD'. */
 export type IsoDate = Brand<string, 'IsoDate'>
 
@@ -123,10 +124,25 @@ export interface FoodEntry {
   readonly grams: number
 }
 
+/** One of a meal's interchangeable menus, such as "Opção 2: Crepioca". */
+export interface MealOption {
+  readonly id: OptionId
+  readonly name: string
+  readonly entries: readonly FoodEntry[]
+}
+
+/**
+ * Only the active option counts toward totals. An `optional` meal (SOS) is shown with its own totals but left out of the day's.
+ * `time` is 'HH:MM' or null; meals keep the user's order, never sorted by time.
+ */
 export interface Meal {
   readonly id: MealId
   readonly name: string
-  readonly entries: readonly FoodEntry[]
+  readonly time: string | null
+  readonly notes: string
+  readonly optional: boolean
+  readonly options: readonly [MealOption, ...MealOption[]]
+  readonly activeOptionId: OptionId
 }
 
 /** What one Meal Plan aims for in a day. Grams, except energy in kcal. */
@@ -144,6 +160,7 @@ export interface MealPlan {
   readonly name: string
   readonly goals: Goals
   readonly meals: readonly Meal[]
+  readonly notes: string
 }
 
 /**

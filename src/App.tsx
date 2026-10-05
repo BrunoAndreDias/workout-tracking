@@ -150,6 +150,7 @@ export default function App() {
                   eyebrow={plan.name}
                   meals={plan.meals}
                   goals={plan.goals}
+                  notes={{ value: plan.notes, onChange: (notes) => dispatch({ type: 'setPlanNotes', planId: plan.id, notes }) }}
                   kit={kit}
                   editMeals={(edit) => dispatch({ type: 'editMeals', planId: plan.id, edit })}
                   onSaveGoals={(goals) => dispatch({ type: 'setGoals', planId: plan.id, goals })}

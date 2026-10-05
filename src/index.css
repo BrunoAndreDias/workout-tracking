@@ -261,7 +261,32 @@ small { font-size: 0.85em; color: var(--muted); }
 .swap-btn { height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--accent); }
 .swap-btn:hover { background: var(--accent-tint); }
 .remove-btn { width: 44px; height: 44px; }
-.meal-add { padding: 6px 16px 8px; }
+.meal.optional { border-style: dashed; }
+.meal-time { flex: none; width: 56px; height: 32px; padding: 0 6px; margin-left: -6px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.meal-time::placeholder { color: var(--faint); font-weight: 400; }
+.meal-time:hover, .meal-time:focus { border-color: var(--input-border); background: var(--field); }
+.meal-time:focus-visible { outline: none; border-color: var(--accent); }
+.sos-tag { flex: none; align-self: flex-start; padding: 1px 8px; border-radius: 999px; background: var(--track); font-size: 12px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.option-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 24px 14px; }
+.option-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border: 1px solid var(--input-border); border-radius: 999px; background: var(--surface); font-size: 14px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.option-tab:hover { border-color: var(--muted); color: var(--ink); }
+.option-tab.active { padding-right: 4px; border-color: var(--accent); background: var(--accent-tint); color: var(--ink); }
+.option-tab .inline-name { font-weight: 600; }
+.option-tab .inline-name-input { width: 9em; font-size: 14px; }
+.option-kcal { font-size: 12px; font-weight: 400; color: var(--muted); }
+.option-remove { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: var(--faint); }
+.option-remove:hover { background: var(--surface); color: var(--ink); }
+.meal-foot { padding: 6px 16px 8px; display: flex; flex-direction: column; gap: 6px; }
+.meal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+.text-btn.quiet { color: var(--ink-2); font-weight: 400; }
+.text-btn.quiet:hover { background: var(--rule); color: var(--ink); }
+.notes-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.sos-check { margin-left: auto; min-height: 44px; padding: 0 8px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.sos-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.notes-input { width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--field); font: inherit; font-size: 14px; color: var(--ink); resize: vertical; }
+.notes-input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.meal-foot .notes-input { margin: 0 8px 8px; width: calc(100% - 16px); }
+.day-notes .notes-input { margin-bottom: 20px; }
 .add-meal { height: 56px; border: 1px dashed var(--input-border); border-radius: 16px; background: transparent; font-size: 15px; font-weight: 500; color: var(--accent); }
 .add-meal:hover { background: var(--surface); border-color: var(--accent); }
 
@@ -518,7 +543,9 @@ small { font-size: 0.85em; color: var(--muted); }
   .entry-actions { grid-area: actions; }
   .entry-actions { gap: 0; }
   .swap-btn { padding: 0 8px; }
-  .meal-add { padding: 4px 8px 6px; }
+  .meal-foot { padding: 4px 8px 6px; }
+  .option-tabs { padding: 0 16px 12px; }
+  .sos-check { margin-left: 0; }
   .detail { padding: 0 16px; }
   .calendar { padding: 16px 12px 14px; }
   .cal-head { padding: 0 4px; }

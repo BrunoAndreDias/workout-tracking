@@ -5,18 +5,24 @@ This context describes how one person plans their meals and reviews the nutritio
 ## Language
 
 **Meal Plan**:
-A named, reusable day of eating (for example "Dia de treino"), composed of ordered Meals and their Food Entries. Its totals are the daily calories and nutrients. The user may keep several Meal Plans.
+A named, reusable day of eating (for example "Dia de treino"), composed of ordered Meals and their Food Entries. Its totals are the daily calories and nutrients. It also carries free-text plan notes, such as "Água 3L–3,5L". The user may keep several Meal Plans.
 
 **Day Log** (Registo diário):
-What was actually eaten on one calendar date, shown in the app as "Diário". A Day Log starts from a Meal Plan or blank, and then it keeps its own copy. Its meals are a copy of the plan's meals, and its goals are a copy of the plan's Daily Goals. Editing the plan later never changes a logged day. The log also keeps a baseline, which is the plan's meals as they were at the start and is never edited. Comparing each meal against its baseline shows which meals were changed and by how many calories. A blank day starts with the default meals and goals and has an empty baseline. A date counts as logged when it has at least one Food Entry. It counts as missed when it is a past date with no entries, on or after the first logged date.
+What was actually eaten on one calendar date, shown in the app as "Diário". A Day Log starts from a Meal Plan or blank, and then it keeps its own copy. Its meals are a copy of the plan's meals, and its goals are a copy of the plan's Daily Goals. Editing the plan later never changes a logged day. The log also keeps a baseline, which is the plan's meals as they were at the start and is never edited. Comparing each meal against its baseline shows which meals were changed and by how many calories. Switching a meal to another option counts as a change. Editing its time or notes does not. A blank day starts with the default meals and goals and has an empty baseline. A date counts as logged when a Meal that is not optional has at least one Food Entry in its active Meal Option. It counts as missed when it is a past date with no entries, on or after the first logged date.
 _Avoid_: Daily Journal, diary, diary entry, check-in (in code and domain naming; "Diário" is only UI copy)
 
 **Meal**:
-A named, reorderable section of a Meal Plan or a Day Log that groups Food Entries. A new Meal Plan begins with Breakfast, Lunch, Dinner, and Snack, and its Meals may be added, renamed, reordered, or removed.
+A named, reorderable section of a Meal Plan or a Day Log that holds one or more Meal Options. A new Meal Plan begins with Breakfast, Lunch, Dinner, and Snack, and its Meals may be added, renamed, reordered, or removed. A Meal may have a time (HH:MM) and notes. The time is shown and never reorders the meals.
 _Avoid_: Meal slot, meal category
 
+**Meal Option** (Opção):
+One of a Meal's interchangeable menus, as a nutritionist writes "Opção 1: Papas de aveia / Opção 2: Crepioca". It holds its own Food Entries. Exactly one option is active, and only the active option counts toward the Meal's and the day's totals. A Meal always has at least one option, and a single-option Meal shows no option tabs.
+
+**Optional Meal** (SOS):
+A Meal flagged as eaten only if needed, such as "Ceia em SOS". It shows its own totals and is left out of the day's totals and of each meal's share of the day.
+
 **Food Entry**:
-A Food and quantity recorded within a Meal. Quantity is stored in grams, although it may be entered and shown in a Household Unit of its Food.
+A Food and quantity recorded within a Meal Option. Quantity is stored in grams, although it may be entered and shown in a Household Unit of its Food.
 _Avoid_: Item, food item
 
 **Household Unit**:

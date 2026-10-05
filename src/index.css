@@ -464,7 +464,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .goals-hint { margin: 0; font-size: 13px; color: var(--muted); }
 .goal-input:has(input:disabled) { background: var(--field); }
 .goal-input input:disabled { color: var(--ink-2); }
-.goal-field {: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.goal-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .goal-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .goal-kind { font-weight: 400; color: var(--faint); }
 .goal-input { display: flex; align-items: center; height: 48px; border: 1px solid var(--input-border); border-radius: 12px; background: var(--surface); }

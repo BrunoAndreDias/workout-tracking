@@ -4,9 +4,11 @@ import { SEED_UNITS } from './data/units.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
-import { planTotals } from './domain/nutrition.ts'
+import { countEntries, foodsByUse } from './domain/meals.ts'
+import type { MealsAction } from './domain/meals.ts'
+import { dayTotals } from './domain/nutrition.ts'
 import { loadState, saveState } from './domain/persistence.ts'
-import { countEntries, newId, planReducer } from './domain/plans.ts'
+import { newId, planReducer } from './domain/plans.ts'
 import { buildSearchIndex } from './domain/search.ts'
 import type { EntryId, Food, FoodId, MealId, MealPlan, PlanId } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
@@ -77,8 +79,10 @@ export default function App() {
     }
   }, [customDefs])
 
+  const allMeals = state.plans.flatMap((p) => p.meals)
   const plan = state.plans.find((p) => p.id === state.selectedId)!
-  const totals = planTotals(plan, foodsById)
+  const totals = dayTotals(plan.meals, foodsById)
+  const editMeals = (edit: MealsAction) => dispatch({ type: 'editMeals', planId: plan.id, edit })
   const foodTarget = panel && resolveFoodTarget(panel, plan, foodsById)
   const close = () => setPanel(null)
 
@@ -107,7 +111,6 @@ export default function App() {
               {plan.meals.map((meal, i) => (
                 <MealSection
                   key={meal.id}
-                  planId={plan.id}
                   meal={meal}
                   index={i}
                   count={plan.meals.length}
@@ -116,13 +119,13 @@ export default function App() {
                   table={table}
                   onAdd={() => setPanel({ mode: 'add', planId: plan.id, mealId: meal.id })}
                   onSwap={(entryId) => setPanel({ mode: 'swap', planId: plan.id, mealId: meal.id, entryId })}
-                  dispatch={dispatch}
+                  editMeals={editMeals}
                 />
               ))}
               <button
                 type="button"
                 className="add-meal"
-                onClick={() => dispatch({ type: 'addMeal', planId: plan.id, mealId: newId<MealId>(), name: `Refeição ${plan.meals.length + 1}` })}
+                onClick={() => editMeals({ type: 'addMeal', mealId: newId<MealId>(), name: `Refeição ${plan.meals.length + 1}` })}
               >
                 + Adicionar refeição
               </button>
@@ -135,7 +138,7 @@ export default function App() {
               ingredientIndex={ingredientIndex}
               foods={foodsById}
               baseName={(id) => catalogById.get(id)?.name}
-              usage={(id) => countEntries(state.plans, id)}
+              usage={(id) => countEntries(allMeals, id)}
               dispatchFoods={dispatchFoods}
             />
           </main>
@@ -155,17 +158,18 @@ export default function App() {
         {foodTarget && (
           <FoodPanel
             key={panel?.mode === 'swap' ? panel.entryId : foodTarget.meal.id}
-            plan={plan}
+            meals={plan.meals}
+            goals={plan.goals}
             meal={foodTarget.meal}
             swap={foodTarget.swap}
-            plans={state.plans}
+            usedFoods={foodsByUse(allMeals)}
             foods={foodsById}
             allFoods={allFoods}
             searchIndex={searchIndex}
             catalogIndex={catalogIndex}
             ingredientIndex={ingredientIndex}
             table={table}
-            dispatch={dispatch}
+            editMeals={editMeals}
             dispatchFoods={dispatchFoods}
             onClose={close}
           />

@@ -38,6 +38,8 @@ const monthYear = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numer
 
 /** "segunda-feira, 5 de outubro" */
 export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(date))
+/** "sexta, 2 de outubro" */
+export const formatRepeatDate = (date: IsoDate) => formatLongDate(date).replace('-feira', '')
 /** "5/10", for chart axes and tiles where space is tight. */
 export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
 /** "outubro de 2026" */

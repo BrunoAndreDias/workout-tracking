@@ -24,7 +24,9 @@ dist-ssr
 *.sw?
 
 # copyrighted source files, personal use only
-data/raw/
+data/raw/*
+# USDA FoodData Central is public domain, so its raw responses are committed
+!data/raw/usda/
 decisions.tsv
 e2e/shots/
 

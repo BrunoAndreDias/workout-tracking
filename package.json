@@ -11,11 +11,14 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "import:portfir": "node scripts/import-portfir.ts",
+    "import:usda": "node scripts/import-usda.ts",
+    "derive:unsalted": "node scripts/derive-unsalted.ts",
     "build:equivalents": "node scripts/build-equivalents.ts",
     "check:equivalents": "node scripts/build-equivalents.ts --check",
     "e2e": "mkdir -p e2e/shots && node e2e/core-loop.mjs",
     "e2e:custom": "mkdir -p e2e/shots && node e2e/custom-food.mjs",
-    "e2e:mobile": "mkdir -p e2e/shots && node e2e/mobile.mjs"
+    "e2e:mobile": "mkdir -p e2e/shots && node e2e/mobile.mjs",
+    "eval:search": "node scripts/search-eval.ts"
   },
   "dependencies": {
     "react": "^19.2.8",

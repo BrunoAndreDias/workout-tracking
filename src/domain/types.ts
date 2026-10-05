@@ -64,7 +64,7 @@ export type NutrientValues = Readonly<Record<NutrientKey, number | null>>
 export interface Food {
   readonly id: FoodId
   readonly name: string
-  readonly source: 'portfir' | 'custom'
+  readonly source: 'portfir' | 'usda' | 'custom'
   /** PortFIR expresses alcoholic beverages per 100 ml; entries still store grams and treat 1 ml as 1 g. */
   readonly basis: 'per100g' | 'per100ml'
   readonly category: string

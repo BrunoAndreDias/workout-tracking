@@ -21,6 +21,7 @@ import { GoalsPanel } from './ui/GoalsPanel.tsx'
 import { MealSection } from './ui/MealSection.tsx'
 import { NutrientDetail } from './ui/NutrientDetail.tsx'
 import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
+import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { UnitsContext } from './ui/unitsContext.ts'
 
 type PanelTarget =
@@ -86,7 +87,10 @@ export default function App() {
       <div className="app">
         <div className="page">
           <header className="top">
-            <div className="eyebrow">Plano alimentar</div>
+            <div className="top-row">
+              <div className="eyebrow">Plano alimentar</div>
+              <ThemeToggle />
+            </div>
             <PlanSwitcher state={state} dispatch={dispatch} />
           </header>
 

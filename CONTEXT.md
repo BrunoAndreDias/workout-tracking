@@ -13,12 +13,20 @@ A named, reorderable section of a Meal Plan that groups Food Entries. A new Meal
 _Avoid_: Meal slot, meal category
 
 **Food Entry**:
-A Food and quantity recorded within a Meal. Quantity is stored in grams, although a Food may expose named serving choices that resolve to grams.
+A Food and quantity recorded within a Meal. Quantity is stored in grams, although it may be entered and shown in a Household Unit of its Food.
 _Avoid_: Item, food item
+
+**Household Unit**:
+A named everyday measure of one Food and its weight in grams, for example "ovo M" at 50 g. A Food Entry or Recipe quantity reads as "2 × ovo M" when its grams are a whole or half count of the unit, and is always stored as grams. The app ships approximate units the APN manual and PortFIR do not give, and the user may add their own for any Food. Deleting a user Food deletes its units.
+_Avoid_: Serving, Portion (the APN term)
 
 **Food**:
 A nutritional reference that defines nutrient amounts per canonical quantity. It may come from the bundled catalog or be created by the user.
 _Avoid_: Ingredient, product
+
+**Recipe**:
+A Food the user composes from other Foods and their grams, with an optional final weight after cooking. Its nutrients per 100 g are the summed amounts of its Foods divided by the final weight, or by the summed grams when there is none, and a nutrient unknown for any of its Foods stays unknown. A Recipe uses catalog Foods or Foods entered from a label, never another Recipe.
+_Avoid_: Composite food, dish
 
 **Favorite Food**:
 A Food explicitly marked by the user for quick access in Food Search.

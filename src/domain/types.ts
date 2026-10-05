@@ -71,8 +71,30 @@ export interface Food {
   readonly per100: NutrientValues
 }
 
-/** A product the user entered from a label. `basedOn` is the generic catalog food whose APN equivalents it borrows. */
-export type CustomFood = Food & { readonly source: 'custom'; readonly basedOn: FoodId | null }
+export interface RecipeIngredient {
+  readonly foodId: FoodId
+  readonly grams: number
+}
+
+/** `yieldGrams` is the weight after cooking; null means the sum of the ingredient grams. */
+export interface Recipe {
+  readonly ingredients: readonly RecipeIngredient[]
+  readonly yieldGrams: number | null
+}
+
+interface CustomFoodDefBase {
+  readonly id: FoodId
+  readonly name: string
+  readonly basedOn: FoodId | null
+}
+
+/** What the user stored: a label's values, or a recipe whose values are derived from its ingredients on load. */
+export type CustomFoodDef =
+  | (CustomFoodDefBase & { readonly kind: 'label'; readonly per100: NutrientValues })
+  | (CustomFoodDefBase & { readonly kind: 'recipe'; readonly recipe: Recipe })
+
+/** A user food resolved to nutrients. `basedOn` is the generic catalog food whose APN equivalents it borrows. */
+export type CustomFood = Food & { readonly source: 'custom'; readonly basedOn: FoodId | null; readonly recipe: Recipe | null }
 
 export interface EquivalenceGroup {
   readonly id: string

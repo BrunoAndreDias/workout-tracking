@@ -148,6 +148,7 @@ export default function App() {
                   key={plan.id}
                   title={<InlineName name={plan.name} label="Nome do plano" onRename={(name) => dispatch({ type: 'renamePlan', planId: plan.id, name })} />}
                   eyebrow={plan.name}
+                  kind="plano"
                   meals={plan.meals}
                   goals={plan.goals}
                   kit={kit}

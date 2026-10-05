@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup } from './backup.ts'
+import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, writeAll } from './backup.ts'
 import type { BackupData } from './backup.ts'
-import { saveCustomFoods } from './customFoodsStorage.ts'
+import { FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
 import { DAYS_STORAGE_KEY, saveDays } from './daysStorage.ts'
 import { saveState, STORAGE_KEY } from './persistence.ts'
 import { initialState, planReducer } from './plans.ts'
@@ -13,6 +13,19 @@ import { saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = { ...initial }
   return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v), removeItem: (k: string) => void delete data[k] }
+}
+
+/** Fails like a full localStorage: the nth write throws. */
+function quotaStorage(initial: Record<string, string>, failOn: number) {
+  const storage = memoryStorage(initial)
+  let writes = 0
+  return {
+    ...storage,
+    setItem: (k: string, v: string) => {
+      if (++writes === failOn) throw new Error('QuotaExceededError')
+      storage.setItem(k, v)
+    },
+  }
 }
 
 const per100 = Object.fromEntries(NUTRIENTS.map(({ key }) => [key, key === 'energyKcal' ? 250 : null])) as NutrientValues
@@ -149,7 +162,7 @@ describe('backup', () => {
   it('replace writes the incoming stores, and a plans-less backup leaves one fresh plan', () => {
     const storage = filled()
     const incoming = parsed({ app: 'plano-alimentar', version: 1, stores: { foods: { version: 2, foods: [] } } })
-    expect(replaceWithBackup(incoming, storage)).toBe(true)
+    expect(replaceWithBackup(incoming, storage)).toEqual({ ok: true })
     const after = loadAll(storage)
     expect(after.plans.plans.map((p) => p.name)).toEqual(['Plano 1'])
     expect([after.foods, after.units, after.days]).toEqual([[], [], { days: {} }])
@@ -160,6 +173,39 @@ describe('backup', () => {
     const before = { ...storage.data }
     expect(parseBackup({ app: 'plano-alimentar', version: 1, stores: { plans: { version: 3 } } }).ok).toBe(false)
     expect(storage.data).toEqual(before)
+  })
+
+  describe('applying is all or nothing', () => {
+    const FAILED = { ok: false, error: 'Não foi possível guardar os dados: o armazenamento do navegador não tem espaço. Não foi alterado nada.' }
+    // Foods are absent, so the failed import must also remove the key it had already created.
+    const before = () => {
+      const storage = filled()
+      delete storage.data[FOODS_STORAGE_KEY]
+      return { ...storage.data }
+    }
+    const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} } })
+
+    it('replace restores every key when the third write throws', () => {
+      const initial = before()
+      const storage = quotaStorage(initial, 3)
+      expect(replaceWithBackup(incoming(), storage)).toEqual(FAILED)
+      expect(storage.data).toEqual(initial)
+      expect(storage.data[FOODS_STORAGE_KEY]).toBeUndefined()
+    })
+
+    it('merge restores every key when the third write throws', () => {
+      const initial = before()
+      const storage = quotaStorage(initial, 3)
+      const merged = mergeBackup(loadAll(storage), incoming()).data
+      expect(writeAll(merged, storage)).toEqual(FAILED)
+      expect(storage.data).toEqual(initial)
+    })
+
+    it('reports success and writes all four stores when nothing throws', () => {
+      const storage = quotaStorage(before(), 99)
+      expect(replaceWithBackup(incoming(), storage)).toEqual({ ok: true })
+      expect([UNITS_STORAGE_KEY, DAYS_STORAGE_KEY, FOODS_STORAGE_KEY].map((k) => k in storage.data)).toEqual([true, true, true])
+    })
   })
 
   describe('export reports what it left out', () => {

@@ -3,7 +3,7 @@ import type { DayState } from './days.ts'
 import { DAYS_STORAGE_KEY, loadDays, parseDays, saveDays } from './daysStorage.ts'
 import { copyMeals } from './meals.ts'
 import { isRecord, loadState, parseState, saveState, STORAGE_KEY } from './persistence.ts'
-import type { StorageLike } from './persistence.ts'
+import type { RemovableStorage, StorageLike } from './persistence.ts'
 import { initialState, newId } from './plans.ts'
 import type { PlanState } from './plans.ts'
 import type { CustomFoodDef, DayLog, IsoDate, MealPlan, PlanId } from './types.ts'
@@ -143,13 +143,34 @@ export function mergeBackup(current: AppData, incoming: BackupData, makeId: () =
   }
 }
 
+export type ApplyResult = { ok: true } | { ok: false; error: string }
+
+const APPLY_FAILED = 'Não foi possível guardar os dados: o armazenamento do navegador não tem espaço. Não foi alterado nada.'
+const RESTORE_FAILED = 'Não foi possível guardar os dados e também não foi possível repor os anteriores. Exporte uma cópia antes de recarregar.'
+
 /** Replacing is writing the incoming stores. A backup without plans leaves the app its fresh starting plan. */
-export function replaceWithBackup(incoming: BackupData, storage: StorageLike): boolean {
+export function replaceWithBackup(incoming: BackupData, storage: RemovableStorage): ApplyResult {
   return writeAll({ ...incoming, plans: incoming.plans ?? initialState() }, storage)
 }
 
-export function writeAll(data: AppData, storage: StorageLike): boolean {
-  return [saveState(data.plans, storage), saveCustomFoods(data.foods, storage), saveUnits(data.units, storage), saveDays(data.days, storage)].every(Boolean)
+/**
+ * All four stores or none: the raw value of every key is kept first, and any failed write puts every key back
+ * (removing the ones that did not exist), so a full storage cannot leave plans from one file next to days from another.
+ */
+export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult {
+  const snapshot = STORES.map(({ key }) => [key, storage.getItem(key)] as const)
+  const writes = [() => saveState(data.plans, storage), () => saveCustomFoods(data.foods, storage), () => saveUnits(data.units, storage), () => saveDays(data.days, storage)]
+  if (writes.every((write) => write())) return { ok: true }
+  let restored = true
+  for (const [key, raw] of snapshot) {
+    try {
+      if (raw === null) storage.removeItem(key)
+      else storage.setItem(key, raw)
+    } catch {
+      restored = false
+    }
+  }
+  return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
 }
 
 /** "2 planos, 1 alimento meu, 4 unidades, 0 dias" */

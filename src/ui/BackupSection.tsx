@@ -51,10 +51,9 @@ export function BackupSection() {
     const storage = defaultStorage()
     if (!storage || !incoming) return setError('O armazenamento do navegador não está disponível.')
     const current = loadAll(storage)
-    if (mode === 'replace') {
-      if (!window.confirm(`Substituir tudo?\n\nVais perder o que tens agora: ${describeBackup(current)}.\nFicas com o que está no ficheiro: ${describeBackup(incoming)}.`)) return
-      if (!replaceWithBackup(incoming, storage)) return setError('Não foi possível guardar os dados.')
-    } else if (!writeAll(mergeBackup(current, incoming).data, storage)) return setError('Não foi possível guardar os dados.')
+    if (mode === 'replace' && !window.confirm(`Substituir tudo?\n\nVais perder o que tens agora: ${describeBackup(current)}.\nFicas com o que está no ficheiro: ${describeBackup(incoming)}.`)) return
+    const result = mode === 'replace' ? replaceWithBackup(incoming, storage) : writeAll(mergeBackup(current, incoming).data, storage)
+    if (!result.ok) return setError(result.error)
     reloadApp()
   }
 

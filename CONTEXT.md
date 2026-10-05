@@ -19,7 +19,7 @@ _Avoid_: Meal slot, meal category
 One of a Meal's interchangeable menus, as a nutritionist writes "Opção 1: Papas de aveia / Opção 2: Crepioca". It holds its own Food Entries. Exactly one option is active, and only the active option counts toward the Meal's and the day's totals. A Meal always has at least one option, and a single-option Meal shows no option tabs.
 
 **Optional Meal** (SOS):
-A Meal flagged as eaten only if needed, such as "Ceia em SOS". It shows its own totals and is left out of the day's totals and of each meal's share of the day.
+A Meal flagged as eaten only if needed, such as "Ceia em SOS". It shows its own totals and is left out of the day's totals and of each meal's share of the day. A day whose only food is in Optional Meals is not logged, so history shows it as missed.
 
 **Food Entry**:
 A Food and quantity recorded within a Meal Option. Quantity is stored in grams, although it may be entered and shown in a Household Unit of its Food.

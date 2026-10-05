@@ -6,10 +6,13 @@ This context describes how one person plans their meals and reviews the nutritio
 
 **Meal Plan**:
 A named, reusable day of eating (for example "Dia de treino"), composed of ordered Meals and their Food Entries. Its totals are the daily calories and nutrients. The user may keep several Meal Plans.
-_Avoid_: Daily Journal, diary, day log
+
+**Day Log** (Registo diário):
+What was actually eaten on one calendar date, shown in the app as "Diário". A Day Log starts from a Meal Plan or blank, and then it keeps its own copy. Its meals are a copy of the plan's meals, and its goals are a copy of the plan's Daily Goals. Editing the plan later never changes a logged day. The log also keeps a baseline, which is the plan's meals as they were at the start and is never edited. Comparing each meal against its baseline shows which meals were changed and by how many calories. A blank day starts with the default meals and goals and has an empty baseline. A date counts as logged when it has at least one Food Entry. It counts as missed when it is a past date with no entries, on or after the first logged date.
+_Avoid_: Daily Journal, diary, diary entry, check-in (in code and domain naming; "Diário" is only UI copy)
 
 **Meal**:
-A named, reorderable section of a Meal Plan that groups Food Entries. A new Meal Plan begins with Breakfast, Lunch, Dinner, and Snack, and its Meals may be added, renamed, reordered, or removed.
+A named, reorderable section of a Meal Plan or a Day Log that groups Food Entries. A new Meal Plan begins with Breakfast, Lunch, Dinner, and Snack, and its Meals may be added, renamed, reordered, or removed.
 _Avoid_: Meal slot, meal category
 
 **Food Entry**:
@@ -41,7 +44,7 @@ A visual account of the calories, macronutrients, and micronutrients contained i
 _Avoid_: Nutrition target, goal summary
 
 **Daily Goals**:
-The day's aims stored with each Meal Plan: energy, protein, carbohydrate and fat are targets to reach, fiber is a minimum, and salt is a limit. A new Meal Plan starts at 2 000 kcal, 130 g protein, 220 g carbohydrate, 65 g fat, 30 g fiber and 5 g salt, and a duplicate keeps the original's goals.
+The day's aims stored with each Meal Plan and copied into a Day Log when it starts: energy, protein, carbohydrate and fat are targets to reach, fiber is a minimum, and salt is a limit. A new Meal Plan starts at 2 000 kcal, 130 g protein, 220 g carbohydrate, 65 g fat, 30 g fiber and 5 g salt, and a duplicate keeps the original's goals.
 _Avoid_: Targets, macros plan, budget
 
 **Equivalent**:

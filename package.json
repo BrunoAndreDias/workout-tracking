@@ -19,7 +19,8 @@
     "e2e:custom": "mkdir -p e2e/shots && node e2e/custom-food.mjs",
     "e2e:mobile": "mkdir -p e2e/shots && node e2e/mobile.mjs",
     "e2e:recipe": "mkdir -p e2e/shots && node e2e/recipe.mjs",
-    "eval:search": "node scripts/search-eval.ts"
+    "eval:search": "node scripts/search-eval.ts",
+    "e2e:day-log": "mkdir -p e2e/shots && node e2e/day-log.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

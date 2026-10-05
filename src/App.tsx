@@ -4,61 +4,88 @@ import { SEED_UNITS } from './data/units.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
+import { dayReducer, toIsoDate } from './domain/days.ts'
+import { loadDays, saveDays } from './domain/daysStorage.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
-import type { MealsAction } from './domain/meals.ts'
-import { dayTotals } from './domain/nutrition.ts'
 import { loadState, saveState } from './domain/persistence.ts'
-import { newId, planReducer } from './domain/plans.ts'
+import { planReducer } from './domain/plans.ts'
 import { buildSearchIndex } from './domain/search.ts'
-import type { EntryId, Food, FoodId, MealId, MealPlan, PlanId } from './domain/types.ts'
+import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
 import { loadUnits, saveUnits } from './domain/unitsStorage.ts'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
-import { DaySummary } from './ui/DaySummary.tsx'
-import { FoodPanel } from './ui/FoodPanel.tsx'
-import type { Swap } from './ui/FoodPanel.tsx'
+import { DayEditor } from './ui/DayEditor.tsx'
+import { DayLogView } from './ui/DayLogView.tsx'
+import type { FoodKit } from './ui/DayEditor.tsx'
 import { Footer } from './ui/Footer.tsx'
-import { GoalsPanel } from './ui/GoalsPanel.tsx'
-import { MealSection } from './ui/MealSection.tsx'
-import { NutrientDetail } from './ui/NutrientDetail.tsx'
-import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
+import { HistoryView } from './ui/HistoryView.tsx'
+import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
+import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
 import { UnitsContext } from './ui/unitsContext.ts'
 
-type PanelTarget =
-  | { mode: 'add'; planId: PlanId; mealId: MealId }
-  | { mode: 'swap'; planId: PlanId; mealId: MealId; entryId: EntryId }
-  | { mode: 'goals'; planId: PlanId }
+const VIEWS = [
+  { id: 'planos', label: 'Planos' },
+  { id: 'diario', label: 'Diário' },
+  { id: 'historico', label: 'Histórico' },
+] as const
 
-/** Resolves a food panel target against the current plan; null once its meal or entry is gone. */
-function resolveFoodTarget(target: PanelTarget, plan: MealPlan, foods: ReadonlyMap<FoodId, Food>) {
-  if (target.mode === 'goals' || target.planId !== plan.id) return null
-  const meal = plan.meals.find((m) => m.id === target.mealId)
-  if (!meal) return null
-  if (target.mode === 'add') return { meal, swap: null }
-  const entry = meal.entries.find((e) => e.id === target.entryId)
-  const food = entry && foods.get(entry.foodId)
-  return entry && food ? { meal, swap: { entry, food } satisfies Swap } : null
+type View = (typeof VIEWS)[number]['id']
+
+const viewFromHash = (): View => VIEWS.find((v) => `#${v.id}` === window.location.hash)?.id ?? 'planos'
+
+/** The local date, kept current past midnight and when the tab comes back after sleeping. */
+function useToday(): IsoDate {
+  const [today, setToday] = useState(() => toIsoDate(new Date()))
+  useEffect(() => {
+    let timer = 0
+    const refresh = () => {
+      const now = new Date()
+      setToday(toIsoDate(now))
+      window.clearTimeout(timer)
+      timer = window.setTimeout(refresh, new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime())
+    }
+    const onVisible = () => document.visibilityState === 'visible' && refresh()
+    timer = window.setTimeout(refresh, 0)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', refresh)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
+  return today
 }
 
 const userUnitsReducer = (state: readonly FoodUnit[], action: UnitsAction) => unitsReducer(state, action, SEED_UNITS)
 
 export default function App() {
   const [state, dispatch] = useReducer(planReducer, undefined, () => loadState())
+  const [dayState, dispatchDays] = useReducer(dayReducer, undefined, () => loadDays())
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
-  const [panel, setPanel] = useState<PanelTarget | null>(null)
+  const [view, setView] = useState(viewFromHash)
+  const today = useToday()
 
   useEffect(() => {
     saveState(state)
   }, [state])
+  useEffect(() => {
+    saveDays(dayState)
+  }, [dayState])
   useEffect(() => {
     saveCustomFoods(customDefs)
   }, [customDefs])
   useEffect(() => {
     saveUnits(userUnits)
   }, [userUnits])
+  useEffect(() => {
+    const onHash = () => setView(viewFromHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
   const units = useMemo(() => ({ user: userUnits, dispatch: dispatchUnits }), [userUnits])
 
   const dispatchFoods = (action: CustomFoodsAction) => {
@@ -79,12 +106,21 @@ export default function App() {
     }
   }, [customDefs])
 
-  const allMeals = state.plans.flatMap((p) => p.meals)
+  const allMeals = useMemo(
+    () => [...state.plans.flatMap((p) => p.meals), ...Object.values(dayState.days).flatMap((d) => d.meals)],
+    [state.plans, dayState.days],
+  )
+  const kit: FoodKit = {
+    foods: foodsById,
+    allFoods,
+    searchIndex,
+    catalogIndex,
+    ingredientIndex,
+    table,
+    usedFoods: foodsByUse(allMeals),
+    dispatchFoods,
+  }
   const plan = state.plans.find((p) => p.id === state.selectedId)!
-  const totals = dayTotals(plan.meals, foodsById)
-  const editMeals = (edit: MealsAction) => dispatch({ type: 'editMeals', planId: plan.id, edit })
-  const foodTarget = panel && resolveFoodTarget(panel, plan, foodsById)
-  const close = () => setPanel(null)
 
   return (
     <UnitsContext value={units}>
@@ -93,87 +129,47 @@ export default function App() {
           <header className="top">
             <div className="top-row">
               <div className="eyebrow">Plano alimentar</div>
+              <nav className="views" aria-label="Secções">
+                {VIEWS.map((v) => (
+                  <a key={v.id} href={`#${v.id}`} className="view-link" aria-current={v.id === view ? 'page' : undefined}>
+                    {v.label}
+                  </a>
+                ))}
+              </nav>
               <ThemeToggle />
             </div>
-            <PlanSwitcher state={state} dispatch={dispatch} />
+            {view === 'planos' && <PlanSwitcher state={state} dispatch={dispatch} />}
           </header>
 
           <main className="main">
-            <DaySummary
-              plan={plan}
-              totals={totals}
-              foods={foodsById}
-              onRename={(name) => dispatch({ type: 'renamePlan', planId: plan.id, name })}
-              onEditGoals={() => setPanel({ mode: 'goals', planId: plan.id })}
-            />
-
-            <div className="meals">
-              {plan.meals.map((meal, i) => (
-                <MealSection
-                  key={meal.id}
-                  meal={meal}
-                  index={i}
-                  count={plan.meals.length}
-                  dayKcal={totals.amounts.energyKcal}
-                  foods={foodsById}
-                  table={table}
-                  onAdd={() => setPanel({ mode: 'add', planId: plan.id, mealId: meal.id })}
-                  onSwap={(entryId) => setPanel({ mode: 'swap', planId: plan.id, mealId: meal.id, entryId })}
-                  editMeals={editMeals}
+            {view === 'planos' && (
+              <>
+                <DayEditor
+                  key={plan.id}
+                  title={<InlineName name={plan.name} label="Nome do plano" onRename={(name) => dispatch({ type: 'renamePlan', planId: plan.id, name })} />}
+                  eyebrow={plan.name}
+                  meals={plan.meals}
+                  goals={plan.goals}
+                  kit={kit}
+                  editMeals={(edit) => dispatch({ type: 'editMeals', planId: plan.id, edit })}
+                  onSaveGoals={(goals) => dispatch({ type: 'setGoals', planId: plan.id, goals })}
                 />
-              ))}
-              <button
-                type="button"
-                className="add-meal"
-                onClick={() => editMeals({ type: 'addMeal', mealId: newId<MealId>(), name: `Refeição ${plan.meals.length + 1}` })}
-              >
-                + Adicionar refeição
-              </button>
-            </div>
-
-            <NutrientDetail totals={totals} />
-            <CustomFoodsSection
-              customFoods={customFoods}
-              catalogIndex={catalogIndex}
-              ingredientIndex={ingredientIndex}
-              foods={foodsById}
-              baseName={(id) => catalogById.get(id)?.name}
-              usage={(id) => countEntries(allMeals, id)}
-              dispatchFoods={dispatchFoods}
-            />
+                <CustomFoodsSection
+                  customFoods={customFoods}
+                  catalogIndex={catalogIndex}
+                  ingredientIndex={ingredientIndex}
+                  foods={foodsById}
+                  baseName={(id) => catalogById.get(id)?.name}
+                  usage={(id) => countEntries(allMeals, id)}
+                  dispatchFoods={dispatchFoods}
+                />
+              </>
+            )}
+            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} />}
+            {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
           </main>
           <Footer />
         </div>
-
-        {panel?.mode === 'goals' && panel.planId === plan.id && (
-          <GoalsPanel
-            key={plan.id}
-            eyebrow={plan.name}
-            goals={plan.goals}
-            totals={totals}
-            onSave={(goals) => dispatch({ type: 'setGoals', planId: plan.id, goals })}
-            onClose={close}
-          />
-        )}
-        {foodTarget && (
-          <FoodPanel
-            key={panel?.mode === 'swap' ? panel.entryId : foodTarget.meal.id}
-            meals={plan.meals}
-            goals={plan.goals}
-            meal={foodTarget.meal}
-            swap={foodTarget.swap}
-            usedFoods={foodsByUse(allMeals)}
-            foods={foodsById}
-            allFoods={allFoods}
-            searchIndex={searchIndex}
-            catalogIndex={catalogIndex}
-            ingredientIndex={ingredientIndex}
-            table={table}
-            editMeals={editMeals}
-            dispatchFoods={dispatchFoods}
-            onClose={close}
-          />
-        )}
       </div>
     </UnitsContext>
   )

@@ -25,3 +25,7 @@ export const ArrowIcon = ({ up }: { up: boolean }) => (
     {up ? <path d="M12 19V5M6 11l6-6 6 6" /> : <path d="M12 5v14M6 13l6 6 6-6" />}
   </svg>
 )
+
+export const ChevronIcon = ({ left }: { left: boolean }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" {...stroke} aria-hidden="true"><path d={left ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} /></svg>
+)

@@ -4,6 +4,8 @@ export type FoodId = Brand<string, 'FoodId'>
 export type PlanId = Brand<string, 'PlanId'>
 export type MealId = Brand<string, 'MealId'>
 export type EntryId = Brand<string, 'EntryId'>
+/** A local calendar day, 'YYYY-MM-DD'. */
+export type IsoDate = Brand<string, 'IsoDate'>
 
 export const NUTRIENTS = [
   { key: 'energyKcal', label: 'Energia', unit: 'kcal' },
@@ -142,6 +144,18 @@ export interface MealPlan {
   readonly name: string
   readonly goals: Goals
   readonly meals: readonly Meal[]
+}
+
+/**
+ * What was eaten on one date. Started from a Meal Plan as a snapshot, so later plan edits never rewrite it.
+ * `baseline` is the plan's meals at start, with the same ids as `meals`, and is never edited; it is empty for a blank day.
+ */
+export interface DayLog {
+  readonly date: IsoDate
+  readonly planId: PlanId | null
+  readonly goals: Goals
+  readonly meals: readonly Meal[]
+  readonly baseline: readonly Meal[]
 }
 
 /** A sum over entries. `missing` lists nutrients for which at least one contributing food had no value. */

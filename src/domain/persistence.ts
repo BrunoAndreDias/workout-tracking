@@ -17,9 +17,9 @@ export function defaultStorage(): StorageLike | null {
 }
 
 export const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
-const isId = (v: unknown): v is string => typeof v === 'string' && v.length > 0
+export const isId = (v: unknown): v is string => typeof v === 'string' && v.length > 0
 
-function parseMeal(raw: unknown): Meal | null {
+export function parseMeal(raw: unknown): Meal | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !Array.isArray(raw.entries)) return null
   const entries = []
   for (const e of raw.entries) {
@@ -31,7 +31,7 @@ function parseMeal(raw: unknown): Meal | null {
 }
 
 // Version 1 had no goals; a bad goals object costs only the goals, never the plan's meals.
-function parseGoals(raw: unknown): Goals {
+export function parseGoals(raw: unknown): Goals {
   if (!isRecord(raw)) return DEFAULT_GOALS
   const goals: Record<keyof Goals, number> = { ...DEFAULT_GOALS }
   for (const { key } of GOALS) {

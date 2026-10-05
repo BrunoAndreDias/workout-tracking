@@ -1,3 +1,6 @@
+import { fromIsoDate } from '../domain/days.ts'
+import type { IsoDate } from '../domain/types.ts'
+
 const int = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 })
 // pt-PT only groups from 10 000; the design groups thousands too, with a narrow no-break space.
 const grouped = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0, useGrouping: 'always' })
@@ -25,3 +28,17 @@ export function formatAmount(v: number, unit: string): string {
 }
 
 export const formatPortionCount = (p: number) => one.format(Math.round(p * 10) / 10)
+
+/** Monday first, matching `weekdayOf`; the calendar shows the first three letters. */
+export const WEEKDAY_NAMES = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'] as const
+
+const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
+const shortDate = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'short' })
+const monthYear = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' })
+
+/** "segunda-feira, 5 de outubro" */
+export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(date))
+/** "5/10", for chart axes and tiles where space is tight. */
+export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
+/** "outubro de 2026" */
+export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))

@@ -53,6 +53,10 @@ _Avoid_: Nutrition target, goal summary
 The day's aims stored with each Meal Plan and copied into a Day Log when it starts: energy, protein, carbohydrate and fat are targets to reach, fiber is a minimum, and salt is a limit. A target is met within 10 % of the goal either way, below that it is under, above that it is over. A minimum is never over, and a limit has no tolerance. The goals panel can fill the goals from the day's current totals, because a plan entered from paper states foods and not goals. A new Meal Plan starts at 2 000 kcal, 130 g protein, 220 g carbohydrate, 65 g fat, 30 g fiber and 5 g salt, and a duplicate keeps the original's goals.
 _Avoid_: Targets, macros plan, budget
 
+**Backup**:
+One JSON file holding every store the app keeps: plans, custom Foods, user Household Units and Day Logs, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units and Day Logs the user does not already have, by id or date. A file that is invalid anywhere is rejected whole and changes nothing.
+_Avoid_: Sync, export (as a noun)
+
 **Equivalent**:
 A row of the APN "Manual de Equivalentes Alimentares" (2023): the grams of a Food that make one Portion of an Equivalence Group. Foods in the same group are interchangeable portion for portion.
 _Avoid_: Substitute, exchange

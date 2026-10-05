@@ -14,6 +14,7 @@ import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
 import { loadUnits, saveUnits } from './domain/unitsStorage.ts'
+import { BackupSection } from './ui/BackupSection.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DayEditor } from './ui/DayEditor.tsx'
 import { DayLogView } from './ui/DayLogView.tsx'
@@ -169,6 +170,7 @@ export default function App() {
             {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} />}
             {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
           </main>
+          <BackupSection />
           <Footer />
         </div>
       </div>

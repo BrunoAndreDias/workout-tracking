@@ -8,9 +8,12 @@ export const STORAGE_KEY = 'nutrition-tracking:plans'
 /** 1 had no goals; 2 had one list of entries per meal and no notes; 3 has meal options, time, notes and optional meals. */
 export const SCHEMA_VERSION = 3
 
-export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
+/** `key` and `length` let the unreadable-copy check find a copy it already made; without them a copy is made on every load. */
+export type StorageLike = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'key' | 'length'>>
+/** What a transaction needs: it must put back a key that did not exist. */
+export type RemovableStorage = StorageLike & Pick<Storage, 'removeItem'>
 
-export function defaultStorage(): StorageLike | null {
+export function defaultStorage(): Storage | null {
   try {
     return globalThis.localStorage ?? null
   } catch {
@@ -110,15 +113,48 @@ export function parseState(raw: unknown): PlanState | null {
   return { plans, selectedId: selected.id }
 }
 
-export function loadState(storage: StorageLike | null = defaultStorage()): PlanState {
+const unreadablePrefix = (key: string) => `${key}:unreadable:`
+
+/** Copies a document this build cannot read aside, so the fresh state's first save cannot destroy it. Idempotent per raw text. */
+function preserveUnreadable(storage: StorageLike, key: string, text: string): void {
   try {
-    const text = storage?.getItem(STORAGE_KEY)
-    if (text) return parseState(JSON.parse(text)) ?? initialState()
+    const prefix = unreadablePrefix(key)
+    for (let i = 0; i < (storage.length ?? 0); i++) {
+      const other = storage.key?.(i)
+      if (other?.startsWith(prefix) && storage.getItem(other) === text) return
+    }
+    const base = `${prefix}${new Date().toISOString()}`
+    let copyKey = base
+    for (let n = 2; storage.getItem(copyKey) !== null; n++) copyKey = `${base}#${n}`
+    storage.setItem(copyKey, text)
   } catch {
-    // corrupt JSON or blocked storage: fall through to a fresh state
+    // a full or blocked storage cannot keep the copy; the original is still untouched until the next save
   }
-  return initialState()
 }
+
+/**
+ * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
+ * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`.
+ */
+export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T): T {
+  let text: string | null | undefined
+  try {
+    text = storage?.getItem(key)
+  } catch {
+    return fresh()
+  }
+  if (!storage || !text) return fresh()
+  try {
+    const value = parse(JSON.parse(text))
+    if (value !== null) return value
+  } catch {
+    // corrupt JSON
+  }
+  preserveUnreadable(storage, key, text)
+  return fresh()
+}
+
+export const loadState = (storage: StorageLike | null = defaultStorage()): PlanState => loadStore(storage, STORAGE_KEY, parseState, initialState)
 
 export function saveState(state: PlanState, storage: StorageLike | null = defaultStorage()): boolean {
   try {

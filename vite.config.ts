@@ -23,6 +23,8 @@ function storeApi(): Plugin {
 export default defineConfig({
   plugins: [react(), storeApi()],
   server: { port: 5180, strictPort: true },
+  // Dictation imports transformers lazily; found only then, Vite re-bundles it and reloads the page mid-recording.
+  optimizeDeps: { include: ['@huggingface/transformers'] },
   // Agent worktrees hold whole copies of the repo.
   test: { exclude: [...configDefaults.exclude, '.claude/**'] },
 })

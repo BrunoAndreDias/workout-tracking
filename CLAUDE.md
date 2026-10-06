@@ -16,7 +16,7 @@ Each rule names what enforces it. When the user corrects a mistake, fix it and a
 | A behaviour change updates the browser checks in the same commit. | `npm run check` runs every `e2e/*.mjs`, found by directory listing, not a hand-kept list. |
 | A behaviour change updates the verify-plano feature map (`.claude/skills/verify-plano/features/`) and any `CONTEXT.md` line that describes it. | Docs. Run `/pstack:maintain-verification-skill` after a feature lands. |
 | Don't edit files another session has uncommitted changes in. Work in a worktree, and check `git status` before touching the shared checkout. | Docs (judgment). |
-| Don't change settled product decisions without asking: plans first plus the Day Log, foods in grams, Portuguese UI, APN equivalents for swaps, a ±5 % band for met targets. | Docs (judgment). Tests pin the band (`src/domain/goals.test.ts`). |
+| Don't change settled product decisions without asking: the Diário calendar as home with meal plans as the Alimentação tab, foods in grams, Portuguese UI, APN equivalents for swaps, a ±5 % band for met targets. | Docs (judgment). Tests pin the band (`src/domain/goals.test.ts`). |
 | PortFIR and APN data stay local. Never deploy the app publicly or commit `data/raw/tca.xlsx` or `data/raw/apn.txt`. | `.gitignore` for `data/raw/*`; docs for deploys. |
 | Tests and agents never open the user's database; every dev server they start gets a temp `PLANO_DB`. | `scripts/e2e.mjs` and verify-plano `launch.sh` set a temp `PLANO_DB` with `PLANO_TEST=1`, and `dbPath` refuses the default database under `PLANO_TEST=1` (`server/storeApi.test.ts`). |
 | Port 5180 is the user's own dev server. Agents use another port (e2e uses 5199, verify-plano 5190). | `scripts/e2e.mjs` uses `--strictPort` on `E2E_PORT`. |

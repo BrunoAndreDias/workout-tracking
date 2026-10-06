@@ -22,7 +22,7 @@ const meal: Meal = {
   options: [{ id: 'o1' as OptionId, name: 'Opção 1', entries: [{ id: 'e1' as EntryId, foodId: '430' as FoodId, grams: 60 }] }],
   activeOptionId: 'o1' as OptionId,
 }
-const day = (date: string): DayLog => ({ date: date as IsoDate, planId: 'p1' as PlanId, goals: DEFAULT_GOALS, meals: [meal], baseline: [] })
+const day = (date: string): DayLog => ({ date: date as IsoDate, planId: 'p1' as PlanId, goals: DEFAULT_GOALS, meals: [meal], baseline: [], eaten: [] })
 const label: CustomFoodDef = {
   id: 'custom:bolo' as FoodId,
   name: 'Bolo',
@@ -61,7 +61,7 @@ describe('the text each store writes', () => {
   it('days, sorted by date', () => {
     expect(written((s) => saveStore(STORES.days, { days: { ['2026-10-05' as IsoDate]: day('2026-10-05'), ['2026-10-04' as IsoDate]: day('2026-10-04') } }, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:days": "{"version":2,"days":[{"date":"2026-10-04","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[]},{"date":"2026-10-05","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[]}]}",
+        "nutrition-tracking:days": "{"version":3,"days":[{"date":"2026-10-04","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]},{"date":"2026-10-05","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]}]}",
       }
     `)
   })

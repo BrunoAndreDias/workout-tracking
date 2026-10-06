@@ -172,6 +172,7 @@ export interface MealPlan {
 /**
  * What was eaten on one date. Started from a Meal Plan as a snapshot, so later plan edits never rewrite it.
  * `baseline` is the plan's meals at start, with the same ids as `meals`, and is never edited; it is empty for a blank day.
+ * `meals` is what was planned for the day; only the entries in `eaten`, in the order they appear in `meals`, count.
  */
 export interface DayLog {
   readonly date: IsoDate
@@ -179,6 +180,7 @@ export interface DayLog {
   readonly goals: Goals
   readonly meals: readonly Meal[]
   readonly baseline: readonly Meal[]
+  readonly eaten: readonly EntryId[]
 }
 
 /** A sum over entries. `missing` lists nutrients for which at least one contributing food had no value. */

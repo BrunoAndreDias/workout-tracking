@@ -66,7 +66,7 @@ describe('a stored document of an older version', () => {
     saveStore(STORES.days, loadStore(STORES.days, storage), storage)
     expect(copies(storage.data, STORES.days.key)).toEqual([DAYS_V1])
     const saved = JSON.parse(storage.data[STORES.days.key])
-    expect(saved.version).toBe(2)
+    expect(saved.version).toBe(3)
     expect(saved.days[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
   })
 

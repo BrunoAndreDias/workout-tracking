@@ -1,7 +1,8 @@
+import { useId, useState } from 'react'
 import type { Dispatch } from 'react'
 import { newId } from '../domain/plans.ts'
-import type { ExerciseId } from '../domain/types.ts'
-import type { Exercise, PlannedExercise, WorkoutAction, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
+import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
+import type { Exercise, PlannedExercise, SessionExercise, WorkoutAction, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
 import { ExerciseAdder } from './ExerciseAdder.tsx'
 import { formatPlanned } from './format.ts'
@@ -36,49 +37,16 @@ export function WorkoutSessionCard({ session, day, title, exercises, dispatch }:
         </button>
       </header>
 
-      {session.exercises.map(({ exerciseId, sets }) => {
-        const name = names.get(exerciseId) ?? 'Exercício desconhecido'
-        const target = planned.get(exerciseId)
-        return (
-          <div key={exerciseId} className="lift" role="group" aria-label={name}>
-            <div className="lift-head">
-              <h3 className="lift-name">{name}</h3>
-              {target && <span className="lift-target">Plano {formatPlanned(target)}</span>}
-              <button type="button" className="icon-btn" aria-label={`Remover ${name}`} onClick={() => dispatch({ type: 'removeSessionExercise', sessionId, exerciseId })}>
-                <CloseIcon />
-              </button>
-            </div>
-            <ol className="sets">
-              {sets.map((set, index) => (
-                <li key={index} className="set-row">
-                  <span className="set-num">{index + 1}</span>
-                  <label className="set-field">
-                    <CountField value={set.reps} label={`Repetições da série ${index + 1} de ${name}`} onCommit={(reps) => dispatch({ type: 'setSet', sessionId, exerciseId, index, set: { ...set, reps } })} />
-                    <span className="unit">reps</span>
-                  </label>
-                  <label className="set-field">
-                    <CountField
-                      value={set.kg}
-                      decimal
-                      placeholder="—"
-                      label={`Kg da série ${index + 1} de ${name}`}
-                      onCommit={(kg) => dispatch({ type: 'setSet', sessionId, exerciseId, index, set: { ...set, kg } })}
-                    />
-                    <span className="unit">kg</span>
-                  </label>
-                  <button type="button" className="icon-btn" aria-label={`Remover série ${index + 1} de ${name}`} onClick={() => dispatch({ type: 'removeSet', sessionId, exerciseId, index })}>
-                    <CloseIcon size={14} />
-                  </button>
-                </li>
-              ))}
-            </ol>
-            <button type="button" className="text-btn" aria-label={`Adicionar série a ${name}`} onClick={() => dispatch({ type: 'addSet', sessionId, exerciseId })}>
-              <PlusIcon />
-              Série
-            </button>
-          </div>
-        )
-      })}
+      {session.exercises.map((exercise) => (
+        <Lift
+          key={exercise.exerciseId}
+          sessionId={sessionId}
+          exercise={exercise}
+          name={names.get(exercise.exerciseId) ?? 'Exercício desconhecido'}
+          target={planned.get(exercise.exerciseId)}
+          dispatch={dispatch}
+        />
+      ))}
 
       <div className="session-foot">
         <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })} />
@@ -91,5 +59,72 @@ export function WorkoutSessionCard({ session, day, title, exercises, dispatch }:
         />
       </div>
     </section>
+  )
+}
+
+interface LiftProps {
+  sessionId: WorkoutSessionId
+  exercise: SessionExercise
+  name: string
+  target: PlannedExercise | undefined
+  dispatch: Dispatch<WorkoutAction>
+}
+
+function Lift({ sessionId, exercise: { exerciseId, sets, note }, name, target, dispatch }: LiftProps) {
+  const [noteOpen, setNoteOpen] = useState(note !== undefined)
+  const noteId = useId()
+  return (
+    <div className="lift" role="group" aria-label={name}>
+      <div className="lift-head">
+        <h3 className="lift-name">{name}</h3>
+        {target && <span className="lift-target">Plano {formatPlanned(target)}</span>}
+        <button type="button" className="icon-btn" aria-label={`Remover ${name}`} onClick={() => dispatch({ type: 'removeSessionExercise', sessionId, exerciseId })}>
+          <CloseIcon />
+        </button>
+      </div>
+      <ol className="sets">
+        {sets.map((set, index) => (
+          <li key={index} className="set-row">
+            <span className="set-num">{index + 1}</span>
+            <label className="set-field">
+              <CountField value={set.reps} label={`Repetições da série ${index + 1} de ${name}`} onCommit={(reps) => dispatch({ type: 'setSet', sessionId, exerciseId, index, set: { ...set, reps } })} />
+              <span className="unit">reps</span>
+            </label>
+            <label className="set-field">
+              <CountField
+                value={set.kg}
+                decimal
+                placeholder="—"
+                label={`Kg da série ${index + 1} de ${name}`}
+                onCommit={(kg) => dispatch({ type: 'setSet', sessionId, exerciseId, index, set: { ...set, kg } })}
+              />
+              <span className="unit">kg</span>
+            </label>
+            <button type="button" className="icon-btn" aria-label={`Remover série ${index + 1} de ${name}`} onClick={() => dispatch({ type: 'removeSet', sessionId, exerciseId, index })}>
+              <CloseIcon size={14} />
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="lift-actions">
+        <button type="button" className="text-btn" aria-label={`Adicionar série a ${name}`} onClick={() => dispatch({ type: 'addSet', sessionId, exerciseId })}>
+          <PlusIcon />
+          Série
+        </button>
+        <button type="button" className="text-btn quiet" aria-label={`Nota de ${name}`} aria-expanded={noteOpen} aria-controls={noteId} onClick={() => setNoteOpen(!noteOpen)}>
+          Nota
+          {!noteOpen && note && <span className="notes-dot" aria-hidden="true" />}
+        </button>
+      </div>
+      {noteOpen && (
+        <TimedNoteField
+          id={noteId}
+          note={note}
+          label={`Nota de ${name}`}
+          placeholder="Dores, desconforto, como correu"
+          onEdit={(text, now) => dispatch({ type: 'setExerciseNote', sessionId, exerciseId, text, now })}
+        />
+      )}
+    </div>
   )
 }

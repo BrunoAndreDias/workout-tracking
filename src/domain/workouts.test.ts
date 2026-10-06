@@ -162,3 +162,34 @@ describe('parseRepRange', () => {
     expect(parseRepRange(text)).toEqual(expected)
   })
 })
+
+describe('exercise notes', () => {
+  const S1 = 's1' as WorkoutSessionId
+  const at = (s: string) => s as LocalDateTime
+  const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
+
+  it('gives one exercise its own note with when it was written and last edited, leaving the others alone', () => {
+    const s = run(
+      [
+        { type: 'setExerciseNote', sessionId: S1, exerciseId: SUPINO, text: 'Ombro esq. a picar', now: at('2026-10-06T18:40:00') },
+        { type: 'setExerciseNote', sessionId: S1, exerciseId: SUPINO, text: 'Ombro esq. a picar na 3.ª série', now: at('2026-10-06T18:47:30') },
+      ],
+      start,
+    )
+    expect(s.sessions[0].exercises).toEqual([
+      { exerciseId: SUPINO, sets: [], note: { text: 'Ombro esq. a picar na 3.ª série', createdAt: '2026-10-06T18:40:00', updatedAt: '2026-10-06T18:47:30' } },
+      { exerciseId: REMO, sets: [] },
+    ])
+  })
+
+  it('removes the note, key and all, when cleared to blank', () => {
+    const s = run(
+      [
+        { type: 'setExerciseNote', sessionId: S1, exerciseId: REMO, text: 'Bem', now: at('2026-10-06T18:40:00') },
+        { type: 'setExerciseNote', sessionId: S1, exerciseId: REMO, text: '', now: at('2026-10-06T18:41:00') },
+      ],
+      start,
+    )
+    expect(Object.keys(s.sessions[0].exercises[1])).toEqual(['exerciseId', 'sets'])
+  })
+})

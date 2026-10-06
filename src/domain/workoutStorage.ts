@@ -13,7 +13,7 @@ export const EXERCISES_SCHEMA_VERSION = 1
 export const WORKOUT_PLANS_STORAGE_KEY = STORE_KEY.workoutPlans
 export const WORKOUT_PLANS_SCHEMA_VERSION = 1
 export const WORKOUT_SESSIONS_STORAGE_KEY = STORE_KEY.workoutSessions
-/** 1 had a plain-text `notes`; 2 has an optional timed `note`. */
+/** 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. */
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 2
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
@@ -80,7 +80,9 @@ function parseSet(raw: unknown): LoggedSet | null {
 function parseSessionExercise(raw: unknown): SessionExercise | null {
   if (!isRecord(raw) || !isId(raw.exerciseId)) return null
   const sets = parseList(raw.sets, parseSet)
-  return sets && { exerciseId: raw.exerciseId as ExerciseId, sets }
+  const note = parseOptionalNote(raw.note)
+  if (!sets || note === false) return null
+  return note ? { exerciseId: raw.exerciseId as ExerciseId, sets, note } : { exerciseId: raw.exerciseId as ExerciseId, sets }
 }
 
 /** A version 1 note was plain text with no time: it counts as written at midday of the session's date. */

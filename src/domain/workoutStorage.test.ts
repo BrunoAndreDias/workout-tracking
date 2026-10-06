@@ -19,7 +19,13 @@ const SESSION = {
   id: 's1',
   date: '2026-10-06',
   workoutDayId: 'd1',
-  exercises: [{ exerciseId: 'e1', sets: [{ reps: 8, kg: 62.5 }, { reps: 10, kg: null }, { reps: null, kg: null }] }],
+  exercises: [
+    {
+      exerciseId: 'e1',
+      sets: [{ reps: 8, kg: 62.5 }, { reps: 10, kg: null }, { reps: null, kg: null }],
+      note: { text: 'Pulso dir. a doer na última', createdAt: '2026-10-06T19:12:00', updatedAt: '2026-10-06T19:12:00' },
+    },
+  ],
   note: { text: 'Ombro ok', createdAt: '2026-10-06T19:30:00', updatedAt: '2026-10-06T19:41:00' },
 }
 const PLAN = { id: 'p1', name: 'Força', days: [{ id: 'd1', name: 'Peito', exercises: [{ exerciseId: 'e1', sets: 4, reps: { min: 6, max: 6 } }] }] }
@@ -52,6 +58,7 @@ describe('workout storage', () => {
     ['an exercise twice', { version: 2, sessions: [{ ...SESSION, exercises: [SESSION.exercises[0], SESSION.exercises[0]] }] }],
     ['a repeated session id', { version: 2, sessions: [SESSION, SESSION] }],
     ['a blank note', { version: 2, sessions: [{ ...SESSION, note: { ...SESSION.note, text: '' } }] }],
+    ['an exercise note with no times', { version: 2, sessions: [{ ...SESSION, exercises: [{ ...SESSION.exercises[0], note: { text: 'x' } }] }] }],
     ['a version 1 session without notes', { version: 1, sessions: [{ ...SESSION, note: undefined }] }],
   ])('rejects sessions with %s', (_, raw) => {
     expect(parseWorkoutSessions(raw)).toBe(null)

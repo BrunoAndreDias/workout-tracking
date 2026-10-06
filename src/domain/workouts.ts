@@ -41,6 +41,8 @@ export interface LoggedSet {
 export interface SessionExercise {
   readonly exerciseId: ExerciseId
   readonly sets: readonly LoggedSet[]
+  /** Pain, discomfort or anything else about this Exercise in this session. */
+  readonly note?: TimedNote
 }
 
 /** `workoutDayId` is the day it started from, null for a blank session; the day may since have been deleted. */
@@ -151,6 +153,7 @@ export type WorkoutAction =
   | { type: 'addSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
   | { type: 'setSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number; set: LoggedSet }
   | { type: 'removeSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number }
+  | { type: 'setExerciseNote'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; text: string; now: LocalDateTime }
   | { type: 'setSessionNote'; sessionId: WorkoutSessionId; text: string; now: LocalDateTime }
   | { type: 'deleteSession'; sessionId: WorkoutSessionId }
 
@@ -175,8 +178,12 @@ function updateSession(state: WorkoutState, sessionId: WorkoutSessionId, fn: (se
   return { ...state, sessions: state.sessions.map((s) => (s.id === sessionId ? fn(s) : s)) }
 }
 
+function updateExercise(state: WorkoutState, sessionId: WorkoutSessionId, exerciseId: ExerciseId, fn: (exercise: SessionExercise) => SessionExercise): WorkoutState {
+  return updateSession(state, sessionId, (s) => ({ ...s, exercises: s.exercises.map((e) => (e.exerciseId === exerciseId ? fn(e) : e)) }))
+}
+
 function updateSets(state: WorkoutState, sessionId: WorkoutSessionId, exerciseId: ExerciseId, fn: (sets: readonly LoggedSet[]) => readonly LoggedSet[]): WorkoutState {
-  return updateSession(state, sessionId, (s) => ({ ...s, exercises: s.exercises.map((e) => (e.exerciseId === exerciseId ? { ...e, sets: fn(e.sets) } : e)) }))
+  return updateExercise(state, sessionId, exerciseId, (e) => ({ ...e, sets: fn(e.sets) }))
 }
 
 export function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutState {
@@ -231,6 +238,8 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.map((s, i) => (i === action.index ? action.set : s)))
     case 'removeSet':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.filter((_, i) => i !== action.index))
+    case 'setExerciseNote':
+      return updateExercise(state, action.sessionId, action.exerciseId, (e) => withNote(e, editNote(e.note, action.text, action.now)))
     case 'setSessionNote':
       return updateSession(state, action.sessionId, (s) => withNote(s, editNote(s.note, action.text, action.now)))
     case 'deleteSession':

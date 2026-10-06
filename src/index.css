@@ -348,6 +348,43 @@ small { font-size: 0.85em; color: var(--muted); }
 .goal-unit { padding-right: 14px; font-size: 13px; color: var(--muted); }
 
 /* Tools fade only where hover exists; keyboard focus and touch keep them reachable. */
+/* workouts */
+.workout-date { padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+.workout-date .icon-btn { width: 44px; height: 44px; color: var(--ink-2); }
+.workout-date-title { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.workout-date .cal-title { text-align: center; font-size: 22px; }
+.workout-date .link-btn { min-height: 28px; padding: 0; font-size: 13px; }
+.session, .workout-day { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.session-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
+.session-title { font: 500 26px/1.15 var(--font-serif); min-width: 0; }
+.lift { display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.lift-head { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.lift-name { font-size: 16px; font-weight: 600; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.lift-target { font-size: 13px; color: var(--muted); }
+.sets { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; list-style: none; }
+.set-row { display: grid; grid-template-columns: 24px auto auto 36px; align-items: center; justify-content: start; gap: 10px; }
+.set-num { font-size: 13px; color: var(--muted); text-align: right; }
+.set-field { display: inline-flex; align-items: center; gap: 6px; }
+.count-input { width: 64px; height: 44px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--field); font-size: 16px; font-weight: 500; text-align: right; }
+.count-input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.count-input::placeholder { color: var(--faint); font-weight: 400; }
+.lift .text-btn { align-self: flex-start; margin-left: 26px; }
+.session-foot { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.exercise-adder { display: flex; align-items: center; gap: 8px; max-width: 560px; }
+.exercise-adder .field-input { flex: 1 1 auto; font-size: 16px; }
+.workout-plan-title { font: 500 36px/1.1 var(--font-serif); letter-spacing: -0.01em; min-width: 0; }
+.workout-plan-note { margin-top: -18px; font-size: 14px; }
+.workout-empty { font-size: 14px; }
+.planned-list { display: flex; flex-direction: column; }
+.planned { display: grid; grid-template-columns: minmax(0, 1fr) auto 36px; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px solid var(--rule); }
+.planned-name { font-weight: 500; overflow-wrap: anywhere; }
+.planned-fields { display: inline-flex; align-items: center; gap: 6px; }
+.planned-fields .count-input { width: 52px; }
+.planned-fields .reps-input { width: 76px; }
+.workout-line { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; color: var(--muted); font-size: 14px; text-decoration: none; }
+.workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
+.workout-line-name { font-weight: 600; color: var(--ink); }
+
 @media (hover: hover) and (pointer: fine) {
   .meal-tools { opacity: 0; }
   .meal-head:hover .meal-tools, .meal-tools:focus-within { opacity: 1; }
@@ -411,9 +448,17 @@ small { font-size: 0.85em; color: var(--muted); }
   .food-form, .label-fields { gap: 12px; }
   .ingredient { grid-template-columns: minmax(0, 1fr) auto; }
   .ingredient-name { grid-column: 1 / -1; }
+  .session, .workout-day { padding: 16px; gap: 12px; }
+  .session-title { font-size: 23px; }
+  .workout-plan-title { font-size: 30px; }
+  .workout-plan-note { margin-top: -10px; }
+  .planned { grid-template-columns: minmax(0, 1fr) 36px; }
+  .planned-fields { grid-row: 2; }
 }
 @media (max-width: 480px) {
   .meal-bar { display: none; }
+  /* Four views and the theme toggle share one row on a phone. */
+  .view-link { padding: 0 11px; }
 }
 @media (max-width: 380px) {
   .swap-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

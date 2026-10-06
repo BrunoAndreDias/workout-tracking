@@ -4,7 +4,7 @@ import { SEED_UNITS } from './data/units.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
-import { dayReducer, toIsoDate } from './domain/days.ts'
+import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
 import { loadDays, saveDays } from './domain/daysStorage.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
 import { loadState, saveState } from './domain/persistence.ts'
@@ -14,6 +14,8 @@ import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
 import { loadUnits, saveUnits } from './domain/unitsStorage.ts'
+import { loadWorkouts, saveExercises, saveWorkoutPlans, saveWorkoutSessions } from './domain/workoutStorage.ts'
+import { workoutReducer } from './domain/workouts.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DayEditor } from './ui/DayEditor.tsx'
@@ -24,17 +26,24 @@ import { HistoryView } from './ui/HistoryView.tsx'
 import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
+import { WorkoutView } from './ui/WorkoutView.tsx'
 import { UnitsContext } from './ui/unitsContext.ts'
 
 const VIEWS = [
   { id: 'planos', label: 'Planos' },
   { id: 'diario', label: 'Diário' },
   { id: 'historico', label: 'Histórico' },
+  { id: 'treino', label: 'Treino' },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
 
-const viewFromHash = (): View => VIEWS.find((v) => `#${v.id}` === window.location.hash)?.id ?? 'planos'
+/** `#treino/2026-10-06` opens the Treino view on that date; a bare `#treino` opens it on today. */
+function routeFromHash(): { view: View; date: IsoDate | null } {
+  const [id, arg] = window.location.hash.slice(1).split('/')
+  const view = VIEWS.find((v) => v.id === id)?.id ?? 'planos'
+  return { view, date: view === 'treino' && arg ? parseIsoDate(arg) : null }
+}
 
 /** The local date, kept current past midnight and when the tab comes back after sleeping. */
 function useToday(): IsoDate {
@@ -67,7 +76,8 @@ export default function App() {
   const [dayState, dispatchDays] = useReducer(dayReducer, undefined, () => loadDays())
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
-  const [view, setView] = useState(viewFromHash)
+  const [workouts, dispatchWorkouts] = useReducer(workoutReducer, undefined, () => loadWorkouts())
+  const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
   useEffect(() => {
@@ -83,7 +93,17 @@ export default function App() {
     saveUnits(userUnits)
   }, [userUnits])
   useEffect(() => {
-    const onHash = () => setView(viewFromHash())
+    saveExercises(workouts.exercises)
+  }, [workouts.exercises])
+  const { plans: workoutPlans, activePlanId } = workouts
+  useEffect(() => {
+    saveWorkoutPlans({ plans: workoutPlans, activePlanId })
+  }, [workoutPlans, activePlanId])
+  useEffect(() => {
+    saveWorkoutSessions(workouts.sessions)
+  }, [workouts.sessions])
+  useEffect(() => {
+    const onHash = () => setRoute(routeFromHash())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
@@ -167,8 +187,11 @@ export default function App() {
                 />
               </>
             )}
-            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} />}
+            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} />}
             {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
+            {view === 'treino' && (
+              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
+            )}
           </main>
           <BackupSection />
           <Footer />

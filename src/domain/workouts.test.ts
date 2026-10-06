@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { emptyWorkouts, loggedCounts, prefillSets, startSession, workoutReducer } from './workouts.ts'
+import { emptyWorkouts, loggedCounts, parseRepRange, prefillSets, startSession, workoutReducer } from './workouts.ts'
 import type { WorkoutAction, WorkoutDay, WorkoutSession, WorkoutState } from './workouts.ts'
 
 const SUPINO = 'ex-supino' as ExerciseId
@@ -147,5 +147,20 @@ describe('workoutReducer', () => {
     const one = run([{ type: 'deletePlan', planId: 'p2' as WorkoutPlanId }], two)
     expect(one.activePlanId).toBe('p1')
     expect(run([{ type: 'deletePlan', planId: P }], one).activePlanId).toBe(null)
+  })
+})
+
+describe('parseRepRange', () => {
+  it.each([
+    ['8-12', { min: 8, max: 12 }],
+    [' 8 – 12 ', { min: 8, max: 12 }],
+    ['6 a 8', { min: 6, max: 8 }],
+    ['10', { min: 10, max: 10 }],
+    ['12-8', null],
+    ['8-', null],
+    ['0', null],
+    ['', null],
+  ])('reads "%s"', (text, expected) => {
+    expect(parseRepRange(text)).toEqual(expected)
   })
 })

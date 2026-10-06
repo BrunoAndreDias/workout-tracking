@@ -1,5 +1,7 @@
 import { fromIsoDate } from '../domain/days.ts'
 import type { IsoDate } from '../domain/types.ts'
+import { findDay } from '../domain/workouts.ts'
+import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
 
 const int = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 })
 // pt-PT only groups from 10 000; the design groups thousands too, with a narrow no-break space.
@@ -44,3 +46,17 @@ export const formatRepeatDate = (date: IsoDate) => formatLongDate(date).replace(
 export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
 /** "outubro de 2026" */
 export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))
+
+/** "3 × 8–12", or "4 × 6" when the range is a single target. */
+export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) =>
+  `${sets} × ${reps.min === reps.max ? reps.min : `${reps.min}–${reps.max}`}`
+
+/** "1 exercício, 3 séries" */
+export const formatLoggedCounts = ({ exercises, sets }: { exercises: number; sets: number }) =>
+  `${exercises} ${exercises === 1 ? 'exercício' : 'exercícios'}, ${sets} ${sets === 1 ? 'série' : 'séries'}`
+
+/** The Workout Day a session started from, by its current name. */
+export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {
+  if (session.workoutDayId === null) return 'Treino livre'
+  return findDay(plans, session.workoutDayId)?.name ?? 'Dia de treino eliminado'
+}

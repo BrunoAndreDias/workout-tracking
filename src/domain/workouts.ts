@@ -77,6 +77,15 @@ function resolveExercise(exercises: readonly Exercise[], name: string, newId: Ex
   return found ? { exercises, id: found.id } : { exercises: [...exercises, { id: newId, name: trimmed }], id: newId }
 }
 
+/** "8-12", "8–12" or "8" as typed: null unless the minimum is at least 1 and not above the maximum. */
+export function parseRepRange(text: string): RepRange | null {
+  const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)
+  if (!m) return null
+  const min = Number(m[1])
+  const max = m[2] === undefined ? min : Number(m[2])
+  return min >= 1 && max >= min ? { min, max } : null
+}
+
 const isFilled = (set: LoggedSet) => set.reps !== null
 
 /** The filled sets of `exerciseId` in the latest session on or before `date`; on the same date, the one logged last. Null when none. */

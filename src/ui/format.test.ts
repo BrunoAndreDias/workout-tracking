@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGrams, formatKcal, formatMacro, formatPercent, formatPortionCount, formatSigned } from './format.ts'
+import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatPercent, formatPlanned, formatPortionCount, formatSigned } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -34,5 +34,12 @@ describe('pt-PT formatting', () => {
     expect(formatAmount(12.34, 'mg')).toBe('12,3')
     expect(formatAmount(0.125, 'g')).toBe('0,13')
     expect(formatPercent(0.254)).toBe('25%')
+  })
+
+  it('writes a planned exercise and a session count', () => {
+    expect(formatPlanned({ sets: 3, reps: { min: 8, max: 12 } })).toBe('3 × 8–12')
+    expect(formatPlanned({ sets: 4, reps: { min: 6, max: 6 } })).toBe('4 × 6')
+    expect(formatLoggedCounts({ exercises: 1, sets: 1 })).toBe('1 exercício, 1 série')
+    expect(formatLoggedCounts({ exercises: 2, sets: 7 })).toBe('2 exercícios, 7 séries')
   })
 })

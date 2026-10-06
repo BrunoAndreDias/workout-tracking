@@ -7,6 +7,10 @@ export type EntryId = Brand<string, 'EntryId'>
 export type OptionId = Brand<string, 'OptionId'>
 /** A local calendar day, 'YYYY-MM-DD'. */
 export type IsoDate = Brand<string, 'IsoDate'>
+export type ExerciseId = Brand<string, 'ExerciseId'>
+export type WorkoutPlanId = Brand<string, 'WorkoutPlanId'>
+export type WorkoutDayId = Brand<string, 'WorkoutDayId'>
+export type WorkoutSessionId = Brand<string, 'WorkoutSessionId'>
 
 export const NUTRIENTS = [
   { key: 'energyKcal', label: 'Energia', unit: 'kcal' },

@@ -1,6 +1,6 @@
 # Nutrition Tracking
 
-This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table.
+This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table. It is also that person's health log: workouts now, and later sleep, pain and watch metrics.
 
 ## Language
 
@@ -53,8 +53,41 @@ _Avoid_: Nutrition target, goal summary
 The day's aims stored with each Meal Plan and copied into a Day Log when it starts: energy, protein, carbohydrate and fat are targets to reach, fiber is a minimum, and salt is a limit. A target is met within 5 % of the goal either way, below that it is under, above that it is over. A minimum is never over, and a limit has no tolerance. The goals panel can fill the goals from the day's current totals, because a plan entered from paper states foods and not goals. A new Meal Plan starts at 2 000 kcal, 130 g protein, 220 g carbohydrate, 65 g fat, 30 g fiber and 5 g salt, and a duplicate keeps the original's goals.
 _Avoid_: Targets, macros plan, budget
 
+**Exercise** (Exercício):
+A named movement the user trains, such as "Supino". It is created by typing a new name in a Workout Day or a Workout Session, and typing a name it already has, ignoring case, picks the existing one. The app ships no exercise library.
+_Avoid_: Movement, lift
+
+**Workout Plan** (Plano de treino):
+A named training program made of Workout Days, written by the user from their own plan. The user may keep several and one is active: its days are the ones a Workout Session can start from. The app never generates, rates or adjusts a plan.
+_Avoid_: Program, routine, split; "Plano" alone, which is a Meal Plan
+
+**Workout Day** (Dia de treino):
+One named day of a Workout Plan, such as "Peito e tríceps", holding its Planned Exercises in order. An Exercise appears at most once in a day.
+_Avoid_: Workout template
+
+**Planned Exercise**:
+An Exercise in a Workout Day with its number of sets and a rep range, such as 3 × 8–12. A single target is a range whose minimum and maximum are equal.
+
+**Workout Session** (Treino):
+What was trained on one calendar date, in the same date form as the Day Log. It starts from a Workout Day or blank, and then keeps its own copy, so editing the plan later never changes it. Starting from a day gives one row per Planned Exercise with the planned number of sets. Each set is filled in from the latest earlier session that logged that Exercise, repeating its last set when the plan asks for more sets, and is left empty when the Exercise was never logged. An Exercise appears at most once in a session. A session also has free-text notes. A date may hold more than one session, and the Diário shows a line for each.
+_Avoid_: Workout (as a type name), training log
+
+**Logged Set**:
+One set of a Workout Session: the reps done and the load in kg, or no load for a bodyweight set. A set whose reps are empty is not filled in yet and counts as not logged.
+_Avoid_: Rep set, entry
+
+**Sleep Entry** (not built yet):
+How one night's sleep went: a quality from 1 to 5 and, optionally, the hours slept.
+
+**Pain Entry** (not built yet):
+A pain the user felt: the body region, an intensity from 0 to 10 and, optionally, the time and a note.
+
+**Health Sample** (not built yet):
+One daily metric recorded by the user's Apple Watch, such as stand hours, imported into the app rather than typed.
+_Avoid_: Reading, measurement
+
 **Backup**:
-One JSON file holding every store the app keeps: plans, custom Foods, user Household Units and Day Logs, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units and Day Logs the user does not already have, by id or date. A file that is invalid anywhere is rejected whole and changes nothing.
+One JSON file holding every store the app keeps: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans and Workout Sessions, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans and Workout Sessions the user does not already have, by id or date. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
 _Avoid_: Sync, export (as a noun)
 
 **Equivalent**:

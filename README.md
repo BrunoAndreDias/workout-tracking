@@ -2,6 +2,8 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
+It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise.
+
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
 ## Run
@@ -11,7 +13,7 @@ npm install
 npm run dev            # http://localhost:5180
 ```
 
-Plans are saved in the browser's localStorage.
+Plans, day logs and workouts are saved in the browser's localStorage.
 
 ## Data
 

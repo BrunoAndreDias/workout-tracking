@@ -2,7 +2,7 @@
 // so a UI change is fixed here once instead of in every script's copy.
 // Every quantity field opens in grams (2fc4aaf), so typing grams needs no unit switch.
 
-const STORAGE_KEYS = ['plans', 'foods', 'units', 'days']
+const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -12,7 +12,7 @@ export class FlowError extends Error {
   }
 }
 
-/** The four localStorage documents, parsed (null when absent): the shape of a plano state file. */
+/** The localStorage documents, parsed (null when absent): the shape of a plano state file. */
 export const readStored = (page) =>
   page.evaluate((keys) => Object.fromEntries(keys.map((k) => [k, JSON.parse(localStorage.getItem(`nutrition-tracking:${k}`) ?? 'null')])), STORAGE_KEYS)
 

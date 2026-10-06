@@ -27,6 +27,8 @@ Each store's first change of a day keeps the version from before it in the `snap
 node -e 'const db = new (require("node:sqlite").DatabaseSync)(process.argv[1]); console.log(db.prepare("SELECT day, key, length(doc) FROM snapshots ORDER BY day DESC LIMIT 20").all())' ~/.plano-alimentar/plano.sqlite
 ```
 
+To see what the database holds without opening it by hand, run `! npm run plano -- inspect` in Claude Code, or `npm run plano -- inspect` in a terminal. It opens `PLANO_DB` read-only and prints, per store, its rev, when it was last written and its size in bytes, plus the count and the first and last date for the days, sleep, pains, health and workout sessions. It never prints a document's contents. Agents don't run it: `.claude/settings.json` denies it, and they never open the real database.
+
 To run the built app on its own Node server:
 
 ```sh

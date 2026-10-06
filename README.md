@@ -13,7 +13,30 @@ npm install
 npm run dev            # http://localhost:5180
 ```
 
-Plans, day logs, workouts, sleep, pains and watch values are saved in the browser's localStorage.
+## Where the data lives
+
+Plans, day logs, custom foods, units, workouts, sleep, pains and watch values live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
+
+The browser keeps a working copy in localStorage. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
+
+The first time a browser opens the app against an empty database, it uploads what it has in localStorage. Open the browser that holds your data first. A second browser that already has its own data then gets the server's copy instead and loses its own, so export a Backup from it before and import it with `Juntar aos meus dados` after.
+
+Each store's first change of a day keeps the version from before it in the `snapshots` table, so a bad day can be undone from the file:
+
+```sh
+node -e 'const db = new (require("node:sqlite").DatabaseSync)(process.argv[1]); console.log(db.prepare("SELECT day, key, length(doc) FROM snapshots ORDER BY day DESC LIMIT 20").all())' ~/.plano-alimentar/plano.sqlite
+```
+
+To run the built app on its own Node server:
+
+```sh
+npm run serve          # builds, then serves dist/ and /api/stores on http://127.0.0.1:4173
+PORT=8080 PLANO_DB=/path/to/plano.sqlite npm run serve
+```
+
+It listens on this machine only. `HOST=0.0.0.0` would open it to your network, and it has no login: anyone who can reach it reads and changes everything. Put it behind authentication before that, and never deploy it publicly (see the licence note above).
+
+Tests never open this file. `npm run e2e` and the verify-plano skill give each dev server they start a temp `PLANO_DB` and `PLANO_TEST=1`, which is also the only way the API allows `DELETE /api/stores`.
 
 ## Apple Watch import
 

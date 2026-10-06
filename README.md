@@ -106,6 +106,10 @@ node scripts/unmapped-candidates.ts   # PortFIR candidates for APN labels mapped
 
 `data/apn-table.ts` is the hand-transcribed APN table. `data/apn-portfir-map.ts` maps each APN label to PortFIR food codes. Edit those two files and rebuild.
 
+## Dictation
+
+The plan, meal and workout notes have a mic button. Speech is transcribed on the device with OpenAI's Whisper small model through Transformers.js, in a Web Worker. The first use downloads about 250 MB of model files (and the wasm runtime from jsdelivr), which the browser then caches. No audio leaves the device. `npm run e2e` caches the model under `e2e/.cache/` (gitignored) so only the first run downloads it.
+
 ## Checks
 
 ```sh

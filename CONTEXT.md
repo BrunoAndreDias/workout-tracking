@@ -57,6 +57,10 @@ _Avoid_: Targets, macros plan, budget
 A named movement the user trains, such as "Supino". It is created by typing a new name in a Workout Day or a Workout Session, and typing a name it already has, ignoring case, picks the existing one. The app ships no exercise library.
 _Avoid_: Movement, lift
 
+**Dictation** (Ditado):
+Speaking a note instead of typing it. The mic button on a note field records until tapped again, and the transcribed text is appended to the note. The user's voice is transcribed on the device by the Whisper small speech model, which is downloaded once (about 250 MB) the first time the user dictates. No audio leaves the device. Only the plan, meal and workout notes can be dictated.
+_Avoid_: Voice note (that would be a stored recording; none is kept), voice input
+
 **Workout Plan** (Plano de treino):
 A named training program made of Workout Days, written by the user from their own plan. The user may keep several and one is active: its days are the ones a Workout Session can start from. The app never generates, rates or adjusts a plan.
 _Avoid_: Program, routine, split; "Plano" alone, which is a Meal Plan

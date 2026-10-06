@@ -7,8 +7,10 @@ import { saveState, STORAGE_KEY } from './persistence.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
-import type { CustomFoodDef, DayLog, EntryId, FoodId, IsoDate, MealId, NutrientValues, PlanId } from './types.ts'
+import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, MealId, NutrientValues, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
+import { saveExercises, saveWorkoutPlans, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
+import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = { ...initial }
@@ -46,12 +48,30 @@ const day = (date: string, planId: PlanId | null): DayLog => {
   return { date: date as IsoDate, planId, goals: plan.goals, meals: plan.meals, baseline: plan.meals }
 }
 
+const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }
+const PEITO: WorkoutPlan = {
+  id: 'wp-1' as WorkoutPlanId,
+  name: 'Força',
+  days: [{ id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] }],
+}
+const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
+  id: id as WorkoutSessionId,
+  date: '2026-05-01' as IsoDate,
+  workoutDayId: null,
+  exercises: [{ exerciseId, sets: [{ reps: 8, kg: 60 }] }],
+  notes: '',
+})
+const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
+
 function filled() {
   const storage = memoryStorage()
   saveState(withEntry(A, 'Treino'), storage)
   saveCustomFoods([SKYR], storage)
   saveUnits([COPO], storage)
   saveDays({ days: { '2026-05-01': day('2026-05-01', A) } as Record<IsoDate, DayLog> }, storage)
+  saveExercises([SUPINO], storage)
+  saveWorkoutPlans({ plans: [PEITO], activePlanId: PEITO.id }, storage)
+  saveWorkoutSessions([workout('ws-1', SUPINO.id)], storage)
   return storage
 }
 
@@ -61,7 +81,7 @@ const parsed = (raw: unknown): BackupData => {
   return r.data
 }
 
-const NO_PLANS = { plans: null, foods: [], units: [], days: { days: {} } } satisfies BackupData
+const NO_PLANS = { plans: null, foods: [], units: [], days: { days: {} }, ...NO_WORKOUTS } satisfies BackupData
 
 describe('backup', () => {
   it('round-trips every store through export and parse', () => {
@@ -74,13 +94,13 @@ describe('backup', () => {
     expect(file.stores.plans).toEqual(JSON.parse(storage.data[STORAGE_KEY]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
-    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia')
+    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino')
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
-    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias')
+    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos')
   })
 
   it('migrates an old-version plans document inside a backup', () => {
@@ -105,6 +125,21 @@ describe('backup', () => {
       'one good store and one bad',
       { app: 'plano-alimentar', version: 1, stores: { foods: { version: 2, foods: [] }, units: { version: 1, units: [{ id: 'x' }] } } },
       'A cópia de segurança está danificada: os dados de unidades não são válidos. Não foi alterado nada.',
+    ],
+    [
+      'a set with fractional reps',
+      { app: 'plano-alimentar', version: 1, stores: { workoutSessions: { version: 1, sessions: [{ ...workout('s', SUPINO.id), exercises: [{ exerciseId: 'x', sets: [{ reps: 2.5, kg: null }] }] }] } } },
+      'A cópia de segurança está danificada: os dados de treinos não são válidos. Não foi alterado nada.',
+    ],
+    [
+      'two exercises with the same name',
+      { app: 'plano-alimentar', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO, { id: 'other', name: 'supino ' }] } } },
+      'A cópia de segurança está danificada: os dados de exercícios não são válidos. Não foi alterado nada.',
+    ],
+    [
+      'an active plan that is not there',
+      { app: 'plano-alimentar', version: 1, stores: { workoutPlans: { version: 1, plans: [PEITO], activePlanId: 'gone' } } },
+      'A cópia de segurança está danificada: os dados de planos de treino não são válidos. Não foi alterado nada.',
     ],
   ])('rejects %s', (_, raw, error) => {
     expect(parseBackup(raw)).toEqual({ ok: false, error })
@@ -138,6 +173,7 @@ describe('backup', () => {
       foods: [{ ...SKYR, name: 'Skyr diferente' }, { ...SKYR, id: 'custom:novo' as FoodId, name: 'Novo' }],
       units: [COPO, { ...COPO, id: 'unit:b', name: 'colher' }],
       days: { days: { '2026-05-01': day('2026-05-01', A), '2026-05-02': day('2026-05-02', A) } as Record<IsoDate, DayLog> },
+      ...NO_WORKOUTS,
     }
     const r = mergeBackup(loadAll(filled()), incoming, () => 'n3' as PlanId)
     expect(r.data.foods.map((f) => [f.id, f.name])).toEqual([
@@ -149,6 +185,30 @@ describe('backup', () => {
     expect(r.data.days.days['2026-05-01' as IsoDate].planId).toBe('a')
     expect(r.data.days.days['2026-05-02' as IsoDate].planId).toBe('n3')
     expect([r.skippedFoods, r.skippedUnits, r.skippedDays]).toEqual([1, 1, 1])
+  })
+
+  it('merges workouts by id, and an incoming exercise named like one the user has becomes that one', () => {
+    const remo = { id: 'ex-remo' as ExerciseId, name: 'Remo' }
+    const theirSupino = { id: 'ex-their-supino' as ExerciseId, name: 'SUPINO' }
+    const theirPlan: WorkoutPlan = { ...PEITO, id: 'wp-2' as WorkoutPlanId, name: 'Deles', days: [{ ...PEITO.days[0], exercises: [{ ...PEITO.days[0].exercises[0], exerciseId: theirSupino.id }] }] }
+    const incoming: BackupData = {
+      ...NO_PLANS,
+      exercises: [{ ...SUPINO, name: 'Supino renomeado' }, theirSupino, remo],
+      workoutPlans: { plans: [{ ...PEITO, name: 'Outro nome' }, theirPlan], activePlanId: theirPlan.id },
+      workoutSessions: [{ ...workout('ws-1', remo.id), notes: 'perde' }, workout('ws-2', theirSupino.id), workout('ws-3', remo.id)],
+    }
+    const { data } = mergeBackup(loadAll(filled()), incoming)
+    expect(data.exercises).toEqual([SUPINO, remo])
+    expect(data.workoutPlans.plans.map((p) => [p.id, p.name, p.days[0].exercises[0].exerciseId])).toEqual([
+      ['wp-1', 'Força', 'ex-supino'],
+      ['wp-2', 'Deles', 'ex-supino'],
+    ])
+    expect(data.workoutPlans.activePlanId).toBe('wp-1')
+    expect(data.workoutSessions.map((s) => [s.id, s.exercises[0].exerciseId, s.notes])).toEqual([
+      ['ws-1', 'ex-supino', ''],
+      ['ws-2', 'ex-supino', ''],
+      ['ws-3', 'ex-remo', ''],
+    ])
   })
 
   it('entries of an imported plan still resolve to the imported custom food after merging', () => {
@@ -183,7 +243,7 @@ describe('backup', () => {
       delete storage.data[FOODS_STORAGE_KEY]
       return { ...storage.data }
     }
-    const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} } })
+    const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} }, ...NO_WORKOUTS })
 
     it('replace restores every key when the third write throws', () => {
       const initial = before()
@@ -201,10 +261,18 @@ describe('backup', () => {
       expect(storage.data).toEqual(initial)
     })
 
-    it('reports success and writes all four stores when nothing throws', () => {
+    it('reports success and writes every store when nothing throws', () => {
       const storage = quotaStorage(before(), 99)
       expect(replaceWithBackup(incoming(), storage)).toEqual({ ok: true })
       expect([UNITS_STORAGE_KEY, DAYS_STORAGE_KEY, FOODS_STORAGE_KEY].map((k) => k in storage.data)).toEqual([true, true, true])
+      expect(JSON.parse(storage.data[WORKOUT_SESSIONS_STORAGE_KEY])).toEqual({ version: 1, sessions: [] })
+    })
+
+    it('a failed last write puts back the workout sessions too', () => {
+      const initial = before()
+      const storage = quotaStorage(initial, 7)
+      expect(replaceWithBackup(incoming(), storage)).toEqual(FAILED)
+      expect(storage.data).toEqual(initial)
     })
   })
 
@@ -214,7 +282,7 @@ describe('backup', () => {
       storage.data[UNITS_STORAGE_KEY] = JSON.stringify({ version: 99, units: [] })
       const { file, skipped } = exportBackup(storage)
       expect(skipped).toEqual(['units'])
-      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days'])
+      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions'])
     })
 
     it('lists corrupt JSON too, but not a store that was never saved', () => {

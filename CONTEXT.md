@@ -87,7 +87,7 @@ One daily metric recorded by the user's Apple Watch, such as stand hours, import
 _Avoid_: Reading, measurement
 
 **Backup**:
-One JSON file holding every store the app keeps: plans, custom Foods, user Household Units and Day Logs, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units and Day Logs the user does not already have, by id or date. A file that is invalid anywhere is rejected whole and changes nothing.
+One JSON file holding every store the app keeps: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans and Workout Sessions, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans and Workout Sessions the user does not already have, by id or date. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
 _Avoid_: Sync, export (as a noun)
 
 **Equivalent**:

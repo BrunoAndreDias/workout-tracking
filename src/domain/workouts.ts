@@ -63,10 +63,11 @@ export interface WorkoutState extends WorkoutPlanState {
 
 export const EMPTY_SET: LoggedSet = { reps: null, kg: null }
 
-const nameKey = (name: string) => name.trim().toLocaleLowerCase('pt')
+/** Two Exercise names with the same key are the same Exercise. */
+export const exerciseKey = (name: string) => name.trim().toLocaleLowerCase('pt')
 
 export const findExercise = (exercises: readonly Exercise[], name: string): Exercise | undefined =>
-  exercises.find((e) => nameKey(e.name) === nameKey(name))
+  exercises.find((e) => exerciseKey(e.name) === exerciseKey(name))
 
 /** The Exercise with this name, ignoring case, or a new one under `newId`. Null for a blank name. */
 function resolveExercise(exercises: readonly Exercise[], name: string, newId: ExerciseId): { exercises: readonly Exercise[]; id: ExerciseId } | null {

@@ -1,5 +1,6 @@
 import { fromIsoDate } from '../domain/days.ts'
-import type { IsoDate } from '../domain/types.ts'
+import type { TimedNote } from '../domain/notes.ts'
+import type { IsoDate, LocalDateTime } from '../domain/types.ts'
 import { findDay } from '../domain/workouts.ts'
 import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
 
@@ -68,4 +69,16 @@ export const formatLoggedCounts = ({ exercises, sets }: { exercises: number; set
 export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {
   if (session.workoutDayId === null) return 'Treino livre'
   return findDay(plans, session.workoutDayId)?.name ?? 'Dia de treino eliminado'
+}
+
+const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const
+const dayMonth = (at: LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
+const clock = (at: LocalDateTime) => at.slice(11, 16)
+
+/** "Escrito a 6 out, 18:50 · editado 19:02"; no edit part within the same minute, and the date again when edited on another day. */
+export function formatNoteTimes({ createdAt, updatedAt }: TimedNote): string {
+  const written = `Escrito a ${dayMonth(createdAt)}, ${clock(createdAt)}`
+  if (updatedAt.slice(0, 16) === createdAt.slice(0, 16)) return written
+  const sameDay = updatedAt.slice(0, 10) === createdAt.slice(0, 10)
+  return `${written} · editado ${sameDay ? '' : `${dayMonth(updatedAt)}, `}${clock(updatedAt)}`
 }

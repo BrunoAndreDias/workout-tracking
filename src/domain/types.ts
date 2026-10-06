@@ -7,6 +7,8 @@ export type EntryId = Brand<string, 'EntryId'>
 export type OptionId = Brand<string, 'OptionId'>
 /** A local calendar day, 'YYYY-MM-DD'. */
 export type IsoDate = Brand<string, 'IsoDate'>
+/** A local date and time to the second, 'YYYY-MM-DDTHH:MM:SS', with no zone: when the user wrote something, as their clock read. */
+export type LocalDateTime = Brand<string, 'LocalDateTime'>
 export type ExerciseId = Brand<string, 'ExerciseId'>
 export type WorkoutPlanId = Brand<string, 'WorkoutPlanId'>
 export type WorkoutDayId = Brand<string, 'WorkoutDayId'>

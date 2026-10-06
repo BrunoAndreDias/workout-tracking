@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
+import type { LocalDateTime } from '../domain/types.ts'
+import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -48,5 +49,21 @@ describe('pt-PT formatting', () => {
     expect(formatPlanned({ sets: 4, reps: { min: 6, max: 6 } })).toBe('4 × 6')
     expect(formatLoggedCounts({ exercises: 1, sets: 1 })).toBe('1 exercício, 1 série')
     expect(formatLoggedCounts({ exercises: 2, sets: 7 })).toBe('2 exercícios, 7 séries')
+  })
+})
+
+describe('note times', () => {
+  const note = (createdAt: string, updatedAt: string) => ({ text: 'x', createdAt: createdAt as LocalDateTime, updatedAt: updatedAt as LocalDateTime })
+
+  it('shows only when it was written while the edit falls in the same minute', () => {
+    expect(formatNoteTimes(note('2026-10-06T18:50:05', '2026-10-06T18:50:59'))).toBe('Escrito a 6 out, 18:50')
+  })
+
+  it('adds the edit time on the same day', () => {
+    expect(formatNoteTimes(note('2026-10-06T18:50:05', '2026-10-06T19:02:00'))).toBe('Escrito a 6 out, 18:50 · editado 19:02')
+  })
+
+  it('repeats the date when edited on another day', () => {
+    expect(formatNoteTimes(note('2026-01-31T23:59:00', '2026-02-01T00:10:00'))).toBe('Escrito a 31 jan, 23:59 · editado 1 fev, 00:10')
   })
 })

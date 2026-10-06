@@ -156,8 +156,18 @@ small { font-size: 0.85em; color: var(--muted); }
 .notes-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .sos-check { margin-left: auto; min-height: 44px; padding: 0 8px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
 .sos-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
-.meal-foot .notes-input { margin: 0 8px 8px; width: calc(100% - 16px); }
-.day-notes .notes-input { margin-bottom: 20px; }
+.note-field { position: relative; }
+.note-field .notes-input { padding-right: 48px; }
+.dictate-btn { position: absolute; top: 4px; right: 4px; width: 40px; height: 40px; color: var(--ink-2); }
+.dictate-btn.recording { background: var(--over-bg); color: var(--over-fg); }
+.dictate-status { margin: 6px 2px 0; }
+.dictate-status:empty { display: none; }
+.meal-foot .note-field { margin: 0 8px 8px; }
+.day-notes .note-field { margin-bottom: 20px; }
+@media (prefers-reduced-motion: no-preference) {
+  .dictate-btn.recording { animation: dictate-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes dictate-pulse { 50% { opacity: 0.6; } }
 .add-meal { height: 56px; border: 1px dashed var(--input-border); border-radius: 16px; background: transparent; font-size: 15px; font-weight: 500; color: var(--accent); }
 .add-meal:hover { background: var(--surface); border-color: var(--accent); }
 

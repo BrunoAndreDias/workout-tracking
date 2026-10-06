@@ -29,3 +29,13 @@ export const ArrowIcon = ({ up }: { up: boolean }) => (
 export const ChevronIcon = ({ left }: { left: boolean }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" {...stroke} aria-hidden="true"><path d={left ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} /></svg>
 )
+
+export const MicIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+    <rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+  </svg>
+)
+
+export const StopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+)

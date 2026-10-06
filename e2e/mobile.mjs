@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: W, height: 844 }, hasTou
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-await page.goto(URL)
+await page.goto(URL + '#alimentacao')
 await page.evaluate(() => localStorage.clear())
 await page.reload()
 const dialog = page.getByRole('dialog')

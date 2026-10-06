@@ -9,7 +9,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
-await page.goto(URL)
+await page.goto(URL + '#alimentacao')
 await page.evaluate(() => localStorage.clear())
 await page.reload()
 

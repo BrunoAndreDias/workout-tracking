@@ -35,10 +35,10 @@ import { WorkoutView } from './ui/WorkoutView.tsx'
 import { UnitsContext } from './ui/unitsContext.ts'
 
 const VIEWS = [
-  { id: 'planos', label: 'Planos' },
   { id: 'diario', label: 'Diário' },
   { id: 'historico', label: 'Histórico' },
   { id: 'treino', label: 'Treino' },
+  { id: 'alimentacao', label: 'Alimentação' },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -46,7 +46,7 @@ type View = (typeof VIEWS)[number]['id']
 /** `#treino/2026-10-06` opens the Treino view on that date; a bare `#treino` opens it on today. */
 function routeFromHash(): { view: View; date: IsoDate | null } {
   const [id, arg] = window.location.hash.slice(1).split('/')
-  const view = VIEWS.find((v) => v.id === id)?.id ?? 'planos'
+  const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
   return { view, date: view === 'treino' && arg ? parseIsoDate(arg) : null }
 }
 
@@ -165,7 +165,6 @@ export default function App() {
         <div className="page">
           <header className="top">
             <div className="top-row">
-              <div className="eyebrow">Plano alimentar</div>
               <nav className="views" aria-label="Secções">
                 {VIEWS.map((v) => (
                   <a key={v.id} href={`#${v.id}`} className="view-link" aria-current={v.id === view ? 'page' : undefined}>
@@ -175,11 +174,11 @@ export default function App() {
               </nav>
               <ThemeToggle />
             </div>
-            {view === 'planos' && <PlanSwitcher state={state} dispatch={dispatch} />}
+            {view === 'alimentacao' && <PlanSwitcher state={state} dispatch={dispatch} />}
           </header>
 
           <main className="main">
-            {view === 'planos' && (
+            {view === 'alimentacao' && (
               <>
                 <DayEditor
                   key={plan.id}

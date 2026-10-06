@@ -37,7 +37,6 @@ small { font-size: 0.85em; color: var(--muted); }
 /* header */
 .top { display: flex; flex-direction: column; gap: 14px; }
 .top-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
-.eyebrow { font-size: 14px; color: var(--muted); font-weight: 500; }
 .plan-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0 12px; border-bottom: 1px solid var(--border); }
 .tab-add { color: var(--accent); }
 .tab-add:hover { color: var(--accent-dark); }

@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -35,34 +35,43 @@ export function dbPath(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /**
- * Each write keeps, once per local day, the document as it was before that day's first write, so a bad day can be
- * undone from `snapshots`. `now` is injectable for tests.
+ * The file and its directory are created by the first write, never by a read, so a server pointed at a path that holds
+ * nothing yet leaves nothing behind. Each write keeps, once per local day, the document as it was before that day's
+ * first write, so a bad day can be undone from `snapshots`. `now` is injectable for tests.
  */
 export function openStores(path: string, now: () => Date = () => new Date()): Stores {
-  mkdirSync(dirname(path), { recursive: true })
-  const db = new DatabaseSync(path)
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA busy_timeout = 5000;
-    CREATE TABLE IF NOT EXISTS stores (key TEXT PRIMARY KEY, doc TEXT NOT NULL, rev INTEGER NOT NULL, updated_at TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS snapshots (day TEXT NOT NULL, key TEXT NOT NULL, doc TEXT NOT NULL, PRIMARY KEY (day, key));
-  `)
-  const selectAll = db.prepare('SELECT key, doc, rev FROM stores')
-  const selectOne = db.prepare('SELECT doc, rev FROM stores WHERE key = ?')
-  const snapshot = db.prepare('INSERT OR IGNORE INTO snapshots (day, key, doc) VALUES (?, ?, ?)')
-  const upsert = db.prepare(
-    'INSERT INTO stores (key, doc, rev, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (key) DO UPDATE SET doc = excluded.doc, rev = excluded.rev, updated_at = excluded.updated_at',
-  )
+  const open = () => {
+    mkdirSync(dirname(path), { recursive: true })
+    const db = new DatabaseSync(path)
+    db.exec(`
+      PRAGMA journal_mode = WAL;
+      PRAGMA busy_timeout = 5000;
+      CREATE TABLE IF NOT EXISTS stores (key TEXT PRIMARY KEY, doc TEXT NOT NULL, rev INTEGER NOT NULL, updated_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS snapshots (day TEXT NOT NULL, key TEXT NOT NULL, doc TEXT NOT NULL, PRIMARY KEY (day, key));
+    `)
+    return {
+      db,
+      selectAll: db.prepare('SELECT key, doc, rev FROM stores'),
+      selectOne: db.prepare('SELECT doc, rev FROM stores WHERE key = ?'),
+      snapshot: db.prepare('INSERT OR IGNORE INTO snapshots (day, key, doc) VALUES (?, ?, ?)'),
+      upsert: db.prepare(
+        'INSERT INTO stores (key, doc, rev, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (key) DO UPDATE SET doc = excluded.doc, rev = excluded.rev, updated_at = excluded.updated_at',
+      ),
+    }
+  }
+  let opened: ReturnType<typeof open> | undefined
+  const existing = () => opened ?? (existsSync(path) ? (opened = open()) : undefined)
 
   return {
     all() {
       const out: Partial<Record<StoreKey, Stored>> = {}
-      for (const row of selectAll.all() as { key: string; doc: string; rev: number }[]) {
+      for (const row of (existing()?.selectAll.all() ?? []) as { key: string; doc: string; rev: number }[]) {
         if (isStoreKey(row.key)) out[row.key] = { doc: row.doc, rev: row.rev }
       }
       return out
     },
     put(key, doc, baseRev) {
+      const { db, selectOne, snapshot, upsert } = (opened ??= open())
       db.exec('BEGIN IMMEDIATE')
       try {
         const current = (selectOne.get(key) as Stored | undefined) ?? null
@@ -87,10 +96,10 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
       }
     },
     reset() {
-      db.exec('DELETE FROM stores; DELETE FROM snapshots;')
+      existing()?.db.exec('DELETE FROM stores; DELETE FROM snapshots;')
     },
     close() {
-      db.close()
+      opened?.db.close()
     },
   }
 }

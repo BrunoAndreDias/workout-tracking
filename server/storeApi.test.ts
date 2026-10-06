@@ -1,4 +1,4 @@
-import { mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -105,6 +105,26 @@ describe('store API', () => {
     await test.put(PLANS, '{}', null)
     expect((await fetch(test.base, { method: 'DELETE' })).status).toBe(200)
     expect(await test.get()).toEqual({})
+  })
+})
+
+describe('a database that does not exist yet', () => {
+  it('is not created by a read, only by the first write', async () => {
+    const dir = join(mkdtempSync(join(tmpdir(), 'plano-store-')), 'fresh')
+    const file = join(dir, 'plano.sqlite')
+    const stores = openStores(file)
+    const server = createServer(storeHandler(() => stores))
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+    expect(await (await fetch(base)).json()).toEqual({})
+    expect(existsSync(file)).toBe(false)
+    expect(existsSync(dir)).toBe(false)
+    const put = await fetch(`${base}/${encodeURIComponent(PLANS)}`, { method: 'PUT', body: JSON.stringify({ doc: '{"version":3}', baseRev: null }) })
+    expect(await put.json()).toEqual({ rev: 1 })
+    expect(existsSync(file)).toBe(true)
+    expect(await (await fetch(base)).json()).toEqual({ [PLANS]: { doc: '{"version":3}', rev: 1 } })
+    server.close()
+    stores.close()
   })
 })
 

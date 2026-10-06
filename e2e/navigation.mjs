@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { openFresh } from './_driver.mjs'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
@@ -6,9 +7,7 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-await page.goto(URL)
-await page.evaluate(() => localStorage.clear())
-await page.goto(URL)
+await openFresh(page, URL)
 
 const views = page.getByRole('navigation', { name: 'Secções' })
 const current = () => views.locator('[aria-current="page"]').textContent()

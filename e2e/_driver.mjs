@@ -16,11 +16,51 @@ export class FlowError extends Error {
 export const readStored = (page) =>
   page.evaluate((keys) => Object.fromEntries(keys.map((k) => [k, JSON.parse(localStorage.getItem(`nutrition-tracking:${k}`) ?? 'null')])), STORAGE_KEYS)
 
-/** Makes every load of this page boot from `state` (the readStored shape), reloads included. Call before page.goto. */
-export const seedStored = (page, state) =>
-  page.addInitScript((entries) => {
-    for (const [key, value] of entries) localStorage.setItem(`nutrition-tracking:${key}`, JSON.stringify(value))
-  }, STORAGE_KEYS.filter((k) => state[k] != null).map((k) => [k, state[k]]))
+const storesUrl = (url, key) => new URL(key ? `api/stores/${encodeURIComponent(`nutrition-tracking:${key}`)}` : 'api/stores', url).href
+
+/** Empties the server's database. Only a test server (PLANO_TEST=1: scripts/e2e.mjs, verify-plano launch.sh) allows it. */
+export async function resetServer(page, url) {
+  const res = await page.request.delete(storesUrl(url))
+  if (!res.ok()) throw new FlowError(`${url} refused to reset its stores (${res.status()})`, 'drive a test server: npm run e2e, or verify-plano launch.sh, both set PLANO_TEST=1 and a temp PLANO_DB')
+}
+
+/** The app renders only after it has fetched the server's stores, which is after the page's `load` event. */
+export const rendered = (page) => page.locator('#root > *').first().waitFor()
+
+/** Opens the app on an empty server, as a first visit: the page's context must be new, so its localStorage is empty. */
+export async function openFresh(page, url) {
+  await resetServer(page, url)
+  await page.goto(url)
+  await rendered(page)
+}
+
+/** page.reload(), then waits until the app has rendered again. */
+export async function reloadApp(page) {
+  await page.reload()
+  await rendered(page)
+}
+
+/** Resolves once every change this page made has reached the server. */
+export const synced = (page) =>
+  page.waitForFunction(() => (JSON.parse(localStorage.getItem('nutrition-tracking:sync') ?? 'null')?.pending ?? []).length === 0)
+
+/** Writes one store on the server as another device would; the page sees it on its next load. */
+export async function putStore(page, url, key, doc) {
+  await synced(page)
+  const current = (await (await page.request.get(storesUrl(url))).json())[`nutrition-tracking:${key}`]
+  const res = await page.request.put(storesUrl(url, key), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
+  if (!res.ok()) throw new FlowError(`the server refused ${key} (${res.status()})`, 'check the server log')
+}
+
+/** Puts `state` (the readStored shape) on an emptied server, so the next page load boots from it. Call before page.goto. */
+export async function seedStored(page, url, state) {
+  await resetServer(page, url)
+  for (const key of STORAGE_KEYS) {
+    if (state[key] == null) continue
+    const res = await page.request.put(storesUrl(url, key), { data: { doc: JSON.stringify(state[key]), baseRev: null } })
+    if (!res.ok()) throw new FlowError(`the server refused ${key} (${res.status()})`, 'check the server log')
+  }
+}
 
 /** Plan goal fields, keyed by the name scripts use, with the label the goals panel shows. */
 export const GOAL_FIELDS = {

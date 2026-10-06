@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addFood } from './_driver.mjs'
+import { addFood, openFresh } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const W = 390
@@ -9,9 +9,7 @@ const page = await browser.newPage({ viewport: { width: W, height: 844 }, hasTou
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-await page.goto(URL + '#alimentacao')
-await page.evaluate(() => localStorage.clear())
-await page.reload()
+await openFresh(page, URL + '#alimentacao')
 const dialog = page.getByRole('dialog')
 const fits = async (where) => assert(await page.evaluate((w) => document.documentElement.scrollWidth <= w, W), `no horizontal scroll at ${W} px (${where})`)
 

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { readStored } from './_driver.mjs'
+import { openFresh, readStored, reloadApp } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -9,9 +9,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
-await page.goto(URL + '#alimentacao')
-await page.evaluate(() => localStorage.clear())
-await page.reload()
+await openFresh(page, URL + '#alimentacao')
 
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -70,7 +68,7 @@ assert(JSON.stringify(await values(elevacoes, 'Repetições')) === '["10","9","8
 await elevacoes.getByRole('button', { name: 'Remover série 4 de Elevações' }).click()
 await session.getByLabel('Notas do treino').fill('Ombro bem')
 
-await page.reload()
+await reloadApp(page)
 assert(JSON.stringify(await values(supino, 'Repetições')) === '["8","7"]' && JSON.stringify(await values(supino, 'Kg')) === '["60","62,5"]', 'Supino sets persisted across reload')
 assert(JSON.stringify(await values(elevacoes, 'Kg')) === '["","",""]', 'Elevações stays bodyweight, with no kg')
 assert(await session.getByLabel('Notas do treino').inputValue() === 'Ombro bem', 'notes persisted')

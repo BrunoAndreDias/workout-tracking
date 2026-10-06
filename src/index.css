@@ -162,6 +162,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .dictate-btn.recording { background: var(--over-bg); color: var(--over-fg); }
 .dictate-status { margin: 6px 2px 0; }
 .dictate-status:empty { display: none; }
+.notes-input.grows { field-sizing: content; max-height: 60vh; }
 .note-times { margin: 4px 2px 0; font-size: 12px; color: var(--muted); }
 .meal-foot .note-field { margin: 0 8px 8px; }
 .day-notes .note-field { margin-bottom: 20px; }

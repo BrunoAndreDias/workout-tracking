@@ -20,7 +20,7 @@ export function TimedNoteField({ note, label, placeholder, rows = 2, id, onEdit 
   const edit = (next: string) => onEdit(next, toLocalDateTime(new Date()))
   return (
     <div className="note-field">
-      <textarea id={id} className="notes-input" aria-label={label} placeholder={placeholder} rows={rows} value={text} onChange={(e) => edit(e.target.value)} />
+      <textarea id={id} className="notes-input grows" aria-label={label} placeholder={placeholder} rows={rows} value={text} onChange={(e) => edit(e.target.value)} />
       <DictateButton value={text} onChange={edit} />
       {note && <p className="note-times">{formatNoteTimes(note)}</p>}
     </div>

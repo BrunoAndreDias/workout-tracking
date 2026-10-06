@@ -4,6 +4,9 @@ A private, single-user meal-planning app in Portuguese. `CONTEXT.md` holds the d
 
 Run `npm run check` before every commit. It runs typecheck, lint, unit tests, `vite build` and every `e2e/*.mjs` against its own dev server. The `.githooks/pre-push` hook runs the same command before every push (enable it with `git config core.hooksPath .githooks`); there is no CI, to save private Actions minutes.
 
+Before merging, review the diff against `CODING_STANDARDS.md`.
+PRs target `main`.
+
 ## Rules
 
 Each rule names what enforces it. When the user corrects a mistake, fix it and add a row here. If the row already exists and only "docs" enforces it, that's a repeat, so move it up to architecture, a type, a lint or a test in the same change. Drop a row once the mistake can no longer happen.

@@ -2,7 +2,7 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
-The app opens on the `Diário` calendar; the meal plans live in the `Alimentação` tab. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. Each Diário day also has a `Corpo` section for the night's sleep (your wake-up rating plus the watch's duration), any pains, and the day's Apple Watch values, which you import by pasting (see [Apple Watch import](#apple-watch-import)).
+The app opens on the `Diário` calendar; the meal plans live in the `Alimentação` tab. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. Each Diário day also has a `Corpo` section for the night's sleep (your wake-up rating plus the watch's duration), a Humor note for how you felt, and the day's Apple Watch values, which you import by pasting (see [Apple Watch import](#apple-watch-import)).
 
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
@@ -15,7 +15,7 @@ npm run dev            # http://localhost:5180
 
 ## Where the data lives
 
-Plans, day logs, custom foods, units, workouts, sleep, pains and watch values live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
+Plans, day logs, custom foods, units, workouts, sleep, Humor notes and watch values live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
 
 The browser keeps a working copy in localStorage. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
@@ -108,7 +108,7 @@ node scripts/unmapped-candidates.ts   # PortFIR candidates for APN labels mapped
 
 ## Dictation
 
-The plan, meal and workout notes have a mic button. Speech is transcribed on the device with OpenAI's Whisper small model through Transformers.js, in a Web Worker. The first use downloads about 250 MB of model files (and the wasm runtime from jsdelivr), which the browser then caches. No audio leaves the device. `npm run e2e` caches the model under `e2e/.cache/` (gitignored) so only the first run downloads it.
+Every note has a mic button: plan, meal, Humor, exercise and workout notes. Speech is transcribed on the device with OpenAI's Whisper small model through Transformers.js, in a Web Worker. The first use downloads about 250 MB of model files (and the wasm runtime from jsdelivr), which the browser then caches. No audio leaves the device. `npm run e2e` caches the model under `e2e/.cache/` (gitignored) so only the first run downloads it.
 
 ## Checks
 

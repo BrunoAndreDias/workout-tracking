@@ -1,6 +1,6 @@
 # Nutrition Tracking
 
-This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table. It is also that person's health log: workouts, sleep, pain and the daily metrics of their Apple Watch.
+This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table. It is also that person's health log: workouts, sleep, mood and the daily metrics of their Apple Watch.
 
 ## Language
 
@@ -58,7 +58,7 @@ A named movement the user trains, such as "Supino". It is created by typing a ne
 _Avoid_: Movement, lift
 
 **Dictation** (Ditado):
-Speaking a note instead of typing it. The mic button on a note field records until tapped again, and the transcribed text is appended to the note. The user's voice is transcribed on the device by the Whisper small speech model, which is downloaded once (about 250 MB) the first time the user dictates. No audio leaves the device. Only the plan, meal and workout notes can be dictated.
+Speaking a note instead of typing it. The mic button on a note field records until tapped again, and the transcribed text is appended to the note. The user's voice is transcribed on the device by the Whisper small speech model, which is downloaded once (about 250 MB) the first time the user dictates. No audio leaves the device. Every note can be dictated: plan notes, meal notes, the Mood Note, Exercise Notes and the Workout Session's note.
 _Avoid_: Voice note (that would be a stored recording; none is kept), voice input
 
 **Workout Plan** (Plano de treino):
@@ -73,7 +73,7 @@ _Avoid_: Workout template
 An Exercise in a Workout Day with its number of sets and a rep range, such as 3 × 8–12. A single target is a range whose minimum and maximum are equal.
 
 **Workout Session** (Treino):
-What was trained on one calendar date, in the same date form as the Day Log. It starts from a Workout Day or blank, and then keeps its own copy, so editing the plan later never changes it. Starting from a day gives one row per Planned Exercise with the planned number of sets. Each set is filled in from the latest earlier session that logged that Exercise, repeating its last set when the plan asks for more sets, and is left empty when the Exercise was never logged. An Exercise appears at most once in a session. A session also has free-text notes. A date may hold more than one session, and the Diário shows a line for each.
+What was trained on one calendar date, in the same date form as the Day Log. It starts from a Workout Day or blank, and then keeps its own copy, so editing the plan later never changes it. Starting from a day gives one row per Planned Exercise with the planned number of sets. Each set is filled in from the latest earlier session that logged that Exercise, repeating its last set when the plan asks for more sets, and is left empty when the Exercise was never logged. An Exercise appears at most once in a session. A session also has free-text notes: one Timed Note about the workout as a whole, and an Exercise Note for each of its Exercises. A date may hold more than one session, and the Diário shows a line for each.
 _Avoid_: Workout (as a type name), training log
 
 **Logged Set**:
@@ -83,11 +83,14 @@ _Avoid_: Rep set, entry
 **Sleep Entry** (Sono):
 How one night's sleep went: a quality from 1 (muito mal) to 5 (muito bem) as the user rates it on waking, shown as Muito mal, Mal, Normal, Bem or Muito bem. The hours slept are not typed: the night's duration is the Apple Watch's `sleepMinutes` Health Sample for the same date, shown read only beside the rating. Entries stored before this change may carry an `hours` field, which is ignored. It belongs to the date the user woke up, and a date has at most one. It is logged in the Diário's Corpo section with one tap on the quality; tapping the chosen quality again removes it.
 
-**Pain Entry** (Dor):
-A pain the user felt on one date: the Body Region, a whole intensity from 0 to 10 and, optionally, the time (HH:MM) and a note. A date may hold several. The Diário lists them timed first, by time.
+**Exercise Note** (Nota):
+A Timed Note on one Exercise of one Workout Session, for pain, discomfort or anything else about how that Exercise went. Starting a session never copies one.
 
-**Body Region** (Zona):
-A fixed list of places a pain can be: cabeça, pescoço, costas superiores, lombar, outro, and left and right of ombro, cotovelo, pulso, anca, joelho, tornozelo and pé, since training load differs between sides.
+**Mood Note** (Humor):
+A Timed Note about how the user felt on one date, written in the Diário's Corpo section; a date has at most one. Pain is written here in words: the app keeps no structured pain log. Pains logged before the Mood Note existed (a body region, an intensity from 0 to 10, an optional time and note) became lines of their date's note, such as "Dor: Lombar 5/10 · 14:00 · nota", timed ones first by time, after any text the note had, and the note counts as written at the earliest pain's time (midday for one without a time).
+
+**Timed Note**:
+A free-text note that records when it was written, so a later look at it knows as much as possible: when it first held text and when its text last changed, as local date and time to the second. A note cleared to blank is removed, times and all. The app shows the times under the note, as "Escrito a 6 out, 18:50 · editado 19:02", leaving out the edit within the same minute and repeating the date when the edit was on another day. Mood Notes, Exercise Notes and a Workout Session's note are Timed Notes; plan and meal notes are not. A session note from before Timed Notes counts as written at midday of the session's date.
 
 **Health Sample** (valor do relógio):
 One daily metric recorded by the user's Apple Watch on one date, imported into the app rather than typed. The metrics are a fixed list, each with a unit: `standHours` (h), `standMinutes` (min), `steps`, `activeEnergy` (kcal), `exerciseMinutes` (min), `sleepMinutes` (min) and `restingHeartRate` (bpm). A date holds at most one value per metric, and a later import of the same date and metric replaces it, so importing the same data twice changes nothing. The app stores and shows the values and derives nothing from them. They are read only in the Diário's Corpo section.
@@ -101,7 +104,7 @@ One document the app keeps under its own key, such as the plans or the Sleep Ent
 _Avoid_: Table, collection
 
 **Backup**:
-One JSON file holding every store the app keeps, and still the one portable copy of the data: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans, Workout Sessions, Sleep Entries, Pain Entries and Health Samples, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans, Workout Sessions, Sleep Entries and Pain Entries the user does not already have, by id or date, and Health Samples for a date and metric the user has no value for. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
+One JSON file holding every store the app keeps, and still the one portable copy of the data: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans, Workout Sessions, Sleep Entries, Mood Notes and Health Samples, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans, Workout Sessions and Sleep Entries the user does not already have, by id or date, and Health Samples for a date and metric the user has no value for. A Mood Note gains the incoming note's lines it lacks, so merging the same file twice changes nothing. A file from before Mood Notes carries the old pains instead, which import as Mood Note lines. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
 _Avoid_: Sync, export (as a noun)
 
 **Equivalent**:

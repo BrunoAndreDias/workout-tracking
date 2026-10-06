@@ -6,9 +6,11 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { dbPath, openStores, storeHandler } from './storeApi.ts'
+import type { Stores } from './storeApi.ts'
 
 const PLANS = 'nutrition-tracking:plans'
 const SLEEP = 'nutrition-tracking:sleep'
+const HEALTH = 'nutrition-tracking:health'
 
 let close = () => {}
 afterEach(() => {
@@ -17,11 +19,11 @@ afterEach(() => {
 })
 
 /** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
-async function start({ allowReset = false } = {}) {
+async function start({ allowReset = false, wrap = (stores: Stores) => stores } = {}) {
   const file = join(mkdtempSync(join(tmpdir(), 'plano-store-')), 'plano.sqlite')
   const clock = { now: new Date(2026, 9, 6, 9, 0) }
   const stores = openStores(file, () => clock.now)
-  const server = createServer(storeHandler(() => stores, { allowReset }))
+  const server = createServer(storeHandler(() => wrap(stores), { allowReset }))
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   close = () => {
     server.close()
@@ -33,8 +35,12 @@ async function start({ allowReset = false } = {}) {
     return { status: res.status, body: await res.json() }
   }
   const get = async () => (await fetch(base)).json()
+  const postHealth = async (body: string) => {
+    const res = await fetch(base.replace('/api/stores', '/api/health'), { method: 'POST', headers: { 'content-type': 'application/json' }, body })
+    return { status: res.status, body: await res.json() }
+  }
   const snapshots = () => new DatabaseSync(file).prepare('SELECT day, key, doc FROM snapshots ORDER BY day').all()
-  return { base, clock, put, get, snapshots }
+  return { base, clock, put, get, postHealth, snapshots }
 }
 
 describe('store API', () => {
@@ -105,6 +111,99 @@ describe('store API', () => {
     await test.put(PLANS, '{}', null)
     expect((await fetch(test.base, { method: 'DELETE' })).status).toBe(200)
     expect(await test.get()).toEqual({})
+  })
+})
+
+describe('POST /api/health', () => {
+  const SHORTCUT = JSON.stringify({
+    samples: [
+      { date: '2026-10-05', metric: 'steps', value: 8123 },
+      { date: '2026-10-05', metric: 'standHours', value: 9 },
+      { date: '2026-10-04', metric: 'restingHeartRate', value: 54 },
+    ],
+  })
+  const MERGED =
+    '{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":54},{"date":"2026-10-05","metric":"standHours","value":9},{"date":"2026-10-05","metric":"steps","value":8123}]}'
+
+  it('creates the health store from the Shortcut text, as the browser would save it', async () => {
+    const api = await start()
+    expect(await api.postHealth(SHORTCUT)).toEqual({ status: 200, body: { count: 3, from: '2026-10-04', to: '2026-10-05' } })
+    expect(await api.get()).toEqual({ [HEALTH]: { doc: MERGED, rev: 1 } })
+  })
+
+  it('changes nothing, not even the rev, when the same text comes again', async () => {
+    const api = await start()
+    await api.postHealth(SHORTCUT)
+    expect(await api.postHealth(SHORTCUT)).toEqual({ status: 200, body: { count: 3, from: '2026-10-04', to: '2026-10-05' } })
+    expect(await api.get()).toEqual({ [HEALTH]: { doc: MERGED, rev: 1 } })
+  })
+
+  it('replaces the value of a date and metric it sends again and keeps every other', async () => {
+    const api = await start()
+    await api.postHealth(SHORTCUT)
+    expect(await api.postHealth('[{"date":"2026-10-05","metric":"steps","value":9001},{"date":"2026-10-06","metric":"sleepMinutes","value":452}]')).toEqual({
+      status: 200,
+      body: { count: 2, from: '2026-10-05', to: '2026-10-06' },
+    })
+    expect(await api.get()).toEqual({
+      [HEALTH]: {
+        doc: '{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":54},{"date":"2026-10-05","metric":"standHours","value":9},{"date":"2026-10-05","metric":"steps","value":9001},{"date":"2026-10-06","metric":"sleepMinutes","value":452}]}',
+        rev: 2,
+      },
+    })
+    expect(api.snapshots()).toEqual([{ day: '2026-10-06', key: HEALTH, doc: MERGED }])
+  })
+
+  it('rejects a bad row with the paste’s message and leaves the store as it was', async () => {
+    const api = await start()
+    await api.postHealth(SHORTCUT)
+    expect(await api.postHealth('[{"date":"2026-10-06","metric":"steps","value":1},{"date":"2026-10-06","metric":"sittingHours","value":6}]')).toEqual({
+      status: 400,
+      body: { error: 'Valor n.º 2: a métrica "sittingHours" não existe. Não foi alterado nada.' },
+    })
+    expect(await api.postHealth('{not json')).toEqual({ status: 400, body: { error: 'O texto não é JSON válido. Não foi alterado nada.' } })
+    expect(await api.get()).toEqual({ [HEALTH]: { doc: MERGED, rev: 1 } })
+  })
+
+  it('does not overwrite a stored health doc it cannot read', async () => {
+    const api = await start()
+    await api.put(HEALTH, '{"version":1,"samples":[{"date":"2026-10-05","metric":"steps","value":-1}]}', null)
+    expect(await api.postHealth(SHORTCUT)).toEqual({
+      status: 409,
+      body: { error: 'Os valores do relógio guardados no servidor não se conseguem ler. Abre a app para os recuperar. Não foi alterado nada.' },
+    })
+    expect(await api.get()).toEqual({ [HEALTH]: { doc: '{"version":1,"samples":[{"date":"2026-10-05","metric":"steps","value":-1}]}', rev: 1 } })
+  })
+
+  it('merges into what another writer saved between its read and its write', async () => {
+    const OTHER = '{"version":1,"samples":[{"date":"2026-10-03","metric":"steps","value":5000}]}'
+    let raced = false
+    const api = await start({
+      wrap: (stores) => ({
+        ...stores,
+        all() {
+          const seen = stores.all()
+          if (!raced) {
+            raced = true
+            stores.put(HEALTH, OTHER, null)
+          }
+          return seen
+        },
+      }),
+    })
+    expect((await api.postHealth(SHORTCUT)).status).toBe(200)
+    expect(await api.get()).toEqual({
+      [HEALTH]: {
+        doc: '{"version":1,"samples":[{"date":"2026-10-03","metric":"steps","value":5000},{"date":"2026-10-04","metric":"restingHeartRate","value":54},{"date":"2026-10-05","metric":"standHours","value":9},{"date":"2026-10-05","metric":"steps","value":8123}]}',
+        rev: 2,
+      },
+    })
+  })
+
+  it('answers any other method with 405', async () => {
+    const api = await start()
+    expect((await fetch(api.base.replace('/api/stores', '/api/health'))).status).toBe(405)
+    expect(await api.get()).toEqual({})
   })
 })
 

@@ -3,8 +3,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { isStoreKey, STORE_KEYS } from '../src/domain/storeKeys.ts'
+import { importSpan, parseHealthImport, upsertSamples } from '../src/domain/health.ts'
+import { isStoreKey, STORE_KEY, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
+import { serializeStore, STORES } from '../src/domain/stores.ts'
 
 /** A store's document as the app wrote it, opaque here, and how many writes it has had. */
 export interface Stored {
@@ -136,11 +138,39 @@ function parsePut(text: string): { doc: string; baseRev: number | null } | null 
   }
 }
 
+function readStoredHealth(doc: string) {
+  try {
+    return STORES.health.parse(JSON.parse(doc))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Merges the Shortcut's text into the health store, the one store the server reads. A doc it cannot read is left for
+ * the browser, which keeps an unreadable copy aside before replacing it; overwriting it here would lose it.
+ */
+function receiveHealth(stores: Stores, text: string): { status: number; body: unknown } {
+  const parsed = parseHealthImport(text)
+  if (!parsed.ok) return { status: 400, body: { error: parsed.error } }
+  let current = stores.all()[STORE_KEY.health] ?? null
+  // Another process on the same database (a second server) can write between the read and the put.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const log = current ? readStoredHealth(current.doc) : {}
+    if (!log) return { status: 409, body: { error: 'Os valores do relógio guardados no servidor não se conseguem ler. Abre a app para os recuperar. Não foi alterado nada.' } }
+    const result = stores.put(STORE_KEY.health, serializeStore(STORES.health, upsertSamples(log, parsed.samples)), current?.rev ?? null)
+    if (result.ok) return { status: 200, body: importSpan(parsed.samples) }
+    current = result.current
+  }
+  return { status: 503, body: { error: 'O servidor estava ocupado. Tenta outra vez. Não foi alterado nada.' } }
+}
+
 /**
  * The store API, for any request under `/api/`:
  * `GET /api/stores` → `{ [key]: { doc, rev } }`; `PUT /api/stores/:key` with `{ doc, baseRev }` → `{ rev }`, or 409
  * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first. `DELETE /api/stores` empties
- * the database only when `allowReset`, which only the test server sets.
+ * the database only when `allowReset`, which only the test server sets. `POST /api/health` with the Apple Watch
+ * Shortcut's text → `{ count, from, to }`, or 400 `{ error }` for text the paste would reject.
  */
 export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -152,6 +182,13 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
         return send(res, 200, {})
       }
       return send(res, 405, { error: 'method not allowed' })
+    }
+    if (path === '/api/health') {
+      if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' })
+      const text = await readBody(req)
+      if (text === null) return send(res, 413, { error: 'too large' })
+      const { status, body } = receiveHealth(stores(), text)
+      return send(res, status, body)
     }
     const match = /^\/api\/stores\/([^/]+)$/.exec(path)
     if (!match) return send(res, 404, { error: 'not found' })

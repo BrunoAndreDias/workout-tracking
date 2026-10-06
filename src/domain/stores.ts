@@ -122,10 +122,14 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
   return def.fresh()
 }
 
+/** The exact text a store is saved as, in the browser and by the server. */
+export const serializeStore = <T>(def: StoreDef<T>, value: T): string =>
+  def.text ? def.text(value) : JSON.stringify({ version: def.version, ...def.toDoc(value) })
+
 /** False when the write failed or there is no storage. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
   try {
-    storage?.setItem(def.key, def.text ? def.text(value) : JSON.stringify({ version: def.version, ...def.toDoc(value) }))
+    storage?.setItem(def.key, serializeStore(def, value))
     return storage !== null
   } catch {
     return false

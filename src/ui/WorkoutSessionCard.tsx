@@ -2,11 +2,11 @@ import type { Dispatch } from 'react'
 import { newId } from '../domain/plans.ts'
 import type { ExerciseId } from '../domain/types.ts'
 import type { Exercise, PlannedExercise, WorkoutAction, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
-import { DictateButton } from '../dictation/DictateButton.tsx'
 import { CountField } from './CountField.tsx'
 import { ExerciseAdder } from './ExerciseAdder.tsx'
 import { formatPlanned } from './format.ts'
 import { CloseIcon, PlusIcon } from './icons.tsx'
+import { TimedNoteField } from './TimedNoteField.tsx'
 
 interface Props {
   session: WorkoutSession
@@ -83,17 +83,12 @@ export function WorkoutSessionCard({ session, day, title, exercises, dispatch }:
       <div className="session-foot">
         <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })} />
         <p className="hint muted">Sem kg é peso corporal.</p>
-        <div className="note-field">
-          <textarea
-            className="notes-input"
-            aria-label="Notas do treino"
-            placeholder="Como correu, dores, ajustes"
-            rows={2}
-            value={session.notes}
-            onChange={(e) => dispatch({ type: 'setSessionNotes', sessionId, notes: e.target.value })}
-          />
-          <DictateButton value={session.notes} onChange={(notes) => dispatch({ type: 'setSessionNotes', sessionId, notes })} />
-        </div>
+        <TimedNoteField
+          note={session.note}
+          label="Notas do treino"
+          placeholder="Como correu o treino, ajustes"
+          onEdit={(text, now) => dispatch({ type: 'setSessionNote', sessionId, text, now })}
+        />
       </div>
     </section>
   )

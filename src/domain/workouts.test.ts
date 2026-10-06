@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { ExerciseId, IsoDate, LocalDateTime, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { emptyWorkouts, loggedCounts, parseRepRange, prefillSets, startSession, workoutReducer } from './workouts.ts'
 import type { WorkoutAction, WorkoutDay, WorkoutSession, WorkoutState } from './workouts.ts'
 
@@ -12,7 +12,6 @@ const session = (id: string, on: string, exercises: WorkoutSession['exercises'])
   date: date(on),
   workoutDayId: null,
   exercises,
-  notes: '',
 })
 
 const PEITO: WorkoutDay = {
@@ -64,7 +63,6 @@ describe('pre-fill', () => {
       id: 'new',
       date: '2026-10-06',
       workoutDayId: 'd-peito',
-      notes: '',
       exercises: [
         {
           exerciseId: 'ex-supino',
@@ -87,7 +85,7 @@ describe('pre-fill', () => {
   })
 
   it('a blank session starts with no exercises', () => {
-    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [], notes: '' })
+    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
   })
 })
 
@@ -118,7 +116,7 @@ describe('workoutReducer', () => {
         { type: 'startSession', sessionId: 's2' as WorkoutSessionId, date: date('2026-10-02'), day: null },
         { type: 'addSessionExercise', sessionId: 's2' as WorkoutSessionId, name: 'AGACHAMENTO', newExerciseId: 'e9' as ExerciseId },
         { type: 'addSessionExercise', sessionId: 's2' as WorkoutSessionId, name: 'Prancha', newExerciseId: 'e10' as ExerciseId },
-        { type: 'setSessionNotes', sessionId: 's2' as WorkoutSessionId, notes: 'Joelho bem' },
+        { type: 'setSessionNote', sessionId: 's2' as WorkoutSessionId, text: 'Joelho bem', now: '2026-10-02T19:30:00' as LocalDateTime },
       ],
       planned,
     )
@@ -132,7 +130,7 @@ describe('workoutReducer', () => {
       id: 's2',
       date: '2026-10-02',
       workoutDayId: null,
-      notes: 'Joelho bem',
+      note: { text: 'Joelho bem', createdAt: '2026-10-02T19:30:00', updatedAt: '2026-10-02T19:30:00' },
       exercises: [
         { exerciseId: 'e1', sets: [{ reps: 5, kg: 100 }] },
         { exerciseId: 'e10', sets: [{ reps: null, kg: null }] },

@@ -1,7 +1,9 @@
 import { parseIsoDate } from './days.ts'
+import { atTime, parseOptionalNote } from './notes.ts'
+import type { TimedNote } from './notes.ts'
 import { defaultStorage, isId, isRecord, loadStore, saveStore } from './persistence.ts'
 import type { StorageLike } from './persistence.ts'
-import type { ExerciseId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './workouts.ts'
 import type { Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession, WorkoutState } from './workouts.ts'
 import { STORE_KEY } from './storeKeys.ts'
@@ -11,7 +13,8 @@ export const EXERCISES_SCHEMA_VERSION = 1
 export const WORKOUT_PLANS_STORAGE_KEY = STORE_KEY.workoutPlans
 export const WORKOUT_PLANS_SCHEMA_VERSION = 1
 export const WORKOUT_SESSIONS_STORAGE_KEY = STORE_KEY.workoutSessions
-export const WORKOUT_SESSIONS_SCHEMA_VERSION = 1
+/** 1 had a plain-text `notes`; 2 has an optional timed `note`. */
+export const WORKOUT_SESSIONS_SCHEMA_VERSION = 2
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
 const isKg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
@@ -80,18 +83,30 @@ function parseSessionExercise(raw: unknown): SessionExercise | null {
   return sets && { exerciseId: raw.exerciseId as ExerciseId, sets }
 }
 
-function parseSession(raw: unknown): WorkoutSession | null {
-  if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string' || typeof raw.notes !== 'string') return null
-  const date = parseIsoDate(raw.date)
-  if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
-  const exercises = parseList(raw.exercises, parseSessionExercise, (e) => e.exerciseId)
-  return exercises && { id: raw.id as WorkoutSessionId, date, workoutDayId: raw.workoutDayId as WorkoutDayId | null, exercises, notes: raw.notes }
+/** A version 1 note was plain text with no time: it counts as written at midday of the session's date. */
+function legacyNote(notes: string, date: IsoDate): TimedNote | undefined {
+  if (notes.trim() === '') return undefined
+  const at = atTime(date, '12:00')
+  return { text: notes, createdAt: at, updatedAt: at }
 }
 
-/** The current version only; null for anything else, including one bad session or two with the same id. */
+function parseSession(raw: unknown, legacy: boolean): WorkoutSession | null {
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string') return null
+  const date = parseIsoDate(raw.date)
+  if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
+  if (legacy && typeof raw.notes !== 'string') return null
+  const note = legacy ? legacyNote(raw.notes as string, date) : parseOptionalNote(raw.note)
+  const exercises = parseList(raw.exercises, parseSessionExercise, (e) => e.exerciseId)
+  if (!exercises || note === false) return null
+  const session = { id: raw.id as WorkoutSessionId, date, workoutDayId: raw.workoutDayId as WorkoutDayId | null, exercises }
+  return note ? { ...session, note } : session
+}
+
+/** Versions 1 and 2; null for anything else, including one bad session or two with the same id. */
 export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
-  if (!isRecord(raw) || raw.version !== WORKOUT_SESSIONS_SCHEMA_VERSION) return null
-  return parseList(raw.sessions, parseSession, (s) => s.id)
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_SESSIONS_SCHEMA_VERSION)) return null
+  const legacy = raw.version === 1
+  return parseList(raw.sessions, (r) => parseSession(r, legacy), (s) => s.id)
 }
 
 const emptyPlans = (): WorkoutPlanState => ({ plans: [], activePlanId: null })

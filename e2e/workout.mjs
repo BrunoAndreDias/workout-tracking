@@ -72,8 +72,12 @@ await reloadApp(page)
 assert(JSON.stringify(await values(supino, 'Repetições')) === '["8","7"]' && JSON.stringify(await values(supino, 'Kg')) === '["60","62,5"]', 'Supino sets persisted across reload')
 assert(JSON.stringify(await values(elevacoes, 'Kg')) === '["","",""]', 'Elevações stays bodyweight, with no kg')
 assert(await session.getByLabel('Notas do treino').inputValue() === 'Ombro bem', 'notes persisted')
+const sessionTimes = await session.locator('.session-foot .note-times').textContent()
+assert(/^Escrito a \d+ [a-z]{3}, \d\d:\d\d$/.test(sessionTimes), `the session note shows when it was written (got ${sessionTimes})`)
 const stored = await readStored(page)
-assert(stored['workout-sessions'].version === 1 && stored['workout-sessions'].sessions.length === 1, 'one session stored under its own key')
+assert(stored['workout-sessions'].version === 2 && stored['workout-sessions'].sessions.length === 1, 'one session stored under its own key')
+const storedNote = stored['workout-sessions'].sessions[0].note
+assert(storedNote.text === 'Ombro bem' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(storedNote.createdAt), `the session note is stored with when it was written (got ${JSON.stringify(storedNote)})`)
 assert(JSON.stringify(stored['workout-sessions'].sessions[0].exercises[0].sets) === '[{"reps":8,"kg":60},{"reps":7,"kg":62.5}]', 'stored sets are numbers, kg in decimals')
 assert(stored.exercises.exercises.map((e) => e.name).join('|') === 'Supino|Elevações', 'two exercises stored')
 

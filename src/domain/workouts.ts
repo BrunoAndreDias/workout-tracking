@@ -1,4 +1,6 @@
-import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import { editNote } from './notes.ts'
+import type { TimedNote } from './notes.ts'
+import type { ExerciseId, IsoDate, LocalDateTime, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 
 export interface Exercise {
   readonly id: ExerciseId
@@ -47,7 +49,8 @@ export interface WorkoutSession {
   readonly date: IsoDate
   readonly workoutDayId: WorkoutDayId | null
   readonly exercises: readonly SessionExercise[]
-  readonly notes: string
+  /** About the workout as a whole. */
+  readonly note?: TimedNote
 }
 
 /** `activePlanId` is null only when there are no plans. */
@@ -110,7 +113,7 @@ export function prefillSets(sessions: readonly WorkoutSession[], exerciseId: Exe
 
 export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, sessions: readonly WorkoutSession[]): WorkoutSession {
   const exercises = (day?.exercises ?? []).map((p) => ({ exerciseId: p.exerciseId, sets: prefillSets(sessions, p.exerciseId, date, p.sets) }))
-  return { id, date, workoutDayId: day?.id ?? null, exercises, notes: '' }
+  return { id, date, workoutDayId: day?.id ?? null, exercises }
 }
 
 /** What a session holds once the unfilled sets are left out. */
@@ -148,8 +151,15 @@ export type WorkoutAction =
   | { type: 'addSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
   | { type: 'setSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number; set: LoggedSet }
   | { type: 'removeSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number }
-  | { type: 'setSessionNotes'; sessionId: WorkoutSessionId; notes: string }
+  | { type: 'setSessionNote'; sessionId: WorkoutSessionId; text: string; now: LocalDateTime }
   | { type: 'deleteSession'; sessionId: WorkoutSessionId }
+
+/** `note` set, or the key left out when there is none, so a stored document never holds `note: undefined`. */
+function withNote<T extends { note?: TimedNote }>(item: T, note: TimedNote | undefined): T {
+  if (note === item.note) return item
+  const { note: _, ...rest } = item
+  return (note ? { ...rest, note } : rest) as T
+}
 
 const DEFAULT_PLANNED = { sets: 3, reps: { min: 8, max: 12 } } as const
 
@@ -221,8 +231,8 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.map((s, i) => (i === action.index ? action.set : s)))
     case 'removeSet':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.filter((_, i) => i !== action.index))
-    case 'setSessionNotes':
-      return updateSession(state, action.sessionId, (s) => ({ ...s, notes: action.notes }))
+    case 'setSessionNote':
+      return updateSession(state, action.sessionId, (s) => withNote(s, editNote(s.note, action.text, action.now)))
     case 'deleteSession':
       return { ...state, sessions: state.sessions.filter((s) => s.id !== action.sessionId) }
   }

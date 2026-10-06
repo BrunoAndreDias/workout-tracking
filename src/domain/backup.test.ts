@@ -63,7 +63,6 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   date: '2026-05-01' as IsoDate,
   workoutDayId: null,
   exercises: [{ exerciseId, sets: [{ reps: 8, kg: 60 }] }],
-  notes: '',
 })
 const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
 const NO_BODY = { sleep: {}, moods: {}, health: {} }
@@ -212,7 +211,7 @@ describe('backup', () => {
       ...NO_PLANS,
       exercises: [{ ...SUPINO, name: 'Supino renomeado' }, theirSupino, remo],
       workoutPlans: { plans: [{ ...PEITO, name: 'Outro nome' }, theirPlan], activePlanId: theirPlan.id },
-      workoutSessions: [{ ...workout('ws-1', remo.id), notes: 'perde' }, workout('ws-2', theirSupino.id), workout('ws-3', remo.id)],
+      workoutSessions: [{ ...workout('ws-1', remo.id), note: mood('perde') }, workout('ws-2', theirSupino.id), workout('ws-3', remo.id)],
     }
     const { data } = mergeBackup(loadAll(filled()), incoming)
     expect(data.exercises).toEqual([SUPINO, remo])
@@ -221,10 +220,10 @@ describe('backup', () => {
       ['wp-2', 'Deles', 'ex-supino'],
     ])
     expect(data.workoutPlans.activePlanId).toBe('wp-1')
-    expect(data.workoutSessions.map((s) => [s.id, s.exercises[0].exerciseId, s.notes])).toEqual([
-      ['ws-1', 'ex-supino', ''],
-      ['ws-2', 'ex-supino', ''],
-      ['ws-3', 'ex-remo', ''],
+    expect(data.workoutSessions.map((s) => [s.id, s.exercises[0].exerciseId, s.note?.text])).toEqual([
+      ['ws-1', 'ex-supino', undefined],
+      ['ws-2', 'ex-supino', undefined],
+      ['ws-3', 'ex-remo', undefined],
     ])
   })
 
@@ -319,7 +318,7 @@ describe('backup', () => {
       const storage = quotaStorage(before(), 99)
       expect(replaceWithBackup(incoming(), storage)).toEqual({ ok: true })
       expect([UNITS_STORAGE_KEY, DAYS_STORAGE_KEY, FOODS_STORAGE_KEY].map((k) => k in storage.data)).toEqual([true, true, true])
-      expect(JSON.parse(storage.data[WORKOUT_SESSIONS_STORAGE_KEY])).toEqual({ version: 1, sessions: [] })
+      expect(JSON.parse(storage.data[WORKOUT_SESSIONS_STORAGE_KEY])).toEqual({ version: 2, sessions: [] })
     })
 
     it('a failed last write puts back the workout sessions too', () => {

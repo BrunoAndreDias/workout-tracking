@@ -1,5 +1,5 @@
 import { parseIsoDate } from './days.ts'
-import { defaultStorage, isId, isRecord, loadStore } from './persistence.ts'
+import { defaultStorage, isId, isRecord, loadStore, saveStore } from './persistence.ts'
 import type { StorageLike } from './persistence.ts'
 import type { ExerciseId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './workouts.ts'
@@ -107,18 +107,9 @@ export const loadWorkouts = (storage: StorageLike | null = defaultStorage()): Wo
   sessions: loadWorkoutSessions(storage),
 })
 
-function save(key: string, doc: object, storage: StorageLike | null): boolean {
-  try {
-    storage?.setItem(key, JSON.stringify(doc))
-    return storage !== null
-  } catch {
-    return false
-  }
-}
-
 export const saveExercises = (exercises: readonly Exercise[], storage: StorageLike | null = defaultStorage()): boolean =>
-  save(EXERCISES_STORAGE_KEY, { version: EXERCISES_SCHEMA_VERSION, exercises }, storage)
+  saveStore(EXERCISES_STORAGE_KEY, { version: EXERCISES_SCHEMA_VERSION, exercises }, storage)
 export const saveWorkoutPlans = ({ plans, activePlanId }: WorkoutPlanState, storage: StorageLike | null = defaultStorage()): boolean =>
-  save(WORKOUT_PLANS_STORAGE_KEY, { version: WORKOUT_PLANS_SCHEMA_VERSION, plans, activePlanId }, storage)
+  saveStore(WORKOUT_PLANS_STORAGE_KEY, { version: WORKOUT_PLANS_SCHEMA_VERSION, plans, activePlanId }, storage)
 export const saveWorkoutSessions = (sessions: readonly WorkoutSession[], storage: StorageLike | null = defaultStorage()): boolean =>
-  save(WORKOUT_SESSIONS_STORAGE_KEY, { version: WORKOUT_SESSIONS_SCHEMA_VERSION, sessions }, storage)
+  saveStore(WORKOUT_SESSIONS_STORAGE_KEY, { version: WORKOUT_SESSIONS_SCHEMA_VERSION, sessions }, storage)

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { foods as catalogFoods, foodsById as catalogById, searchIndex as catalogIndex, table as catalogTable } from './data/catalog.ts'
 import { SEED_UNITS } from './data/units.ts'
+import { bodyReducer } from './domain/body.ts'
+import { loadPains, loadSleep, savePains, saveSleep } from './domain/bodyStorage.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
@@ -77,6 +79,7 @@ export default function App() {
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, undefined, () => loadWorkouts())
+  const [body, dispatchBody] = useReducer(bodyReducer, undefined, () => ({ sleep: loadSleep(), pains: loadPains() }))
   const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
@@ -102,6 +105,12 @@ export default function App() {
   useEffect(() => {
     saveWorkoutSessions(workouts.sessions)
   }, [workouts.sessions])
+  useEffect(() => {
+    saveSleep(body.sleep)
+  }, [body.sleep])
+  useEffect(() => {
+    savePains(body.pains)
+  }, [body.pains])
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash())
     window.addEventListener('hashchange', onHash)
@@ -187,7 +196,7 @@ export default function App() {
                 />
               </>
             )}
-            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} />}
+            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} body={body} dispatchBody={dispatchBody} />}
             {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />

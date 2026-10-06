@@ -1,6 +1,6 @@
 # Nutrition Tracking
 
-This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table. It is also that person's health log: workouts now, and later sleep, pain and watch metrics.
+This context describes how one person plans their meals and reviews the nutritional effect of swapping foods using the Portuguese APN equivalents table. It is also that person's health log: workouts, sleep and pain now, and later watch metrics.
 
 ## Language
 
@@ -76,18 +76,21 @@ _Avoid_: Workout (as a type name), training log
 One set of a Workout Session: the reps done and the load in kg, or no load for a bodyweight set. A set whose reps are empty is not filled in yet and counts as not logged.
 _Avoid_: Rep set, entry
 
-**Sleep Entry** (not built yet):
-How one night's sleep went: a quality from 1 to 5 and, optionally, the hours slept.
+**Sleep Entry** (Sono):
+How one night's sleep went: a quality from 1 (muito mal) to 5 (muito bem) and, optionally, the hours slept, up to 24. It belongs to the date the user woke up, and a date has at most one. It is logged in the Diário's Corpo section with one tap on the quality; tapping the chosen quality again removes it.
 
-**Pain Entry** (not built yet):
-A pain the user felt: the body region, an intensity from 0 to 10 and, optionally, the time and a note.
+**Pain Entry** (Dor):
+A pain the user felt on one date: the Body Region, a whole intensity from 0 to 10 and, optionally, the time (HH:MM) and a note. A date may hold several. The Diário lists them timed first, by time.
+
+**Body Region** (Zona):
+A fixed list of places a pain can be: cabeça, pescoço, costas superiores, lombar, outro, and left and right of ombro, cotovelo, pulso, anca, joelho, tornozelo and pé, since training load differs between sides.
 
 **Health Sample** (not built yet):
 One daily metric recorded by the user's Apple Watch, such as stand hours, imported into the app rather than typed.
 _Avoid_: Reading, measurement
 
 **Backup**:
-One JSON file holding every store the app keeps: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans and Workout Sessions, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans and Workout Sessions the user does not already have, by id or date. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
+One JSON file holding every store the app keeps: plans, custom Foods, user Household Units, Day Logs, Exercises, Workout Plans, Workout Sessions, Sleep Entries and Pain Entries, each in the form the app saves it. Importing either merges it in or replaces everything. A merge appends its plans, gives a plan a new id when the id is taken (and the suffix " (importado)" when its name is taken too), and adds custom Foods, units, Day Logs, Exercises, Workout Plans, Workout Sessions, Sleep Entries and Pain Entries the user does not already have, by id or date. An incoming Exercise named like one the user has, ignoring case, becomes that one. A file that is invalid anywhere is rejected whole and changes nothing.
 _Avoid_: Sync, export (as a noun)
 
 **Equivalent**:

@@ -154,6 +154,16 @@ export function loadStore<T>(storage: StorageLike | null, key: string, parse: (r
   return fresh()
 }
 
+/** False when the write failed or there is no storage. */
+export function saveStore(key: string, doc: object, storage: StorageLike | null): boolean {
+  try {
+    storage?.setItem(key, JSON.stringify(doc))
+    return storage !== null
+  } catch {
+    return false
+  }
+}
+
 export const loadState = (storage: StorageLike | null = defaultStorage()): PlanState => loadStore(storage, STORAGE_KEY, parseState, initialState)
 
 export function saveState(state: PlanState, storage: StorageLike | null = defaultStorage()): boolean {

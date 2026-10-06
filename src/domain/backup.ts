@@ -1,3 +1,6 @@
+import type { PainEntry } from './body.ts'
+import { loadPains, loadSleep, PAINS_STORAGE_KEY, parsePains, parseSleep, savePains, saveSleep, SLEEP_STORAGE_KEY } from './bodyStorage.ts'
+import type { SleepLog } from './bodyStorage.ts'
 import { loadCustomFoods, parseCustomFoods, FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
 import type { DayState } from './days.ts'
 import { DAYS_STORAGE_KEY, loadDays, parseDays, saveDays } from './daysStorage.ts'
@@ -38,6 +41,8 @@ export interface BackupData {
   readonly exercises: readonly Exercise[]
   readonly workoutPlans: WorkoutPlanState
   readonly workoutSessions: readonly WorkoutSession[]
+  readonly sleep: SleepLog
+  readonly pains: readonly PainEntry[]
 }
 
 /** The app's own data: it always has a plan. */
@@ -53,6 +58,8 @@ const STORES = [
   { name: 'exercises', key: EXERCISES_STORAGE_KEY, label: 'exercícios', parse: parseExercises },
   { name: 'workoutPlans', key: WORKOUT_PLANS_STORAGE_KEY, label: 'planos de treino', parse: parseWorkoutPlans },
   { name: 'workoutSessions', key: WORKOUT_SESSIONS_STORAGE_KEY, label: 'treinos', parse: parseWorkoutSessions },
+  { name: 'sleep', key: SLEEP_STORAGE_KEY, label: 'sono', parse: parseSleep },
+  { name: 'pains', key: PAINS_STORAGE_KEY, label: 'dores', parse: parsePains },
 ] as const
 
 export type StoreName = (typeof STORES)[number]['name']
@@ -103,7 +110,7 @@ export function parseBackup(raw: unknown): ParsedBackup {
   if (!isRecord(raw) || raw.app !== BACKUP_APP) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Plano alimentar.' }
   if (raw.version !== BACKUP_VERSION) return { ok: false, error: 'Esta cópia de segurança é de uma versão que a app não conhece.' }
   if (!isRecord(raw.stores)) return { ok: false, error: 'A cópia de segurança está danificada: faltam os dados.' }
-  const data = { plans: null, foods: [], units: [], days: { days: {} }, exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] } as { -readonly [K in keyof BackupData]: unknown }
+  const data = { plans: null, foods: [], units: [], days: { days: {} }, exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], sleep: {}, pains: [] } as { -readonly [K in keyof BackupData]: unknown }
   for (const { name, label, parse } of STORES) {
     const doc = raw.stores[name]
     if (doc === undefined) continue
@@ -123,6 +130,8 @@ export function loadAll(storage: StorageLike): AppData {
     exercises: loadExercises(storage),
     workoutPlans: loadWorkoutPlans(storage),
     workoutSessions: loadWorkoutSessions(storage),
+    sleep: loadSleep(storage),
+    pains: loadPains(storage),
   }
 }
 
@@ -167,7 +176,7 @@ function mergeWorkouts(current: AppData, incoming: BackupData): Pick<AppData, 'e
 
 /**
  * Plans are appended; one whose id is taken gets a fresh id (and its days follow it), and the suffix " (importado)" only when its name is taken too.
- * Foods and units are added by id and days by date; what is already there wins.
+ * Foods, units and Pain Entries are added by id, and days and Sleep Entries by date; what is already there wins.
  */
 export function mergeBackup(current: AppData, incoming: BackupData, makeId: () => PlanId = newId<PlanId>): MergeResult {
   const takenIds = new Set(current.plans.plans.map((p) => p.id))
@@ -191,6 +200,8 @@ export function mergeBackup(current: AppData, incoming: BackupData, makeId: () =
   const unitIds = new Set(current.units.map((u) => u.id))
   const units = [...current.units, ...incoming.units.filter((u) => !unitIds.has(u.id))]
 
+  const painIds = new Set(current.pains.map((p) => p.id))
+
   const days: Record<IsoDate, DayLog> = { ...current.days.days }
   let skippedDays = 0
   for (const day of Object.values(incoming.days.days)) {
@@ -198,7 +209,15 @@ export function mergeBackup(current: AppData, incoming: BackupData, makeId: () =
     else days[day.date] = day.planId && renamed.has(day.planId) ? { ...day, planId: renamed.get(day.planId)! } : day
   }
   return {
-    data: { plans: { ...current.plans, plans: [...current.plans.plans, ...added] }, foods, units, days: { days }, ...mergeWorkouts(current, incoming) },
+    data: {
+      plans: { ...current.plans, plans: [...current.plans.plans, ...added] },
+      foods,
+      units,
+      days: { days },
+      ...mergeWorkouts(current, incoming),
+      sleep: { ...incoming.sleep, ...current.sleep },
+      pains: [...current.pains, ...incoming.pains.filter((p) => !painIds.has(p.id))],
+    },
     skippedFoods: incoming.foods.length - (foods.length - current.foods.length),
     skippedUnits: incoming.units.length - (units.length - current.units.length),
     skippedDays,
@@ -229,6 +248,8 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
     () => saveExercises(data.exercises, storage),
     () => saveWorkoutPlans(data.workoutPlans, storage),
     () => saveWorkoutSessions(data.workoutSessions, storage),
+    () => saveSleep(data.sleep, storage),
+    () => savePains(data.pains, storage),
   ]
   if (writes.every((write) => write())) return { ok: true }
   let restored = true
@@ -243,8 +264,8 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
   return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
 }
 
-/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos" */
-export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions }: BackupData): string {
+/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos, 5 noites de sono, 2 dores" */
+export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions, sleep, pains }: BackupData): string {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   return [
     count(plans?.plans.length ?? 0, 'plano', 'planos'),
@@ -253,5 +274,7 @@ export function describeBackup({ plans, foods, units, days, workoutPlans, workou
     count(Object.keys(days.days).length, 'dia', 'dias'),
     count(workoutPlans.plans.length, 'plano de treino', 'planos de treino'),
     count(workoutSessions.length, 'treino', 'treinos'),
+    count(Object.keys(sleep).length, 'noite de sono', 'noites de sono'),
+    count(pains.length, 'dor', 'dores'),
   ].join(', ')
 }

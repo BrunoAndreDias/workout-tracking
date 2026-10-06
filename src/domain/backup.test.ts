@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, writeAll } from './backup.ts'
 import type { BackupData } from './backup.ts'
+import type { PainEntry, SleepEntry, SleepQuality } from './body.ts'
+import { savePains, saveSleep } from './bodyStorage.ts'
 import { FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
 import { DAYS_STORAGE_KEY, saveDays } from './daysStorage.ts'
 import { saveState, STORAGE_KEY } from './persistence.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
-import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, MealId, NutrientValues, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, MealId, PainEntryId, NutrientValues, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
 import { saveExercises, saveWorkoutPlans, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
@@ -62,6 +64,9 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   notes: '',
 })
 const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
+const NO_BODY = { sleep: {}, pains: [] }
+const sleepOn = (date: string, quality: SleepQuality, hours: number | null): SleepEntry => ({ date: date as IsoDate, quality, hours })
+const pain = (id: string, note: string): PainEntry => ({ id: id as PainEntryId, date: '2026-05-01' as IsoDate, region: 'kneeLeft', intensity: 4, time: '08:30', note })
 
 function filled() {
   const storage = memoryStorage()
@@ -72,6 +77,8 @@ function filled() {
   saveExercises([SUPINO], storage)
   saveWorkoutPlans({ plans: [PEITO], activePlanId: PEITO.id }, storage)
   saveWorkoutSessions([workout('ws-1', SUPINO.id)], storage)
+  saveSleep({ ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4, 7.5) }, storage)
+  savePains([pain('pain-1', 'mine')], storage)
   return storage
 }
 
@@ -81,7 +88,7 @@ const parsed = (raw: unknown): BackupData => {
   return r.data
 }
 
-const NO_PLANS = { plans: null, foods: [], units: [], days: { days: {} }, ...NO_WORKOUTS } satisfies BackupData
+const NO_PLANS = { plans: null, foods: [], units: [], days: { days: {} }, ...NO_WORKOUTS, ...NO_BODY } satisfies BackupData
 
 describe('backup', () => {
   it('round-trips every store through export and parse', () => {
@@ -94,13 +101,13 @@ describe('backup', () => {
     expect(file.stores.plans).toEqual(JSON.parse(storage.data[STORAGE_KEY]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
-    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino')
+    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino, 1 noite de sono, 1 dor')
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
-    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos')
+    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos, 0 noites de sono, 0 dores')
   })
 
   it('migrates an old-version plans document inside a backup', () => {
@@ -173,7 +180,7 @@ describe('backup', () => {
       foods: [{ ...SKYR, name: 'Skyr diferente' }, { ...SKYR, id: 'custom:novo' as FoodId, name: 'Novo' }],
       units: [COPO, { ...COPO, id: 'unit:b', name: 'colher' }],
       days: { days: { '2026-05-01': day('2026-05-01', A), '2026-05-02': day('2026-05-02', A) } as Record<IsoDate, DayLog> },
-      ...NO_WORKOUTS,
+      ...NO_WORKOUTS, ...NO_BODY,
     }
     const r = mergeBackup(loadAll(filled()), incoming, () => 'n3' as PlanId)
     expect(r.data.foods.map((f) => [f.id, f.name])).toEqual([
@@ -211,6 +218,28 @@ describe('backup', () => {
     ])
   })
 
+  it('merges sleep by date and pains by id, and what the user has wins', () => {
+    const incoming: BackupData = {
+      ...NO_PLANS,
+      sleep: { ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 1, null), ['2026-05-02' as IsoDate]: sleepOn('2026-05-02', 5, 8) },
+      pains: [pain('pain-1', 'theirs'), pain('pain-2', 'new')],
+    }
+    const { data } = mergeBackup(loadAll(filled()), incoming)
+    expect(data.sleep).toEqual({
+      '2026-05-01': { date: '2026-05-01', quality: 4, hours: 7.5 },
+      '2026-05-02': { date: '2026-05-02', quality: 5, hours: 8 },
+    })
+    expect(data.pains.map((p) => [p.id, p.note])).toEqual([
+      ['pain-1', 'mine'],
+      ['pain-2', 'new'],
+    ])
+  })
+
+  it('rejects a whole file whose pains store holds an intensity above 10', () => {
+    const r = parseBackup({ app: 'plano-alimentar', version: 1, stores: { pains: { version: 1, pains: [{ ...pain('p', ''), intensity: 11 }] } } })
+    expect(r).toEqual({ ok: false, error: 'A cópia de segurança está danificada: os dados de dores não são válidos. Não foi alterado nada.' })
+  })
+
   it('entries of an imported plan still resolve to the imported custom food after merging', () => {
     const { data } = mergeBackup(loadAll(memoryStorage()), parsed(exportBackup(filled()).file))
     const ids = new Set(data.foods.map((f) => f.id))
@@ -243,7 +272,7 @@ describe('backup', () => {
       delete storage.data[FOODS_STORAGE_KEY]
       return { ...storage.data }
     }
-    const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} }, ...NO_WORKOUTS })
+    const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} }, ...NO_WORKOUTS, ...NO_BODY })
 
     it('replace restores every key when the third write throws', () => {
       const initial = before()
@@ -282,7 +311,7 @@ describe('backup', () => {
       storage.data[UNITS_STORAGE_KEY] = JSON.stringify({ version: 99, units: [] })
       const { file, skipped } = exportBackup(storage)
       expect(skipped).toEqual(['units'])
-      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions'])
+      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions', 'sleep', 'pains'])
     })
 
     it('lists corrupt JSON too, but not a store that was never saved', () => {

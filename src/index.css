@@ -390,11 +390,11 @@ small { font-size: 0.85em; color: var(--muted); }
 .body-title { font: 500 22px/1.2 var(--font-serif); }
 .body-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .body-label { width: 52px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
-.sleep-scale { display: inline-flex; gap: 6px; }
-.sleep-pick { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--input-border); background: var(--surface); font-size: 16px; font-weight: 500; }
+.sleep-scale { display: flex; flex-wrap: wrap; gap: 6px; }
+.sleep-pick { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--input-border); background: var(--surface); font-size: 14px; font-weight: 500; }
 .sleep-pick:hover { border-color: var(--muted); }
 .sleep-pick[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
-.body-quality { font-size: 14px; color: var(--muted); }
+.body-watch-sleep { font-size: 14px; color: var(--ink-2); }
 .body-pains { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--rule); }
 .pain-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .pain { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; font-size: 14px; }

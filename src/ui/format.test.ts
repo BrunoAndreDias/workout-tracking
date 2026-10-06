@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatPercent, formatPlanned, formatPortionCount, formatSigned } from './format.ts'
+import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -20,6 +20,13 @@ describe('pt-PT formatting', () => {
     expect(formatPortionCount(1)).toBe('1')
     expect(formatPortionCount(1.44)).toBe('1,4')
     expect(formatPortionCount(4.16)).toBe('4,2')
+  })
+
+  it('writes sleep minutes as hours and minutes', () => {
+    expect(formatSleepDuration(452)).toBe('7 h 32 min')
+    expect(formatSleepDuration(480)).toBe('8 h')
+    expect(formatSleepDuration(45)).toBe('45 min')
+    expect(formatSleepDuration(431.6)).toBe('7 h 12 min')
   })
 
   it('signs deltas and avoids a signed zero', () => {

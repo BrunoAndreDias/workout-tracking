@@ -66,7 +66,7 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
 })
 const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
 const NO_BODY = { sleep: {}, pains: [], health: {} }
-const sleepOn = (date: string, quality: SleepQuality, hours: number | null): SleepEntry => ({ date: date as IsoDate, quality, hours })
+const sleepOn = (date: string, quality: SleepQuality): SleepEntry => ({ date: date as IsoDate, quality })
 const pain = (id: string, note: string): PainEntry => ({ id: id as PainEntryId, date: '2026-05-01' as IsoDate, region: 'kneeLeft', intensity: 4, time: '08:30', note })
 
 function filled() {
@@ -78,7 +78,7 @@ function filled() {
   saveExercises([SUPINO], storage)
   saveWorkoutPlans({ plans: [PEITO], activePlanId: PEITO.id }, storage)
   saveWorkoutSessions([workout('ws-1', SUPINO.id)], storage)
-  saveSleep({ ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4, 7.5) }, storage)
+  saveSleep({ ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4) }, storage)
   savePains([pain('pain-1', 'mine')], storage)
   saveHealth({ ['2026-05-01' as IsoDate]: { steps: 8123, standHours: 9 } }, storage)
   return storage
@@ -110,6 +110,12 @@ describe('backup', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
     expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos, 0 noites de sono, 0 dores, 0 valores do relógio')
+  })
+
+  it('reads a backup whose sleep entries still carry manual hours and drops them', () => {
+    const old = { version: 1, entries: [{ date: '2026-05-01', quality: 4, hours: 7.5 }, { date: '2026-05-02', quality: 2, hours: null }] }
+    const data = parsed({ app: 'plano-alimentar', version: 1, exportedAt: 'x', stores: { sleep: old } })
+    expect(data.sleep).toEqual({ '2026-05-01': { date: '2026-05-01', quality: 4 }, '2026-05-02': { date: '2026-05-02', quality: 2 } })
   })
 
   it('migrates an old-version plans document inside a backup', () => {
@@ -223,13 +229,13 @@ describe('backup', () => {
   it('merges sleep by date and pains by id, and what the user has wins', () => {
     const incoming: BackupData = {
       ...NO_PLANS,
-      sleep: { ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 1, null), ['2026-05-02' as IsoDate]: sleepOn('2026-05-02', 5, 8) },
+      sleep: { ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 1), ['2026-05-02' as IsoDate]: sleepOn('2026-05-02', 5) },
       pains: [pain('pain-1', 'theirs'), pain('pain-2', 'new')],
     }
     const { data } = mergeBackup(loadAll(filled()), incoming)
     expect(data.sleep).toEqual({
-      '2026-05-01': { date: '2026-05-01', quality: 4, hours: 7.5 },
-      '2026-05-02': { date: '2026-05-02', quality: 5, hours: 8 },
+      '2026-05-01': { date: '2026-05-01', quality: 4 },
+      '2026-05-02': { date: '2026-05-02', quality: 5 },
     })
     expect(data.pains.map((p) => [p.id, p.note])).toEqual([
       ['pain-1', 'mine'],

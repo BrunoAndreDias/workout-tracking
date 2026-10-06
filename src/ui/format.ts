@@ -29,6 +29,15 @@ export function formatAmount(v: number, unit: string): string {
   return two.format(v)
 }
 
+/** 452 -> "7 h 32 min"; a whole hour drops the minutes. */
+export function formatSleepDuration(minutes: number): string {
+  const total = Math.round(minutes)
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h === 0) return `${m} min`
+  return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
+
 export const formatPortionCount = (p: number) => one.format(Math.round(p * 10) / 10)
 
 /** Monday first, matching `weekdayOf`; the calendar shows the first three letters. */

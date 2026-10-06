@@ -3,9 +3,21 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { createServer } from 'node:net'
 import { join } from 'node:path'
 
-const PORT = process.env.E2E_PORT ?? '5199'
+/** A port the OS says is free right now, so parallel runs and a user's dev server never collide. */
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const probe = createServer()
+    probe.once('error', reject)
+    probe.listen(0, () => {
+      const { port } = probe.address()
+      probe.close(() => resolve(String(port)))
+    })
+  })
+
+const PORT = process.env.E2E_PORT ?? (await freePort())
 const APP_URL = `http://localhost:${PORT}/`
 const names = process.argv.slice(2)
 const scripts = readdirSync('e2e')
@@ -26,7 +38,7 @@ process.on('exit', stop)
 
 await new Promise((resolve, reject) => {
   server.stdout.on('data', (d) => d.toString().includes('Local:') && resolve())
-  server.on('exit', (code) => reject(new Error(`vite exited with ${code}; is port ${PORT} taken? set E2E_PORT`)))
+  server.on('exit', (code) => reject(new Error(`vite exited with ${code}; is port ${PORT} taken? set E2E_PORT to another`)))
 })
 
 const failed = []

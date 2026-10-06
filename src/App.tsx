@@ -132,7 +132,7 @@ export default function App({ sync }: { sync: Sync | null }) {
     catalogIndex,
     ingredientIndex,
     table,
-    usedFoods: foodsByUse(allMeals),
+    usedFoods: () => foodsByUse(allMeals),
     dispatchFoods,
   }
   const plan = state.plans.find((p) => p.id === state.selectedId)!

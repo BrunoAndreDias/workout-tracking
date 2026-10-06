@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { readStored } from './_driver.mjs'
+import { openFresh, readStored } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -62,9 +62,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
-await page.goto(URL + '#alimentacao')
-await page.evaluate(() => localStorage.clear())
-await page.reload()
+await openFresh(page, URL + '#alimentacao')
 
 const modelRequests = []
 page.on('request', (r) => /huggingface|jsdelivr/.test(r.url()) && modelRequests.push(r.url()))

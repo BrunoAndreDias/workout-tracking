@@ -1,4 +1,17 @@
 #!/bin/sh
 # Runs the full check before a push, locally instead of in paid CI minutes.
 # Enable once per clone: git config core.hooksPath .githooks   (skip a push with --no-verify)
+# First refuses a branch whose open PR targets something other than main. No gh, no PR or no network skips that check.
+if command -v gh >/dev/null 2>&1; then
+  while read -r _ _ remote_ref _; do
+    branch=${remote_ref#refs/heads/}
+    [ "$branch" = "$remote_ref" ] && continue
+    [ "$branch" = main ] && continue
+    base=$(gh pr view "$branch" --json baseRefName -q .baseRefName 2>/dev/null) || continue
+    if [ -n "$base" ] && [ "$base" != main ]; then
+      echo "The PR for $branch targets $base, not main. Fix with: gh pr edit $branch --base main" >&2
+      exit 1
+    fi
+  done
+fi
 exec npm run check

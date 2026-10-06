@@ -1,0 +1,12 @@
+#!/bin/sh
+# Refuses a commit on a branch that is missing commits from local main, so a stale base never reaches a PR.
+# A rebase or merge in progress is exempt: its commits replay history that was already checked.
+for state in rebase-merge rebase-apply MERGE_HEAD; do
+  [ -e "$(git rev-parse --git-path "$state")" ] && exit 0
+done
+branch=$(git symbolic-ref --short -q HEAD) || exit 0
+[ "$branch" = main ] && exit 0
+git rev-parse --verify -q refs/heads/main >/dev/null || exit 0
+git merge-base --is-ancestor main HEAD && exit 0
+echo "This branch is missing commits from local main. Run: git rebase main" >&2
+exit 1

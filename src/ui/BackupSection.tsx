@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, storeLabel, writeAll } from '../domain/backup.ts'
 import type { BackupData } from '../domain/backup.ts'
 import { toIsoDate } from '../domain/days.ts'
@@ -20,7 +21,8 @@ function download(name: string, text: string) {
  */
 const reloadApp = () => window.location.reload()
 
-export function BackupSection() {
+/** `children` are further data actions shown beside export and import. */
+export function BackupSection({ children }: { children?: ReactNode }) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
@@ -77,6 +79,7 @@ export function BackupSection() {
             e.target.value = ''
           }}
         />
+        {children}
       </div>
       {error && (
         <p className="backup-error" role="alert">
@@ -93,7 +96,7 @@ export function BackupSection() {
           <div className="panel-body backup-body">
             <p className="backup-summary">{describeBackup(incoming)}</p>
             <p className="goals-hint">
-              “Juntar” acrescenta os planos e mantém os teus alimentos, unidades, dias, treinos, sono e dores; só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
+              “Juntar” acrescenta os planos e mantém os teus alimentos, unidades, dias, treinos, sono, dores e valores do relógio; só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
             </p>
           </div>
           <div className="panel-foot form-actions">

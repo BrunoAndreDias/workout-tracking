@@ -8,6 +8,8 @@ import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
 import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
 import { loadDays, saveDays } from './domain/daysStorage.ts'
+import { upsertSamples } from './domain/health.ts'
+import { loadHealth, saveHealth } from './domain/healthStorage.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
 import { loadState, saveState } from './domain/persistence.ts'
 import { planReducer } from './domain/plans.ts'
@@ -24,6 +26,7 @@ import { DayEditor } from './ui/DayEditor.tsx'
 import { DayLogView } from './ui/DayLogView.tsx'
 import type { FoodKit } from './ui/DayEditor.tsx'
 import { Footer } from './ui/Footer.tsx'
+import { HealthImport } from './ui/HealthImport.tsx'
 import { HistoryView } from './ui/HistoryView.tsx'
 import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
@@ -80,6 +83,7 @@ export default function App() {
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, undefined, () => loadWorkouts())
   const [body, dispatchBody] = useReducer(bodyReducer, undefined, () => ({ sleep: loadSleep(), pains: loadPains() }))
+  const [health, setHealth] = useState(() => loadHealth())
   const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
@@ -111,6 +115,9 @@ export default function App() {
   useEffect(() => {
     savePains(body.pains)
   }, [body.pains])
+  useEffect(() => {
+    saveHealth(health)
+  }, [health])
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash())
     window.addEventListener('hashchange', onHash)
@@ -196,13 +203,15 @@ export default function App() {
                 />
               </>
             )}
-            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} body={body} dispatchBody={dispatchBody} />}
+            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} body={body} dispatchBody={dispatchBody} health={health} />}
             {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
             )}
           </main>
-          <BackupSection />
+          <BackupSection>
+            <HealthImport onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
+          </BackupSection>
           <Footer />
         </div>
       </div>

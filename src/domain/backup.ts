@@ -4,6 +4,9 @@ import type { SleepLog } from './bodyStorage.ts'
 import { loadCustomFoods, parseCustomFoods, FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
 import type { DayState } from './days.ts'
 import { DAYS_STORAGE_KEY, loadDays, parseDays, saveDays } from './daysStorage.ts'
+import { countSamples, fillMissing } from './health.ts'
+import type { HealthLog } from './health.ts'
+import { HEALTH_STORAGE_KEY, loadHealth, parseHealth, saveHealth } from './healthStorage.ts'
 import { copyMeals } from './meals.ts'
 import { isRecord, loadState, parseState, saveState, STORAGE_KEY } from './persistence.ts'
 import type { RemovableStorage, StorageLike } from './persistence.ts'
@@ -43,6 +46,7 @@ export interface BackupData {
   readonly workoutSessions: readonly WorkoutSession[]
   readonly sleep: SleepLog
   readonly pains: readonly PainEntry[]
+  readonly health: HealthLog
 }
 
 /** The app's own data: it always has a plan. */
@@ -60,6 +64,7 @@ const STORES = [
   { name: 'workoutSessions', key: WORKOUT_SESSIONS_STORAGE_KEY, label: 'treinos', parse: parseWorkoutSessions },
   { name: 'sleep', key: SLEEP_STORAGE_KEY, label: 'sono', parse: parseSleep },
   { name: 'pains', key: PAINS_STORAGE_KEY, label: 'dores', parse: parsePains },
+  { name: 'health', key: HEALTH_STORAGE_KEY, label: 'valores do relógio', parse: parseHealth },
 ] as const
 
 export type StoreName = (typeof STORES)[number]['name']
@@ -110,7 +115,7 @@ export function parseBackup(raw: unknown): ParsedBackup {
   if (!isRecord(raw) || raw.app !== BACKUP_APP) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Plano alimentar.' }
   if (raw.version !== BACKUP_VERSION) return { ok: false, error: 'Esta cópia de segurança é de uma versão que a app não conhece.' }
   if (!isRecord(raw.stores)) return { ok: false, error: 'A cópia de segurança está danificada: faltam os dados.' }
-  const data = { plans: null, foods: [], units: [], days: { days: {} }, exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], sleep: {}, pains: [] } as { -readonly [K in keyof BackupData]: unknown }
+  const data = { plans: null, foods: [], units: [], days: { days: {} }, exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], sleep: {}, pains: [], health: {} } as { -readonly [K in keyof BackupData]: unknown }
   for (const { name, label, parse } of STORES) {
     const doc = raw.stores[name]
     if (doc === undefined) continue
@@ -132,6 +137,7 @@ export function loadAll(storage: StorageLike): AppData {
     workoutSessions: loadWorkoutSessions(storage),
     sleep: loadSleep(storage),
     pains: loadPains(storage),
+    health: loadHealth(storage),
   }
 }
 
@@ -176,7 +182,7 @@ function mergeWorkouts(current: AppData, incoming: BackupData): Pick<AppData, 'e
 
 /**
  * Plans are appended; one whose id is taken gets a fresh id (and its days follow it), and the suffix " (importado)" only when its name is taken too.
- * Foods, units and Pain Entries are added by id, and days and Sleep Entries by date; what is already there wins.
+ * Foods, units and Pain Entries are added by id, days and Sleep Entries by date, and Health Samples by date and metric; what is already there wins.
  */
 export function mergeBackup(current: AppData, incoming: BackupData, makeId: () => PlanId = newId<PlanId>): MergeResult {
   const takenIds = new Set(current.plans.plans.map((p) => p.id))
@@ -217,6 +223,7 @@ export function mergeBackup(current: AppData, incoming: BackupData, makeId: () =
       ...mergeWorkouts(current, incoming),
       sleep: { ...incoming.sleep, ...current.sleep },
       pains: [...current.pains, ...incoming.pains.filter((p) => !painIds.has(p.id))],
+      health: fillMissing(current.health, incoming.health),
     },
     skippedFoods: incoming.foods.length - (foods.length - current.foods.length),
     skippedUnits: incoming.units.length - (units.length - current.units.length),
@@ -250,6 +257,7 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
     () => saveWorkoutSessions(data.workoutSessions, storage),
     () => saveSleep(data.sleep, storage),
     () => savePains(data.pains, storage),
+    () => saveHealth(data.health, storage),
   ]
   if (writes.every((write) => write())) return { ok: true }
   let restored = true
@@ -264,8 +272,8 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
   return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
 }
 
-/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos, 5 noites de sono, 2 dores" */
-export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions, sleep, pains }: BackupData): string {
+/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos, 5 noites de sono, 2 dores, 14 valores do relógio" */
+export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions, sleep, pains, health }: BackupData): string {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   return [
     count(plans?.plans.length ?? 0, 'plano', 'planos'),
@@ -276,5 +284,6 @@ export function describeBackup({ plans, foods, units, days, workoutPlans, workou
     count(workoutSessions.length, 'treino', 'treinos'),
     count(Object.keys(sleep).length, 'noite de sono', 'noites de sono'),
     count(pains.length, 'dor', 'dores'),
+    count(countSamples(health), 'valor do relógio', 'valores do relógio'),
   ].join(', ')
 }

@@ -2,23 +2,17 @@ import { useEffect, useMemo, useReducer, useState } from 'react'
 import { foods as catalogFoods, foodsById as catalogById, searchIndex as catalogIndex, table as catalogTable } from './data/catalog.ts'
 import { SEED_UNITS } from './data/units.ts'
 import { bodyReducer } from './domain/body.ts'
-import { loadMoods, loadSleep, saveMoods, saveSleep } from './domain/bodyStorage.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
-import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
 import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
-import { loadDays, saveDays } from './domain/daysStorage.ts'
 import { upsertSamples } from './domain/health.ts'
-import { loadHealth, saveHealth } from './domain/healthStorage.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
-import { loadState, saveState } from './domain/persistence.ts'
 import { planReducer } from './domain/plans.ts'
 import { buildSearchIndex } from './domain/search.ts'
+import { loadAll, saveStore, STORES } from './domain/stores.ts'
 import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
-import { loadUnits, saveUnits } from './domain/unitsStorage.ts'
-import { loadWorkouts, saveExercises, saveWorkoutPlans, saveWorkoutSessions } from './domain/workoutStorage.ts'
 import { workoutReducer } from './domain/workouts.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
@@ -80,47 +74,28 @@ const userUnitsReducer = (state: readonly FoodUnit[], action: UnitsAction) => un
 
 /** `sync` is null only when the browser blocks localStorage. */
 export default function App({ sync }: { sync: Sync | null }) {
-  const [state, dispatch] = useReducer(planReducer, undefined, () => loadState())
-  const [dayState, dispatchDays] = useReducer(dayReducer, undefined, () => loadDays())
-  const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
-  const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
-  const [workouts, dispatchWorkouts] = useReducer(workoutReducer, undefined, () => loadWorkouts())
-  const [body, dispatchBody] = useReducer(bodyReducer, undefined, () => ({ sleep: loadSleep(), moods: loadMoods() }))
-  const [health, setHealth] = useState(() => loadHealth())
+  const [stored] = useState(() => loadAll())
+  const [state, dispatch] = useReducer(planReducer, stored.plans)
+  const [dayState, dispatchDays] = useReducer(dayReducer, stored.days)
+  const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, stored.foods)
+  const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, stored.units)
+  const [workouts, dispatchWorkouts] = useReducer(workoutReducer, { exercises: stored.exercises, ...stored.workoutPlans, sessions: stored.workoutSessions })
+  const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, moods: stored.moods })
+  const [health, setHealth] = useState(stored.health)
   const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
-  useEffect(() => {
-    saveState(state)
-  }, [state])
-  useEffect(() => {
-    saveDays(dayState)
-  }, [dayState])
-  useEffect(() => {
-    saveCustomFoods(customDefs)
-  }, [customDefs])
-  useEffect(() => {
-    saveUnits(userUnits)
-  }, [userUnits])
-  useEffect(() => {
-    saveExercises(workouts.exercises)
-  }, [workouts.exercises])
+  useEffect(() => void saveStore(STORES.plans, state), [state])
+  useEffect(() => void saveStore(STORES.days, dayState), [dayState])
+  useEffect(() => void saveStore(STORES.foods, customDefs), [customDefs])
+  useEffect(() => void saveStore(STORES.units, userUnits), [userUnits])
+  useEffect(() => void saveStore(STORES.exercises, workouts.exercises), [workouts.exercises])
   const { plans: workoutPlans, activePlanId } = workouts
-  useEffect(() => {
-    saveWorkoutPlans({ plans: workoutPlans, activePlanId })
-  }, [workoutPlans, activePlanId])
-  useEffect(() => {
-    saveWorkoutSessions(workouts.sessions)
-  }, [workouts.sessions])
-  useEffect(() => {
-    saveSleep(body.sleep)
-  }, [body.sleep])
-  useEffect(() => {
-    saveMoods(body.moods)
-  }, [body.moods])
-  useEffect(() => {
-    saveHealth(health)
-  }, [health])
+  useEffect(() => void saveStore(STORES.workoutPlans, { plans: workoutPlans, activePlanId }), [workoutPlans, activePlanId])
+  useEffect(() => void saveStore(STORES.workoutSessions, workouts.sessions), [workouts.sessions])
+  useEffect(() => void saveStore(STORES.sleep, body.sleep), [body.sleep])
+  useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
+  useEffect(() => void saveStore(STORES.health, health), [health])
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash())
     window.addEventListener('hashchange', onHash)

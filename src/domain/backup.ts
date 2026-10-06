@@ -1,75 +1,24 @@
 import type { MoodLog } from './body.ts'
-import { loadMoods, loadSleep, MOODS_STORAGE_KEY, parseMoods, parseSleep, saveMoods, saveSleep, SLEEP_STORAGE_KEY } from './bodyStorage.ts'
-import type { SleepLog } from './bodyStorage.ts'
-import { loadCustomFoods, parseCustomFoods, FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
-import type { DayState } from './days.ts'
-import { DAYS_STORAGE_KEY, loadDays, parseDays, saveDays } from './daysStorage.ts'
 import { countSamples, fillMissing } from './health.ts'
-import type { HealthLog } from './health.ts'
-import { HEALTH_STORAGE_KEY, loadHealth, parseHealth, saveHealth } from './healthStorage.ts'
 import { copyMeals } from './meals.ts'
 import { appendNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
-import { isRecord, loadState, parseState, saveState, STORAGE_KEY } from './persistence.ts'
+import { isRecord } from './persistence.ts'
 import type { RemovableStorage, StorageLike } from './persistence.ts'
-import { initialState, newId } from './plans.ts'
+import { newId } from './plans.ts'
 import type { PlanState } from './plans.ts'
-import type { CustomFoodDef, DayLog, ExerciseId, IsoDate, MealPlan, PlanId } from './types.ts'
-import { loadUnits, parseUnits, saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
-import type { FoodUnit } from './units.ts'
-import {
-  EXERCISES_STORAGE_KEY,
-  loadExercises,
-  loadWorkoutPlans,
-  loadWorkoutSessions,
-  parseExercises,
-  parseWorkoutPlans,
-  parseWorkoutSessions,
-  saveExercises,
-  saveWorkoutPlans,
-  saveWorkoutSessions,
-  WORKOUT_PLANS_STORAGE_KEY,
-  WORKOUT_SESSIONS_STORAGE_KEY,
-} from './workoutStorage.ts'
+import { saveStore, STORE_NAMES, STORES } from './stores.ts'
+import type { AppData, StoreName } from './stores.ts'
+import type { DayLog, ExerciseId, IsoDate, MealPlan, PlanId } from './types.ts'
 import { findExercise } from './workouts.ts'
-import type { Exercise, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const BACKUP_APP = 'plano-alimentar'
 export const BACKUP_VERSION = 1
 
-/** What the stores hold once parsed. `plans` is null only for a backup that had no plans store. */
-export interface BackupData {
-  readonly plans: PlanState | null
-  readonly foods: readonly CustomFoodDef[]
-  readonly units: readonly FoodUnit[]
-  readonly days: DayState
-  readonly exercises: readonly Exercise[]
-  readonly workoutPlans: WorkoutPlanState
-  readonly workoutSessions: readonly WorkoutSession[]
-  readonly sleep: SleepLog
-  readonly moods: MoodLog
-  readonly health: HealthLog
-}
-
-/** The app's own data: it always has a plan. */
-export type AppData = BackupData & { readonly plans: PlanState }
+/** What a Backup's stores hold once parsed. `plans` is null only for a backup that had no plans store. */
+export type BackupData = Omit<AppData, 'plans'> & { readonly plans: PlanState | null }
 
 export type ParsedBackup = { ok: true; data: BackupData } | { ok: false; error: string }
-
-const STORES = [
-  { name: 'plans', key: STORAGE_KEY, label: 'planos', parse: parseState },
-  { name: 'foods', key: FOODS_STORAGE_KEY, label: 'alimentos', parse: parseCustomFoods },
-  { name: 'units', key: UNITS_STORAGE_KEY, label: 'unidades', parse: parseUnits },
-  { name: 'days', key: DAYS_STORAGE_KEY, label: 'dias', parse: parseDays },
-  { name: 'exercises', key: EXERCISES_STORAGE_KEY, label: 'exercícios', parse: parseExercises },
-  { name: 'workoutPlans', key: WORKOUT_PLANS_STORAGE_KEY, label: 'planos de treino', parse: parseWorkoutPlans },
-  { name: 'workoutSessions', key: WORKOUT_SESSIONS_STORAGE_KEY, label: 'treinos', parse: parseWorkoutSessions },
-  { name: 'sleep', key: SLEEP_STORAGE_KEY, label: 'sono', parse: parseSleep },
-  { name: 'moods', key: MOODS_STORAGE_KEY, label: 'humor', parse: parseMoods },
-  { name: 'health', key: HEALTH_STORAGE_KEY, label: 'valores do relógio', parse: parseHealth },
-] as const
-
-export type StoreName = (typeof STORES)[number]['name']
 
 /** Files written before Mood Notes carry their Pain Entries under this name; `parseMoods` turns them into notes. */
 const LEGACY_STORE_NAMES: Partial<Record<StoreName, string>> = { moods: 'pains' }
@@ -82,8 +31,6 @@ export interface BackupFile {
   readonly stores: Readonly<Partial<Record<StoreName, unknown>>>
 }
 
-export const storeLabel = (name: StoreName): string => STORES.find((s) => s.name === name)!.label
-
 /** `skipped` names the stores that hold a document the app can no longer read: they are not in the file. A store never saved is not skipped. */
 export interface Exported {
   readonly file: BackupFile
@@ -93,7 +40,8 @@ export interface Exported {
 export function exportBackup(storage: StorageLike, now: Date = new Date()): Exported {
   const stores: Record<string, unknown> = {}
   const skipped: StoreName[] = []
-  for (const { name, key, parse } of STORES) {
+  for (const name of STORE_NAMES) {
+    const { key, parse } = STORES[name]
     let text: string | null = null
     try {
       text = storage.getItem(key)
@@ -120,8 +68,9 @@ export function parseBackup(raw: unknown): ParsedBackup {
   if (!isRecord(raw) || raw.app !== BACKUP_APP) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Plano alimentar.' }
   if (raw.version !== BACKUP_VERSION) return { ok: false, error: 'Esta cópia de segurança é de uma versão que a app não conhece.' }
   if (!isRecord(raw.stores)) return { ok: false, error: 'A cópia de segurança está danificada: faltam os dados.' }
-  const data = { plans: null, foods: [], units: [], days: { days: {} }, exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], sleep: {}, moods: {}, health: {} } as { -readonly [K in keyof BackupData]: unknown }
-  for (const { name, label, parse } of STORES) {
+  const data = Object.fromEntries(STORE_NAMES.map((name) => [name, name === 'plans' ? null : STORES[name].fresh()])) as { -readonly [K in StoreName]: unknown }
+  for (const name of STORE_NAMES) {
+    const { label, parse } = STORES[name]
     const legacy = LEGACY_STORE_NAMES[name]
     const doc = raw.stores[name] ?? (legacy && raw.stores[legacy])
     if (doc === undefined) continue
@@ -130,21 +79,6 @@ export function parseBackup(raw: unknown): ParsedBackup {
     data[name] = value
   }
   return { ok: true, data: data as BackupData }
-}
-
-export function loadAll(storage: StorageLike): AppData {
-  return {
-    plans: loadState(storage),
-    foods: loadCustomFoods(storage),
-    units: loadUnits(storage),
-    days: loadDays(storage),
-    exercises: loadExercises(storage),
-    workoutPlans: loadWorkoutPlans(storage),
-    workoutSessions: loadWorkoutSessions(storage),
-    sleep: loadSleep(storage),
-    moods: loadMoods(storage),
-    health: loadHealth(storage),
-  }
 }
 
 export interface MergeResult {
@@ -249,7 +183,7 @@ const RESTORE_FAILED = 'Não foi possível guardar os dados e também não foi p
 
 /** Replacing is writing the incoming stores. A backup without plans leaves the app its fresh starting plan. */
 export function replaceWithBackup(incoming: BackupData, storage: RemovableStorage): ApplyResult {
-  return writeAll({ ...incoming, plans: incoming.plans ?? initialState() }, storage)
+  return writeAll({ ...incoming, plans: incoming.plans ?? STORES.plans.fresh() }, storage)
 }
 
 /**
@@ -257,20 +191,8 @@ export function replaceWithBackup(incoming: BackupData, storage: RemovableStorag
  * (removing the ones that did not exist), so a full storage cannot leave plans from one file next to days from another.
  */
 export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult {
-  const snapshot = STORES.map(({ key }) => [key, storage.getItem(key)] as const)
-  const writes = [
-    () => saveState(data.plans, storage),
-    () => saveCustomFoods(data.foods, storage),
-    () => saveUnits(data.units, storage),
-    () => saveDays(data.days, storage),
-    () => saveExercises(data.exercises, storage),
-    () => saveWorkoutPlans(data.workoutPlans, storage),
-    () => saveWorkoutSessions(data.workoutSessions, storage),
-    () => saveSleep(data.sleep, storage),
-    () => saveMoods(data.moods, storage),
-    () => saveHealth(data.health, storage),
-  ]
-  if (writes.every((write) => write())) return { ok: true }
+  const snapshot = STORE_NAMES.map((name) => [STORES[name].key, storage.getItem(STORES[name].key)] as const)
+  if (STORE_NAMES.every((name) => saveStore<unknown>(STORES[name], data[name], storage))) return { ok: true }
   let restored = true
   for (const [key, raw] of snapshot) {
     try {

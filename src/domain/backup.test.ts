@@ -1,20 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, writeAll } from './backup.ts'
+import { describeBackup, exportBackup, mergeBackup, parseBackup, replaceWithBackup, writeAll } from './backup.ts'
 import type { BackupData } from './backup.ts'
 import type { SleepEntry, SleepQuality } from './body.ts'
-import { saveMoods, saveSleep } from './bodyStorage.ts'
 import type { TimedNote } from './notes.ts'
-import { saveHealth } from './healthStorage.ts'
-import { FOODS_STORAGE_KEY, saveCustomFoods } from './customFoodsStorage.ts'
-import { DAYS_STORAGE_KEY, saveDays } from './daysStorage.ts'
-import { saveState, STORAGE_KEY } from './persistence.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
 import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, MealId, NutrientValues, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { saveUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
-import { saveExercises, saveWorkoutPlans, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
+import { loadAll, saveStore, STORES } from './stores.ts'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = { ...initial }
@@ -72,16 +66,16 @@ const OLD_PAIN = { id: 'pain-1', date: '2026-05-01', region: 'kneeLeft', intensi
 
 function filled() {
   const storage = memoryStorage()
-  saveState(withEntry(A, 'Treino'), storage)
-  saveCustomFoods([SKYR], storage)
-  saveUnits([COPO], storage)
-  saveDays({ days: { '2026-05-01': day('2026-05-01', A) } as Record<IsoDate, DayLog> }, storage)
-  saveExercises([SUPINO], storage)
-  saveWorkoutPlans({ plans: [PEITO], activePlanId: PEITO.id }, storage)
-  saveWorkoutSessions([workout('ws-1', SUPINO.id)], storage)
-  saveSleep({ ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4) }, storage)
-  saveMoods({ ['2026-05-01' as IsoDate]: mood('Bem disposto') }, storage)
-  saveHealth({ ['2026-05-01' as IsoDate]: { steps: 8123, standHours: 9 } }, storage)
+  saveStore(STORES.plans, withEntry(A, 'Treino'), storage)
+  saveStore(STORES.foods, [SKYR], storage)
+  saveStore(STORES.units, [COPO], storage)
+  saveStore(STORES.days, { days: { '2026-05-01': day('2026-05-01', A) } as Record<IsoDate, DayLog> }, storage)
+  saveStore(STORES.exercises, [SUPINO], storage)
+  saveStore(STORES.workoutPlans, { plans: [PEITO], activePlanId: PEITO.id }, storage)
+  saveStore(STORES.workoutSessions, [workout('ws-1', SUPINO.id)], storage)
+  saveStore(STORES.sleep, { ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4) }, storage)
+  saveStore(STORES.moods, { ['2026-05-01' as IsoDate]: mood('Bem disposto') }, storage)
+  saveStore(STORES.health, { ['2026-05-01' as IsoDate]: { steps: 8123, standHours: 9 } }, storage)
   return storage
 }
 
@@ -101,7 +95,7 @@ describe('backup', () => {
     expect(file.app).toBe('plano-alimentar')
     expect(file.version).toBe(1)
     expect(file.exportedAt).toBe('2026-06-01T10:00:00.000Z')
-    expect(file.stores.plans).toEqual(JSON.parse(storage.data[STORAGE_KEY]))
+    expect(file.stores.plans).toEqual(JSON.parse(storage.data[STORES.plans.key]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
     expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino, 1 noite de sono, 1 nota de humor, 2 valores do relógio')
@@ -293,7 +287,7 @@ describe('backup', () => {
     // Foods are absent, so the failed import must also remove the key it had already created.
     const before = () => {
       const storage = filled()
-      delete storage.data[FOODS_STORAGE_KEY]
+      delete storage.data[STORES.foods.key]
       return { ...storage.data }
     }
     const incoming = (): BackupData => ({ plans: withEntry('z' as PlanId, 'Novo'), foods: [SKYR], units: [], days: { days: {} }, ...NO_WORKOUTS, ...NO_BODY })
@@ -303,7 +297,7 @@ describe('backup', () => {
       const storage = quotaStorage(initial, 3)
       expect(replaceWithBackup(incoming(), storage)).toEqual(FAILED)
       expect(storage.data).toEqual(initial)
-      expect(storage.data[FOODS_STORAGE_KEY]).toBeUndefined()
+      expect(storage.data[STORES.foods.key]).toBeUndefined()
     })
 
     it('merge restores every key when the third write throws', () => {
@@ -317,8 +311,8 @@ describe('backup', () => {
     it('reports success and writes every store when nothing throws', () => {
       const storage = quotaStorage(before(), 99)
       expect(replaceWithBackup(incoming(), storage)).toEqual({ ok: true })
-      expect([UNITS_STORAGE_KEY, DAYS_STORAGE_KEY, FOODS_STORAGE_KEY].map((k) => k in storage.data)).toEqual([true, true, true])
-      expect(JSON.parse(storage.data[WORKOUT_SESSIONS_STORAGE_KEY])).toEqual({ version: 2, sessions: [] })
+      expect([STORES.units.key, STORES.days.key, STORES.foods.key].map((k) => k in storage.data)).toEqual([true, true, true])
+      expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 2, sessions: [] })
     })
 
     it('a failed last write puts back the workout sessions too', () => {
@@ -332,14 +326,14 @@ describe('backup', () => {
   describe('export reports what it left out', () => {
     it('lists a store whose document does not parse, and keeps the others', () => {
       const storage = filled()
-      storage.data[UNITS_STORAGE_KEY] = JSON.stringify({ version: 99, units: [] })
+      storage.data[STORES.units.key] = JSON.stringify({ version: 99, units: [] })
       const { file, skipped } = exportBackup(storage)
       expect(skipped).toEqual(['units'])
       expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions', 'sleep', 'moods', 'health'])
     })
 
     it('lists corrupt JSON too, but not a store that was never saved', () => {
-      const storage = memoryStorage({ [DAYS_STORAGE_KEY]: '{nope' })
+      const storage = memoryStorage({ [STORES.days.key]: '{nope' })
       expect(exportBackup(storage).skipped).toEqual(['days'])
       expect(exportBackup(memoryStorage()).skipped).toEqual([])
     })

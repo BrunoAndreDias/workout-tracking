@@ -1,18 +1,13 @@
 import { parseIsoDate } from './days.ts'
 import { atTime, parseOptionalNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
-import { defaultStorage, isId, isRecord, loadStore, saveStore } from './persistence.ts'
-import type { StorageLike } from './persistence.ts'
+import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './workouts.ts'
-import type { Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession, WorkoutState } from './workouts.ts'
-import { STORE_KEY } from './storeKeys.ts'
+import type { Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
-export const EXERCISES_STORAGE_KEY = STORE_KEY.exercises
 export const EXERCISES_SCHEMA_VERSION = 1
-export const WORKOUT_PLANS_STORAGE_KEY = STORE_KEY.workoutPlans
 export const WORKOUT_PLANS_SCHEMA_VERSION = 1
-export const WORKOUT_SESSIONS_STORAGE_KEY = STORE_KEY.workoutSessions
 /** 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. */
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 2
 
@@ -110,24 +105,3 @@ export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
   const legacy = raw.version === 1
   return parseList(raw.sessions, (r) => parseSession(r, legacy), (s) => s.id)
 }
-
-const emptyPlans = (): WorkoutPlanState => ({ plans: [], activePlanId: null })
-
-export const loadExercises = (storage: StorageLike | null = defaultStorage()): Exercise[] => loadStore(storage, EXERCISES_STORAGE_KEY, parseExercises, () => [], EXERCISES_SCHEMA_VERSION)
-export const loadWorkoutPlans = (storage: StorageLike | null = defaultStorage()): WorkoutPlanState =>
-  loadStore(storage, WORKOUT_PLANS_STORAGE_KEY, parseWorkoutPlans, emptyPlans, WORKOUT_PLANS_SCHEMA_VERSION)
-export const loadWorkoutSessions = (storage: StorageLike | null = defaultStorage()): WorkoutSession[] =>
-  loadStore(storage, WORKOUT_SESSIONS_STORAGE_KEY, parseWorkoutSessions, () => [], WORKOUT_SESSIONS_SCHEMA_VERSION)
-
-export const loadWorkouts = (storage: StorageLike | null = defaultStorage()): WorkoutState => ({
-  exercises: loadExercises(storage),
-  ...loadWorkoutPlans(storage),
-  sessions: loadWorkoutSessions(storage),
-})
-
-export const saveExercises = (exercises: readonly Exercise[], storage: StorageLike | null = defaultStorage()): boolean =>
-  saveStore(EXERCISES_STORAGE_KEY, { version: EXERCISES_SCHEMA_VERSION, exercises }, storage)
-export const saveWorkoutPlans = ({ plans, activePlanId }: WorkoutPlanState, storage: StorageLike | null = defaultStorage()): boolean =>
-  saveStore(WORKOUT_PLANS_STORAGE_KEY, { version: WORKOUT_PLANS_SCHEMA_VERSION, plans, activePlanId }, storage)
-export const saveWorkoutSessions = (sessions: readonly WorkoutSession[], storage: StorageLike | null = defaultStorage()): boolean =>
-  saveStore(WORKOUT_SESSIONS_STORAGE_KEY, { version: WORKOUT_SESSIONS_SCHEMA_VERSION, sessions }, storage)

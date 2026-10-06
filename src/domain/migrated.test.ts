@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { loadMoods, MOODS_STORAGE_KEY, saveMoods } from './bodyStorage.ts'
-import { loadWorkoutSessions, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
-import { loadUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
-import { loadState, saveState, STORAGE_KEY } from './persistence.ts'
-import { DAYS_STORAGE_KEY, loadDays, saveDays } from './daysStorage.ts'
-import { FOODS_STORAGE_KEY, loadCustomFoods, saveCustomFoods } from './customFoodsStorage.ts'
 import { NUTRIENTS } from './types.ts'
+import { loadStore, saveStore, STORES } from './stores.ts'
 
 function enumerableStorage(initial: Record<string, string>) {
   const data = { ...initial }
@@ -58,70 +53,70 @@ const FOODS_V1 = JSON.stringify({
 
 describe('a stored document of an older version', () => {
   it('keeps the version 2 plans aside before the converted plans are saved over them', () => {
-    const storage = enumerableStorage({ [STORAGE_KEY]: PLANS_V2 })
-    saveState(loadState(storage), storage)
-    expect(copies(storage.data, STORAGE_KEY)).toEqual([PLANS_V2])
-    const saved = JSON.parse(storage.data[STORAGE_KEY])
+    const storage = enumerableStorage({ [STORES.plans.key]: PLANS_V2 })
+    saveStore(STORES.plans, loadStore(STORES.plans, storage), storage)
+    expect(copies(storage.data, STORES.plans.key)).toEqual([PLANS_V2])
+    const saved = JSON.parse(storage.data[STORES.plans.key])
     expect(saved.version).toBe(3)
     expect(saved.state.plans[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
   })
 
   it('keeps the version 1 days aside before the converted days are saved over them', () => {
-    const storage = enumerableStorage({ [DAYS_STORAGE_KEY]: DAYS_V1 })
-    saveDays(loadDays(storage), storage)
-    expect(copies(storage.data, DAYS_STORAGE_KEY)).toEqual([DAYS_V1])
-    const saved = JSON.parse(storage.data[DAYS_STORAGE_KEY])
+    const storage = enumerableStorage({ [STORES.days.key]: DAYS_V1 })
+    saveStore(STORES.days, loadStore(STORES.days, storage), storage)
+    expect(copies(storage.data, STORES.days.key)).toEqual([DAYS_V1])
+    const saved = JSON.parse(storage.data[STORES.days.key])
     expect(saved.version).toBe(2)
     expect(saved.days[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
   })
 
   it('keeps the version 1 custom foods aside before the converted foods are saved over them', () => {
-    const storage = enumerableStorage({ [FOODS_STORAGE_KEY]: FOODS_V1 })
-    saveCustomFoods(loadCustomFoods(storage), storage)
-    expect(copies(storage.data, FOODS_STORAGE_KEY)).toEqual([FOODS_V1])
-    const saved = JSON.parse(storage.data[FOODS_STORAGE_KEY])
+    const storage = enumerableStorage({ [STORES.foods.key]: FOODS_V1 })
+    saveStore(STORES.foods, loadStore(STORES.foods, storage), storage)
+    expect(copies(storage.data, STORES.foods.key)).toEqual([FOODS_V1])
+    const saved = JSON.parse(storage.data[STORES.foods.key])
     expect(saved.version).toBe(2)
     expect(saved.foods[0]).toMatchObject({ id: 'custom:bolo', name: 'Bolo da avó', basedOn: null, kind: 'label' })
     expect(saved.foods[0].per100.energyKcal).toBe(350)
   })
 
   it('keeps the version 1 pains aside before the converted Mood Notes are saved over them', () => {
-    const storage = enumerableStorage({ [MOODS_STORAGE_KEY]: PAINS_V1 })
-    saveMoods(loadMoods(storage), storage)
-    expect(copies(storage.data, MOODS_STORAGE_KEY)).toEqual([PAINS_V1])
-    expect(JSON.parse(storage.data[MOODS_STORAGE_KEY]).version).toBe(2)
+    const storage = enumerableStorage({ [STORES.moods.key]: PAINS_V1 })
+    saveStore(STORES.moods, loadStore(STORES.moods, storage), storage)
+    expect(copies(storage.data, STORES.moods.key)).toEqual([PAINS_V1])
+    expect(JSON.parse(storage.data[STORES.moods.key]).version).toBe(2)
   })
 
   it('keeps the version 1 sessions aside before the converted sessions are saved over them', () => {
-    const storage = enumerableStorage({ [WORKOUT_SESSIONS_STORAGE_KEY]: SESSIONS_V1 })
-    saveWorkoutSessions(loadWorkoutSessions(storage), storage)
-    expect(copies(storage.data, WORKOUT_SESSIONS_STORAGE_KEY)).toEqual([SESSIONS_V1])
-    expect(JSON.parse(storage.data[WORKOUT_SESSIONS_STORAGE_KEY]).version).toBe(2)
+    const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
+    saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
+    expect(copies(storage.data, STORES.workoutSessions.key)).toEqual([SESSIONS_V1])
+    expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(2)
   })
 
   it('keeps one copy when this build starts again after converting', () => {
-    const storage = enumerableStorage({ [MOODS_STORAGE_KEY]: PAINS_V1 })
-    saveMoods(loadMoods(storage), storage)
-    saveMoods(loadMoods(storage), storage)
-    expect(copies(storage.data, MOODS_STORAGE_KEY)).toEqual([PAINS_V1])
+    const storage = enumerableStorage({ [STORES.moods.key]: PAINS_V1 })
+    saveStore(STORES.moods, loadStore(STORES.moods, storage), storage)
+    saveStore(STORES.moods, loadStore(STORES.moods, storage), storage)
+    expect(copies(storage.data, STORES.moods.key)).toEqual([PAINS_V1])
   })
 
   it('keeps both version 1 texts when an older device writes its pains after this build converted them', () => {
-    const storage = enumerableStorage({ [MOODS_STORAGE_KEY]: PAINS_V1 })
-    saveMoods(loadMoods(storage), storage)
+    const storage = enumerableStorage({ [STORES.moods.key]: PAINS_V1 })
+    saveStore(STORES.moods, loadStore(STORES.moods, storage), storage)
     const olderDevice = JSON.stringify({ version: 1, pains: [] })
-    storage.data[MOODS_STORAGE_KEY] = olderDevice
-    loadMoods(storage)
-    expect(copies(storage.data, MOODS_STORAGE_KEY).sort()).toEqual([PAINS_V1, olderDevice].sort())
+    storage.data[STORES.moods.key] = olderDevice
+    loadStore(STORES.moods, storage)
+    expect(copies(storage.data, STORES.moods.key).sort()).toEqual([PAINS_V1, olderDevice].sort())
   })
 
   it('keeps nothing for a current document or a store with no older version', () => {
     const storage = enumerableStorage({
-      [MOODS_STORAGE_KEY]: JSON.stringify({ version: 2, moods: [] }),
-      [UNITS_STORAGE_KEY]: '{"version":1,"units":[]}',
+      [STORES.moods.key]: JSON.stringify({ version: 2, moods: [] }),
+      [STORES.units.key]: '{"version":1,"units":[]}',
     })
-    loadMoods(storage)
-    loadUnits(storage)
-    expect(Object.keys(storage.data).sort()).toEqual([MOODS_STORAGE_KEY, UNITS_STORAGE_KEY].sort())
+    loadStore(STORES.moods, storage)
+    loadStore(STORES.units, storage)
+    expect(Object.keys(storage.data).sort()).toEqual([STORES.moods.key, STORES.units.key].sort())
   })
 })

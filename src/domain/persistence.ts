@@ -1,13 +1,11 @@
 import { GOALS, isValidGoals } from './goals.ts'
 import { newMeal, parseTime } from './meals.ts'
-import { DEFAULT_GOALS, initialState } from './plans.ts'
+import { DEFAULT_GOALS } from './plans.ts'
 import type { PlanState } from './plans.ts'
 import type { EntryId, FoodEntry, FoodId, Goals, Meal, MealId, MealOption, MealPlan, OptionId, PlanId } from './types.ts'
-import { STORE_KEY } from './storeKeys.ts'
 
-export const STORAGE_KEY = STORE_KEY.plans
 /** 1 had no goals; 2 had one list of entries per meal and no notes; 3 has meal options, time, notes and optional meals. */
-export const SCHEMA_VERSION = 3
+export const PLANS_SCHEMA_VERSION = 3
 
 /** `key` and `length` let the unreadable-copy check find a copy it already made; without them a copy is made on every load. */
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'key' | 'length'>>
@@ -110,8 +108,8 @@ function parsePlan(raw: unknown, legacy: boolean): MealPlan | null {
 
 /** Reads every version up to the current one; null for anything else. */
 export function parseState(raw: unknown): PlanState | null {
-  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== 2 && raw.version !== SCHEMA_VERSION) || !isRecord(raw.state)) return null
-  const legacy = raw.version !== SCHEMA_VERSION
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== 2 && raw.version !== PLANS_SCHEMA_VERSION) || !isRecord(raw.state)) return null
+  const legacy = raw.version !== PLANS_SCHEMA_VERSION
   const { plans: rawPlans, selectedId } = raw.state
   if (!Array.isArray(rawPlans) || rawPlans.length === 0) return null
   const plans = []
@@ -144,53 +142,5 @@ export function preserveCopy(storage: StorageLike, key: string, text: string, re
     storage.setItem(copyKey, text)
   } catch {
     // a full or blocked storage cannot keep the copy; the original is still untouched until the next save
-  }
-}
-
-/**
- * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
- * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. A
- * document of an older version than `currentVersion` that parses is preserved under `<key>:migrated:<ISO time>`.
- */
-export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T, currentVersion: number): T {
-  let text: string | null | undefined
-  try {
-    text = storage?.getItem(key)
-  } catch {
-    return fresh()
-  }
-  if (!storage || !text) return fresh()
-  try {
-    const raw: unknown = JSON.parse(text)
-    const value = parse(raw)
-    if (value !== null) {
-      if (isRecord(raw) && raw.version !== currentVersion) preserveCopy(storage, key, text, 'migrated')
-      return value
-    }
-  } catch {
-    // corrupt JSON
-  }
-  preserveCopy(storage, key, text, 'unreadable')
-  return fresh()
-}
-
-/** False when the write failed or there is no storage. */
-export function saveStore(key: string, doc: object, storage: StorageLike | null): boolean {
-  try {
-    storage?.setItem(key, JSON.stringify(doc))
-    return storage !== null
-  } catch {
-    return false
-  }
-}
-
-export const loadState = (storage: StorageLike | null = defaultStorage()): PlanState => loadStore(storage, STORAGE_KEY, parseState, initialState, SCHEMA_VERSION)
-
-export function saveState(state: PlanState, storage: StorageLike | null = defaultStorage()): boolean {
-  try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, state }))
-    return storage !== null
-  } catch {
-    return false
   }
 }

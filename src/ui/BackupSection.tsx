@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { describeBackup, exportBackup, loadAll, mergeBackup, parseBackup, replaceWithBackup, storeLabel, writeAll } from '../domain/backup.ts'
+import { describeBackup, exportBackup, mergeBackup, parseBackup, replaceWithBackup, writeAll } from '../domain/backup.ts'
 import type { BackupData } from '../domain/backup.ts'
 import { toIsoDate } from '../domain/days.ts'
 import { defaultStorage } from '../domain/persistence.ts'
+import { loadAll, STORES } from '../domain/stores.ts'
 import { Panel } from './Panel.tsx'
 
 function download(name: string, text: string) {
@@ -46,7 +47,7 @@ export function BackupSection({ children }: { children?: ReactNode }) {
     if (!storage) return setError('O armazenamento do navegador não está disponível.')
     const { file, skipped } = exportBackup(storage)
     download(`plano-alimentar-${toIsoDate(new Date())}.json`, JSON.stringify(file, null, 2))
-    setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map(storeLabel).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
+    setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map((name) => STORES[name].label).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
   }
 
   const apply = (mode: 'merge' | 'replace') => {

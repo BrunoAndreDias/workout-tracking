@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseId } from './types.ts'
-import { loadWorkouts, parseWorkoutPlans, parseWorkoutSessions, saveExercises, saveWorkoutPlans, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
+import { parseWorkoutPlans, parseWorkoutSessions } from './workoutStorage.ts'
+import { loadAll, loadStore, saveStore, STORES } from './stores.ts'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = { ...initial }
@@ -33,14 +34,16 @@ const PLAN = { id: 'p1', name: 'Força', days: [{ id: 'd1', name: 'Peito', exerc
 describe('workout storage', () => {
   it('reads back what it saved', () => {
     const storage = memoryStorage()
-    saveExercises([{ id: 'e1' as ExerciseId, name: 'Supino' }], storage)
-    saveWorkoutPlans(parseWorkoutPlans({ version: 1, plans: [PLAN], activePlanId: 'p1' })!, storage)
-    saveWorkoutSessions(parseWorkoutSessions({ version: 2, sessions: [SESSION] })!, storage)
-    expect(loadWorkouts(storage)).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], plans: [PLAN], activePlanId: 'p1', sessions: [SESSION] })
+    saveStore(STORES.exercises, [{ id: 'e1' as ExerciseId, name: 'Supino' }], storage)
+    saveStore(STORES.workoutPlans, parseWorkoutPlans({ version: 1, plans: [PLAN], activePlanId: 'p1' })!, storage)
+    saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [SESSION] })!, storage)
+    const { exercises, workoutPlans, workoutSessions } = loadAll(storage)
+    expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], workoutPlans: { plans: [PLAN], activePlanId: 'p1' }, workoutSessions: [SESSION] })
   })
 
   it('starts empty when nothing was saved', () => {
-    expect(loadWorkouts(memoryStorage())).toEqual({ exercises: [], plans: [], activePlanId: null, sessions: [] })
+    const { exercises, workoutPlans, workoutSessions } = loadAll(memoryStorage())
+    expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] })
   })
 
   it('reads a version 1 plain-text note as written at midday of the session, and an empty one as no note', () => {
@@ -75,9 +78,9 @@ describe('workout storage', () => {
 
   it('keeps an unreadable sessions document aside before starting empty', () => {
     const text = JSON.stringify({ version: 1, sessions: [{ ...SESSION, notes: 3 }] })
-    const storage = memoryStorage({ [WORKOUT_SESSIONS_STORAGE_KEY]: text })
-    expect(loadWorkouts(storage).sessions).toEqual([])
-    const copies = Object.entries(storage.data).filter(([k]) => k.startsWith(`${WORKOUT_SESSIONS_STORAGE_KEY}:unreadable:`))
+    const storage = memoryStorage({ [STORES.workoutSessions.key]: text })
+    expect(loadStore(STORES.workoutSessions, storage)).toEqual([])
+    const copies = Object.entries(storage.data).filter(([k]) => k.startsWith(`${STORES.workoutSessions.key}:unreadable:`))
     expect(copies.map(([, v]) => v)).toEqual([text])
   })
 })

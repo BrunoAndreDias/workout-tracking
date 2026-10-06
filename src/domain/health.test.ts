@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { importSpan, parseHealthImport, samplesOn, upsertSamples } from './health.ts'
 import type { HealthSample } from './health.ts'
-import { loadHealth, parseHealth, saveHealth } from './healthStorage.ts'
+import { parseHealth } from './healthStorage.ts'
 import type { IsoDate } from './types.ts'
+import { loadStore, saveStore, STORES } from './stores.ts'
 
 const PASTE = JSON.stringify({
   samples: [
@@ -83,11 +84,11 @@ describe('health import', () => {
 describe('health storage', () => {
   it('stores the import rows by date and metric order and reads them back', () => {
     const storage = memoryStorage()
-    saveHealth(upsertSamples({}, samples(PASTE)), storage)
+    saveStore(STORES.health, upsertSamples({}, samples(PASTE)), storage)
     expect(storage.data['nutrition-tracking:health']).toBe(
       '{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":54},{"date":"2026-10-05","metric":"standHours","value":9},{"date":"2026-10-05","metric":"steps","value":8123}]}',
     )
-    expect(loadHealth(storage)).toEqual({ '2026-10-04': { restingHeartRate: 54 }, '2026-10-05': { standHours: 9, steps: 8123 } })
+    expect(loadStore(STORES.health, storage)).toEqual({ '2026-10-04': { restingHeartRate: 54 }, '2026-10-05': { standHours: 9, steps: 8123 } })
   })
 
   it.each([

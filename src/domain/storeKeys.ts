@@ -12,7 +12,8 @@ export const STORE_KEY = {
   workoutPlans: 'nutrition-tracking:workout-plans',
   workoutSessions: 'nutrition-tracking:workout-sessions',
   sleep: 'nutrition-tracking:sleep',
-  pains: 'nutrition-tracking:pains',
+  // Mood Notes took over the key of the Pain Entries they replaced, so the server's copy migrates where it is.
+  moods: 'nutrition-tracking:pains',
   health: 'nutrition-tracking:health',
 } as const
 

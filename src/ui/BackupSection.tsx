@@ -96,7 +96,7 @@ export function BackupSection({ children }: { children?: ReactNode }) {
           <div className="panel-body backup-body">
             <p className="backup-summary">{describeBackup(incoming)}</p>
             <p className="goals-hint">
-              “Juntar” acrescenta os planos e mantém os teus alimentos, unidades, dias, treinos, sono, dores e valores do relógio; só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
+              “Juntar” acrescenta os planos e mantém os teus alimentos, unidades, dias, treinos, sono e valores do relógio; só entram os que ainda não tens. As notas de humor do ficheiro juntam-se às tuas. “Substituir tudo” apaga o que tens agora.
             </p>
           </div>
           <div className="panel-foot form-actions">

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from 'react'
 import { foods as catalogFoods, foodsById as catalogById, searchIndex as catalogIndex, table as catalogTable } from './data/catalog.ts'
 import { SEED_UNITS } from './data/units.ts'
 import { bodyReducer } from './domain/body.ts'
-import { loadPains, loadSleep, savePains, saveSleep } from './domain/bodyStorage.ts'
+import { loadMoods, loadSleep, saveMoods, saveSleep } from './domain/bodyStorage.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { loadCustomFoods, saveCustomFoods } from './domain/customFoodsStorage.ts'
@@ -85,7 +85,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, undefined, () => loadUnits())
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, undefined, () => loadWorkouts())
-  const [body, dispatchBody] = useReducer(bodyReducer, undefined, () => ({ sleep: loadSleep(), pains: loadPains() }))
+  const [body, dispatchBody] = useReducer(bodyReducer, undefined, () => ({ sleep: loadSleep(), moods: loadMoods() }))
   const [health, setHealth] = useState(() => loadHealth())
   const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
@@ -116,8 +116,8 @@ export default function App({ sync }: { sync: Sync | null }) {
     saveSleep(body.sleep)
   }, [body.sleep])
   useEffect(() => {
-    savePains(body.pains)
-  }, [body.pains])
+    saveMoods(body.moods)
+  }, [body.moods])
   useEffect(() => {
     saveHealth(health)
   }, [health])

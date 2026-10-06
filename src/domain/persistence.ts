@@ -128,9 +128,10 @@ export function parseState(raw: unknown): PlanState | null {
 /**
  * Copies a document aside under `<key>:<reason>:<ISO time>` before something replaces it: `unreadable`, a document this
  * build cannot read, before the fresh state's first save; `unsynced`, a browser's own document it never sent, before
- * the server's copy replaces it. The copy is device-local, never a store. Idempotent per text.
+ * the server's copy replaces it; `migrated`, an older version this build converts, before the converted state's first
+ * save. The copy is device-local, never a store. Idempotent per text.
  */
-export function preserveCopy(storage: StorageLike, key: string, text: string, reason: 'unreadable' | 'unsynced'): void {
+export function preserveCopy(storage: StorageLike, key: string, text: string, reason: 'unreadable' | 'unsynced' | 'migrated'): void {
   try {
     const prefix = `${key}:${reason}:`
     for (let i = 0; i < (storage.length ?? 0); i++) {
@@ -148,9 +149,10 @@ export function preserveCopy(storage: StorageLike, key: string, text: string, re
 
 /**
  * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
- * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`.
+ * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. With
+ * `currentVersion`, a document of an older version that parses is preserved under `<key>:migrated:<ISO time>`.
  */
-export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T): T {
+export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T, currentVersion?: number): T {
   let text: string | null | undefined
   try {
     text = storage?.getItem(key)
@@ -159,8 +161,12 @@ export function loadStore<T>(storage: StorageLike | null, key: string, parse: (r
   }
   if (!storage || !text) return fresh()
   try {
-    const value = parse(JSON.parse(text))
-    if (value !== null) return value
+    const raw: unknown = JSON.parse(text)
+    const value = parse(raw)
+    if (value !== null) {
+      if (currentVersion !== undefined && isRecord(raw) && raw.version !== currentVersion) preserveCopy(storage, key, text, 'migrated')
+      return value
+    }
   } catch {
     // corrupt JSON
   }

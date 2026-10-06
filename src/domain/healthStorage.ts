@@ -2,8 +2,9 @@ import { logSamples, readSamples, upsertSamples } from './health.ts'
 import type { HealthLog } from './health.ts'
 import { defaultStorage, isRecord, loadStore, saveStore } from './persistence.ts'
 import type { StorageLike } from './persistence.ts'
+import { STORE_KEY } from './storeKeys.ts'
 
-export const HEALTH_STORAGE_KEY = 'nutrition-tracking:health'
+export const HEALTH_STORAGE_KEY = STORE_KEY.health
 export const HEALTH_SCHEMA_VERSION = 1
 
 /** Stored as the import's own rows; the current version only, and null for one bad row or a (date, metric) twice. */

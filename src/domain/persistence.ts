@@ -3,8 +3,9 @@ import { newMeal, parseTime } from './meals.ts'
 import { DEFAULT_GOALS, initialState } from './plans.ts'
 import type { PlanState } from './plans.ts'
 import type { EntryId, FoodEntry, FoodId, Goals, Meal, MealId, MealOption, MealPlan, OptionId, PlanId } from './types.ts'
+import { STORE_KEY } from './storeKeys.ts'
 
-export const STORAGE_KEY = 'nutrition-tracking:plans'
+export const STORAGE_KEY = STORE_KEY.plans
 /** 1 had no goals; 2 had one list of entries per meal and no notes; 3 has meal options, time, notes and optional meals. */
 export const SCHEMA_VERSION = 3
 

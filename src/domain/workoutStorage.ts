@@ -4,12 +4,13 @@ import type { StorageLike } from './persistence.ts'
 import type { ExerciseId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './workouts.ts'
 import type { Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession, WorkoutState } from './workouts.ts'
+import { STORE_KEY } from './storeKeys.ts'
 
-export const EXERCISES_STORAGE_KEY = 'nutrition-tracking:exercises'
+export const EXERCISES_STORAGE_KEY = STORE_KEY.exercises
 export const EXERCISES_SCHEMA_VERSION = 1
-export const WORKOUT_PLANS_STORAGE_KEY = 'nutrition-tracking:workout-plans'
+export const WORKOUT_PLANS_STORAGE_KEY = STORE_KEY.workoutPlans
 export const WORKOUT_PLANS_SCHEMA_VERSION = 1
-export const WORKOUT_SESSIONS_STORAGE_KEY = 'nutrition-tracking:workout-sessions'
+export const WORKOUT_SESSIONS_STORAGE_KEY = STORE_KEY.workoutSessions
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 1
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0

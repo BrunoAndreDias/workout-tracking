@@ -77,7 +77,7 @@ One set of a Workout Session: the reps done and the load in kg, or no load for a
 _Avoid_: Rep set, entry
 
 **Sleep Entry** (Sono):
-How one night's sleep went: a quality from 1 (muito mal) to 5 (muito bem) and, optionally, the hours slept, up to 24. It belongs to the date the user woke up, and a date has at most one. It is logged in the Diário's Corpo section with one tap on the quality; tapping the chosen quality again removes it.
+How one night's sleep went: a quality from 1 (muito mal) to 5 (muito bem) as the user rates it on waking, shown as Muito mal, Mal, Normal, Bem or Muito bem. The hours slept are not typed: the night's duration is the Apple Watch's `sleepMinutes` Health Sample for the same date, shown read only beside the rating. Entries stored before this change may carry an `hours` field, which is ignored. It belongs to the date the user woke up, and a date has at most one. It is logged in the Diário's Corpo section with one tap on the quality; tapping the chosen quality again removes it.
 
 **Pain Entry** (Dor):
 A pain the user felt on one date: the Body Region, a whole intensity from 0 to 10 and, optionally, the time (HH:MM) and a note. A date may hold several. The Diário lists them timed first, by time.

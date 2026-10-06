@@ -2,7 +2,7 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
-It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. Each Diário day also has a `Corpo` section for the night's sleep, any pains, and the day's Apple Watch values, which you import by pasting (see [Apple Watch import](#apple-watch-import)).
+The app opens on the `Diário` calendar; the meal plans live in the `Alimentação` tab. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. Each Diário day also has a `Corpo` section for the night's sleep (your wake-up rating plus the watch's duration), any pains, and the day's Apple Watch values, which you import by pasting (see [Apple Watch import](#apple-watch-import)).
 
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
@@ -35,7 +35,7 @@ A bare list of the same objects works too. `date` is `YYYY-MM-DD`, `value` is a 
 | `steps` | steps | 8 123 passos |
 | `activeEnergy` | kcal | 412 kcal ativas |
 | `exerciseMinutes` | min | Exercício 31 min |
-| `sleepMinutes` | min | Sono 431 min |
+| `sleepMinutes` | min | Relógio: 7 h 11 min, beside the sleep rating |
 | `restingHeartRate` | bpm | FC em repouso 54 bpm |
 
 A date and metric already stored is overwritten, so pasting the same export twice changes nothing. Any bad row (unknown metric, bad date, negative or non-number value, or a date and metric repeated in the paste) rejects the whole paste with a message naming the row, and nothing is stored. `sleepMinutes` belongs to the date you woke up, like a Sleep Entry.

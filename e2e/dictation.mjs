@@ -62,6 +62,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
+page.on('crash', () => console.error('the page crashed'))
 await openFresh(page, URL + '#alimentacao')
 
 const modelRequests = []
@@ -76,8 +77,10 @@ await page.screenshot({ path: `${S}/dictation-desktop-light.png`, fullPage: true
 await page.getByRole('button', { name: 'Ditar nota' }).first().click()
 await page.getByRole('button', { name: 'Parar ditado' }).waitFor()
 assert(await page.getByRole('status').filter({ hasText: 'A ouvir…' }).count() === 1, 'the status line says A ouvir… while recording')
-await page.waitForTimeout(11000) // the clip is 10 s of speech plus 5 s of silence; the fake microphone track ends with the file, which would stop the recorder by itself
+await page.waitForTimeout(11000) // the clip is 10 s of speech, then silence
 const stoppedAt = Date.now()
+const micState = await page.evaluate(() => [...document.querySelectorAll('.dictate-btn')].map((b) => b.getAttribute('aria-label')).join(', ') + ` at ${location.href}`)
+assert(micState.startsWith('Parar ditado'), `still recording before the stop tap (${micState})`)
 await page.getByRole('button', { name: 'Parar ditado' }).click()
 await page.waitForFunction(() => document.querySelector('[aria-label="Notas do plano"]').value.length > 12, null, { timeout: 600_000 })
 console.log(`transcribed ${(Date.now() - stoppedAt) / 1000} s after stop (${downloaded} files downloaded this run)`)

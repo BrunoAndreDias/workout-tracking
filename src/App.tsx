@@ -31,8 +31,10 @@ import { HistoryView } from './ui/HistoryView.tsx'
 import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
+import { SyncLine } from './ui/SyncLine.tsx'
 import { WorkoutView } from './ui/WorkoutView.tsx'
 import { UnitsContext } from './ui/unitsContext.ts'
+import type { Sync } from './sync.ts'
 
 const VIEWS = [
   { id: 'diario', label: 'Diário' },
@@ -76,7 +78,8 @@ function useToday(): IsoDate {
 
 const userUnitsReducer = (state: readonly FoodUnit[], action: UnitsAction) => unitsReducer(state, action, SEED_UNITS)
 
-export default function App() {
+/** `sync` is null only when the browser blocks localStorage. */
+export default function App({ sync }: { sync: Sync | null }) {
   const [state, dispatch] = useReducer(planReducer, undefined, () => loadState())
   const [dayState, dispatchDays] = useReducer(dayReducer, undefined, () => loadDays())
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, undefined, () => loadCustomFoods())
@@ -174,6 +177,7 @@ export default function App() {
               </nav>
               <ThemeToggle />
             </div>
+            {sync && <SyncLine sync={sync} />}
             {view === 'alimentacao' && <PlanSwitcher state={state} dispatch={dispatch} />}
           </header>
 

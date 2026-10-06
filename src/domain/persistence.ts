@@ -14,7 +14,18 @@ export type StorageLike = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<St
 /** What a transaction needs: it must put back a key that did not exist. */
 export type RemovableStorage = StorageLike & Pick<Storage, 'removeItem'>
 
-export function defaultStorage(): Storage | null {
+/** What the app's storage offers: localStorage, or the sync layer's write-through copy of it. */
+export type BrowserStorage = RemovableStorage & Pick<Storage, 'key' | 'length'>
+
+let installed: BrowserStorage | null = null
+
+/** main.tsx installs the storage that also sends each store to the server; until then, and in tests, it is localStorage. */
+export function installStorage(storage: BrowserStorage): void {
+  installed = storage
+}
+
+export function defaultStorage(): BrowserStorage | null {
+  if (installed) return installed
   try {
     return globalThis.localStorage ?? null
   } catch {

@@ -1,0 +1,107 @@
+import { describe, expect, it } from 'vitest'
+import { startSync } from './sync.ts'
+
+const PLANS = 'nutrition-tracking:plans'
+const SLEEP = 'nutrition-tracking:sleep'
+const THEME = 'nutrition-tracking:theme'
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const data: Record<string, string> = { ...initial }
+  return {
+    data,
+    getItem: (k: string) => data[k] ?? null,
+    setItem: (k: string, v: string) => void (data[k] = v),
+    removeItem: (k: string) => void delete data[k],
+    key: (i: number) => Object.keys(data)[i] ?? null,
+    get length() {
+      return Object.keys(data).length
+    },
+  }
+}
+
+/** The store API's rules over a map: a write needs the current rev, and `up: false` refuses every request. */
+function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) {
+  const stores = new Map(Object.entries(initial))
+  const server = {
+    stores,
+    up: true,
+    fetch: async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      if (!server.up) throw new TypeError('Failed to fetch')
+      const path = String(url)
+      if (!init?.method) return Response.json(Object.fromEntries(stores))
+      const key = decodeURIComponent(path.slice('/api/stores/'.length))
+      const { doc, baseRev } = JSON.parse(String(init.body)) as { doc: string; baseRev: number | null }
+      const current = stores.get(key)
+      if (current?.doc !== doc && (current?.rev ?? null) !== baseRev) return Response.json({ doc: current?.doc ?? null, rev: current?.rev ?? 0 }, { status: 409 })
+      const rev = current?.doc === doc ? current.rev : (current?.rev ?? 0) + 1
+      stores.set(key, { doc, rev })
+      return Response.json({ rev })
+    },
+  }
+  return server
+}
+
+describe('startSync', () => {
+  it('replaces a local store with the server copy, which wins', async () => {
+    const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 } })
+    const storage = memoryStorage({ [PLANS]: '{"v":"local"}' })
+    const sync = await startSync({ storage, fetch: server.fetch })
+    expect(storage.data[PLANS]).toBe('{"v":"server"}')
+    expect(server.stores.get(PLANS)).toEqual({ doc: '{"v":"server"}', rev: 3 })
+    expect(sync.status()).toBe('ligado')
+  })
+
+  it('uploads a store only this browser has', async () => {
+    const server = fakeServer()
+    const storage = memoryStorage({ [SLEEP]: '{"version":1,"entries":[]}', [THEME]: 'dark' })
+    await startSync({ storage, fetch: server.fetch })
+    expect(Object.fromEntries(server.stores)).toEqual({ [SLEEP]: { doc: '{"version":1,"entries":[]}', rev: 1 } })
+  })
+
+  it('starts offline and leaves localStorage as it was when the server does not answer', async () => {
+    const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 } })
+    server.up = false
+    const storage = memoryStorage({ [PLANS]: '{"v":"local"}' })
+    const sync = await startSync({ storage, fetch: server.fetch })
+    expect(sync.status()).toBe('offline')
+    expect(storage.data).toEqual({ [PLANS]: '{"v":"local"}' })
+  })
+
+  it('sends each change to a store, and never a device-local key', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    const sync = await startSync({ storage: memoryStorage(), fetch: server.fetch, debounceMs: 60_000 })
+    sync.storage.setItem(SLEEP, '"b"')
+    sync.storage.setItem(THEME, 'dark')
+    await sync.flush()
+    expect(Object.fromEntries(server.stores)).toEqual({ [SLEEP]: { doc: '"b"', rev: 2 } })
+  })
+
+  it('keeps a change made offline and sends it, not the server copy, at the next start', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    const storage = memoryStorage()
+    const first = await startSync({ storage, fetch: server.fetch, debounceMs: 60_000 })
+    server.up = false
+    first.storage.setItem(SLEEP, '"offline edit"')
+    await first.flush()
+    expect(first.status()).toBe('offline')
+    server.up = true
+    const second = await startSync({ storage, fetch: server.fetch })
+    expect(storage.data[SLEEP]).toBe('"offline edit"')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"offline edit"', rev: 2 })
+    expect(second.status()).toBe('ligado')
+  })
+
+  it('stops at a conflict, and after dropConflicts the next start takes the other device’s copy', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch, debounceMs: 60_000 })
+    server.stores.set(SLEEP, { doc: '"other device"', rev: 2 })
+    sync.storage.setItem(SLEEP, '"here"')
+    await sync.flush()
+    expect(sync.status()).toBe('conflito')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"other device"', rev: 2 })
+    sync.dropConflicts()
+    await startSync({ storage, fetch: server.fetch })
+    expect(storage.data[SLEEP]).toBe('"other device"')
+  })
+})

@@ -14,7 +14,7 @@ export function parseHealth(raw: unknown): HealthLog | null {
   return read.ok ? upsertSamples({}, read.samples) : null
 }
 
-export const loadHealth = (storage: StorageLike | null = defaultStorage()): HealthLog => loadStore(storage, HEALTH_STORAGE_KEY, parseHealth, () => ({}))
+export const loadHealth = (storage: StorageLike | null = defaultStorage()): HealthLog => loadStore(storage, HEALTH_STORAGE_KEY, parseHealth, () => ({}), HEALTH_SCHEMA_VERSION)
 
 export const saveHealth = (log: HealthLog, storage: StorageLike | null = defaultStorage()): boolean =>
   saveStore(HEALTH_STORAGE_KEY, { version: HEALTH_SCHEMA_VERSION, samples: logSamples(log) }, storage)

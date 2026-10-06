@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { loadMoods, MOODS_STORAGE_KEY, saveMoods } from './bodyStorage.ts'
 import { loadWorkoutSessions, saveWorkoutSessions, WORKOUT_SESSIONS_STORAGE_KEY } from './workoutStorage.ts'
 import { loadUnits, UNITS_STORAGE_KEY } from './unitsStorage.ts'
+import { loadState, saveState, STORAGE_KEY } from './persistence.ts'
+import { DAYS_STORAGE_KEY, loadDays, saveDays } from './daysStorage.ts'
+import { FOODS_STORAGE_KEY, loadCustomFoods, saveCustomFoods } from './customFoodsStorage.ts'
+import { NUTRIENTS } from './types.ts'
 
 function enumerableStorage(initial: Record<string, string>) {
   const data = { ...initial }
@@ -29,8 +33,58 @@ const SESSIONS_V1 = JSON.stringify({
   version: 1,
   sessions: [{ id: 's1', date: '2026-10-05', workoutDayId: null, exercises: [], notes: 'Bom treino' }],
 })
+const PLANS_V2 = JSON.stringify({
+  version: 2,
+  state: { plans: [{ id: 'p1', name: 'Plano', meals: [{ id: 'm1', name: 'Almoço', entries: [{ id: 'e1', foodId: '430', grams: 60 }] }] }], selectedId: 'p1' },
+})
+const DAYS_V1 = JSON.stringify({
+  version: 1,
+  days: [{ date: '2026-10-05', planId: null, meals: [{ id: 'm1', name: 'Almoço', entries: [{ id: 'e1', foodId: '430', grams: 60 }] }], baseline: [] }],
+})
+const FOODS_V1 = JSON.stringify({
+  version: 1,
+  foods: [
+    {
+      id: 'custom:bolo',
+      name: 'Bolo da avó',
+      basedOn: null,
+      source: 'custom',
+      basis: 'per100g',
+      category: 'Os meus alimentos',
+      per100: Object.fromEntries(NUTRIENTS.map(({ key }) => [key, key === 'energyKcal' ? 350 : null])),
+    },
+  ],
+})
 
 describe('a stored document of an older version', () => {
+  it('keeps the version 2 plans aside before the converted plans are saved over them', () => {
+    const storage = enumerableStorage({ [STORAGE_KEY]: PLANS_V2 })
+    saveState(loadState(storage), storage)
+    expect(copies(storage.data, STORAGE_KEY)).toEqual([PLANS_V2])
+    const saved = JSON.parse(storage.data[STORAGE_KEY])
+    expect(saved.version).toBe(3)
+    expect(saved.state.plans[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
+  })
+
+  it('keeps the version 1 days aside before the converted days are saved over them', () => {
+    const storage = enumerableStorage({ [DAYS_STORAGE_KEY]: DAYS_V1 })
+    saveDays(loadDays(storage), storage)
+    expect(copies(storage.data, DAYS_STORAGE_KEY)).toEqual([DAYS_V1])
+    const saved = JSON.parse(storage.data[DAYS_STORAGE_KEY])
+    expect(saved.version).toBe(2)
+    expect(saved.days[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
+  })
+
+  it('keeps the version 1 custom foods aside before the converted foods are saved over them', () => {
+    const storage = enumerableStorage({ [FOODS_STORAGE_KEY]: FOODS_V1 })
+    saveCustomFoods(loadCustomFoods(storage), storage)
+    expect(copies(storage.data, FOODS_STORAGE_KEY)).toEqual([FOODS_V1])
+    const saved = JSON.parse(storage.data[FOODS_STORAGE_KEY])
+    expect(saved.version).toBe(2)
+    expect(saved.foods[0]).toMatchObject({ id: 'custom:bolo', name: 'Bolo da avó', basedOn: null, kind: 'label' })
+    expect(saved.foods[0].per100.energyKcal).toBe(350)
+  })
+
   it('keeps the version 1 pains aside before the converted Mood Notes are saved over them', () => {
     const storage = enumerableStorage({ [MOODS_STORAGE_KEY]: PAINS_V1 })
     saveMoods(loadMoods(storage), storage)

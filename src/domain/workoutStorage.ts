@@ -113,9 +113,9 @@ export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
 
 const emptyPlans = (): WorkoutPlanState => ({ plans: [], activePlanId: null })
 
-export const loadExercises = (storage: StorageLike | null = defaultStorage()): Exercise[] => loadStore(storage, EXERCISES_STORAGE_KEY, parseExercises, () => [])
+export const loadExercises = (storage: StorageLike | null = defaultStorage()): Exercise[] => loadStore(storage, EXERCISES_STORAGE_KEY, parseExercises, () => [], EXERCISES_SCHEMA_VERSION)
 export const loadWorkoutPlans = (storage: StorageLike | null = defaultStorage()): WorkoutPlanState =>
-  loadStore(storage, WORKOUT_PLANS_STORAGE_KEY, parseWorkoutPlans, emptyPlans)
+  loadStore(storage, WORKOUT_PLANS_STORAGE_KEY, parseWorkoutPlans, emptyPlans, WORKOUT_PLANS_SCHEMA_VERSION)
 export const loadWorkoutSessions = (storage: StorageLike | null = defaultStorage()): WorkoutSession[] =>
   loadStore(storage, WORKOUT_SESSIONS_STORAGE_KEY, parseWorkoutSessions, () => [], WORKOUT_SESSIONS_SCHEMA_VERSION)
 

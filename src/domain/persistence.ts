@@ -149,10 +149,10 @@ export function preserveCopy(storage: StorageLike, key: string, text: string, re
 
 /**
  * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
- * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. With
- * `currentVersion`, a document of an older version that parses is preserved under `<key>:migrated:<ISO time>`.
+ * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. A
+ * document of an older version than `currentVersion` that parses is preserved under `<key>:migrated:<ISO time>`.
  */
-export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T, currentVersion?: number): T {
+export function loadStore<T>(storage: StorageLike | null, key: string, parse: (raw: unknown) => T | null, fresh: () => T, currentVersion: number): T {
   let text: string | null | undefined
   try {
     text = storage?.getItem(key)
@@ -164,7 +164,7 @@ export function loadStore<T>(storage: StorageLike | null, key: string, parse: (r
     const raw: unknown = JSON.parse(text)
     const value = parse(raw)
     if (value !== null) {
-      if (currentVersion !== undefined && isRecord(raw) && raw.version !== currentVersion) preserveCopy(storage, key, text, 'migrated')
+      if (isRecord(raw) && raw.version !== currentVersion) preserveCopy(storage, key, text, 'migrated')
       return value
     }
   } catch {
@@ -184,7 +184,7 @@ export function saveStore(key: string, doc: object, storage: StorageLike | null)
   }
 }
 
-export const loadState = (storage: StorageLike | null = defaultStorage()): PlanState => loadStore(storage, STORAGE_KEY, parseState, initialState)
+export const loadState = (storage: StorageLike | null = defaultStorage()): PlanState => loadStore(storage, STORAGE_KEY, parseState, initialState, SCHEMA_VERSION)
 
 export function saveState(state: PlanState, storage: StorageLike | null = defaultStorage()): boolean {
   try {

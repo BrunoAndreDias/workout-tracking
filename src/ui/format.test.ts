@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { LocalDateTime } from '../domain/types.ts'
-import { formatAmount, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
+import type { IsoDate, LocalDateTime } from '../domain/types.ts'
+import { formatAmount, formatDayMonth, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -49,6 +49,12 @@ describe('pt-PT formatting', () => {
     expect(formatPlanned({ sets: 4, reps: { min: 6, max: 6 } })).toBe('4 × 6')
     expect(formatLoggedCounts({ exercises: 1, sets: 1 })).toBe('1 exercício, 1 série')
     expect(formatLoggedCounts({ exercises: 2, sets: 7 })).toBe('2 exercícios, 7 séries')
+  })
+})
+
+describe('day and month', () => {
+  it('writes the day and the short month', () => {
+    expect(formatDayMonth('2026-10-05' as IsoDate)).toBe('5 out')
   })
 })
 

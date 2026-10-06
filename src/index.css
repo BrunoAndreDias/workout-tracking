@@ -427,6 +427,18 @@ small { font-size: 0.85em; color: var(--muted); }
 .health-import { display: flex; flex-direction: column; gap: 12px; padding-inline: 16px; }
 .health-import > .secondary { align-self: flex-start; }
 .health-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.health-latest { margin: 0; font: 500 20px/1.3 var(--font-serif); }
+.health-url { display: grid; gap: 6px; }
+.health-url-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.health-url-row { display: flex; gap: 8px; }
+.health-url-field { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--surface); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--ink); }
+.health-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.health-steps strong { font-weight: 600; color: var(--ink); }
+.health-manual { border-top: 1px solid var(--rule); }
+.health-manual summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; font-weight: 500; color: var(--ink); }
+.health-manual summary:hover { color: var(--accent); }
+.health-manual .health-import { padding: 0 0 16px; }
+.health-manual .primary { align-self: flex-start; }
 
 @media (hover: hover) and (pointer: fine) {
   .meal-tools { opacity: 0; }

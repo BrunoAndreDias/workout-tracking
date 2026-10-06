@@ -100,6 +100,13 @@ export function samplesOn(log: HealthLog, date: IsoDate): HealthSample[] {
   return HEALTH_METRICS.flatMap(({ key }) => (values[key] === undefined ? [] : [{ date, metric: key, value: values[key] }]))
 }
 
+/** The latest date with a value, or null for an empty log. */
+export const latestSampleDate = (log: HealthLog): IsoDate | null =>
+  (Object.keys(log) as IsoDate[])
+    .filter((date) => Object.keys(log[date]).length > 0)
+    .sort()
+    .at(-1) ?? null
+
 export const countSamples = (log: HealthLog): number => Object.values(log).reduce((n, values) => n + Object.keys(values).length, 0)
 
 /** How many samples and the dates they span. */

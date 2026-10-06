@@ -200,7 +200,7 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
           </main>
           <BackupSection>
-            <HealthImport onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
+            <HealthImport log={health} onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
           </BackupSection>
           <Footer />
         </div>

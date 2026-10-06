@@ -125,12 +125,14 @@ export function parseState(raw: unknown): PlanState | null {
   return { plans, selectedId: selected.id }
 }
 
-const unreadablePrefix = (key: string) => `${key}:unreadable:`
-
-/** Copies a document this build cannot read aside, so the fresh state's first save cannot destroy it. Idempotent per raw text. */
-function preserveUnreadable(storage: StorageLike, key: string, text: string): void {
+/**
+ * Copies a document aside under `<key>:<reason>:<ISO time>` before something replaces it: `unreadable`, a document this
+ * build cannot read, before the fresh state's first save; `unsynced`, a browser's own document it never sent, before
+ * the server's copy replaces it. The copy is device-local, never a store. Idempotent per text.
+ */
+export function preserveCopy(storage: StorageLike, key: string, text: string, reason: 'unreadable' | 'unsynced'): void {
   try {
-    const prefix = unreadablePrefix(key)
+    const prefix = `${key}:${reason}:`
     for (let i = 0; i < (storage.length ?? 0); i++) {
       const other = storage.key?.(i)
       if (other?.startsWith(prefix) && storage.getItem(other) === text) return
@@ -162,7 +164,7 @@ export function loadStore<T>(storage: StorageLike | null, key: string, parse: (r
   } catch {
     // corrupt JSON
   }
-  preserveUnreadable(storage, key, text)
+  preserveCopy(storage, key, text, 'unreadable')
   return fresh()
 }
 

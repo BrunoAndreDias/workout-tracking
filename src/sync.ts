@@ -1,3 +1,4 @@
+import { preserveCopy } from './domain/persistence.ts'
 import type { BrowserStorage } from './domain/persistence.ts'
 import { isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
@@ -71,7 +72,8 @@ function parseRemote(raw: unknown): Remote | null {
 
 /**
  * Brings localStorage in step with the server before the app reads it: a store changed here and not yet sent is sent
- * (it may conflict), any other store the server has replaces the local one, and a store only this browser has is
+ * (it may conflict), any other store the server has replaces the local one (a local one this browser never synced is
+ * first kept under `<key>:unsynced:<ISO time>`), and a store only this browser has is
  * uploaded, which is how data from before the server arrives there. With no server it changes nothing and starts
  * `offline`. Then every change to a store through `storage` is sent after `debounceMs`, except the first write of a
  * store this browser did not have: that is the app saving its default, and uploading it could replace another
@@ -160,6 +162,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
       const server = remote[key]
       if (local !== null && meta.pending.includes(key)) continue
       if (server) {
+        if (local !== null && local !== server.doc && meta.revs[key] === undefined && !meta.fresh.includes(key)) preserveCopy(storage, key, local, 'unsynced')
         try {
           storage.setItem(key, server.doc)
           meta.revs[key] = server.rev

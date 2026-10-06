@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { startSync } from './sync.ts'
 
 const PLANS = 'nutrition-tracking:plans'
@@ -49,6 +49,33 @@ describe('startSync', () => {
     expect(storage.data[PLANS]).toBe('{"v":"server"}')
     expect(server.stores.get(PLANS)).toEqual({ doc: '{"v":"server"}', rev: 3 })
     expect(sync.status()).toBe('ligado')
+  })
+
+  it('keeps a never-synced browser’s own copy aside, unsent, before taking the server’s', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-06T08:00:00.000Z'))
+    const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 }, [SLEEP]: { doc: '"same"', rev: 1 } })
+    const storage = memoryStorage({ [PLANS]: '{"v":"local"}', [SLEEP]: '"same"' })
+    await startSync({ storage, fetch: server.fetch })
+    await startSync({ storage, fetch: server.fetch })
+    vi.useRealTimers()
+    const { 'nutrition-tracking:sync': _meta, ...docs } = storage.data
+    expect(docs).toEqual({
+      [PLANS]: '{"v":"server"}',
+      [SLEEP]: '"same"',
+      'nutrition-tracking:plans:unsynced:2026-10-06T08:00:00.000Z': '{"v":"local"}',
+    })
+    expect(Object.fromEntries(server.stores)).toEqual({ [PLANS]: { doc: '{"v":"server"}', rev: 3 }, [SLEEP]: { doc: '"same"', rev: 1 } })
+  })
+
+  it('keeps no copy when a synced browser takes another device’s newer copy', async () => {
+    const server = fakeServer({ [PLANS]: { doc: '{"v":"one"}', rev: 1 } })
+    const storage = memoryStorage()
+    await startSync({ storage, fetch: server.fetch })
+    server.stores.set(PLANS, { doc: '{"v":"two"}', rev: 2 })
+    await startSync({ storage, fetch: server.fetch })
+    const { 'nutrition-tracking:sync': _meta, ...docs } = storage.data
+    expect(docs).toEqual({ [PLANS]: '{"v":"two"}' })
   })
 
   it('uploads a store only this browser has', async () => {

@@ -1,6 +1,6 @@
 /**
  * The localStorage key of every store the app keeps, by Backup store name. The server keeps exactly these documents;
- * device-local keys (the theme, `:unreadable:` copies, the sync bookkeeping) are not stores.
+ * device-local keys (the theme, `:unreadable:` and `:unsynced:` copies, the sync bookkeeping) are not stores.
  * It imports nothing, so the Node server can import it without the browser's domain graph.
  */
 export const STORE_KEY = {

@@ -58,13 +58,37 @@ describe('startSync', () => {
     expect(Object.fromEntries(server.stores)).toEqual({ [SLEEP]: { doc: '{"version":1,"entries":[]}', rev: 1 } })
   })
 
-  it('starts offline and leaves localStorage as it was when the server does not answer', async () => {
+  it('does not send the first write of a store neither side had, and sends the next one that changes it', async () => {
+    const server = fakeServer()
+    const sync = await startSync({ storage: memoryStorage(), fetch: server.fetch, debounceMs: 60_000 })
+    sync.storage.setItem(PLANS, '{"name":"Plano 1"}')
+    await sync.flush()
+    expect(Object.fromEntries(server.stores)).toEqual({})
+    sync.storage.setItem(PLANS, '{"name":"Plano do Bruno"}')
+    await sync.flush()
+    expect(Object.fromEntries(server.stores)).toEqual({ [PLANS]: { doc: '{"name":"Plano do Bruno"}', rev: 1 } })
+  })
+
+  it('does not upload an untouched default at a later start either', async () => {
+    const server = fakeServer()
+    const storage = memoryStorage()
+    const first = await startSync({ storage, fetch: server.fetch, debounceMs: 60_000 })
+    first.storage.setItem(PLANS, '{"name":"Plano 1"}')
+    await first.flush()
+    await startSync({ storage, fetch: server.fetch })
+    expect(Object.fromEntries(server.stores)).toEqual({})
+    server.stores.set(PLANS, { doc: '{"name":"Plano do Bruno"}', rev: 4 })
+    await startSync({ storage, fetch: server.fetch })
+    expect(storage.data[PLANS]).toBe('{"name":"Plano do Bruno"}')
+  })
+
+  it('starts offline and keeps the local copy when the server does not answer', async () => {
     const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 } })
     server.up = false
     const storage = memoryStorage({ [PLANS]: '{"v":"local"}' })
     const sync = await startSync({ storage, fetch: server.fetch })
     expect(sync.status()).toBe('offline')
-    expect(storage.data).toEqual({ [PLANS]: '{"v":"local"}' })
+    expect(storage.data[PLANS]).toBe('{"v":"local"}')
   })
 
   it('sends each change to a store, and never a device-local key', async () => {

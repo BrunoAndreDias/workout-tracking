@@ -19,7 +19,7 @@ Plans, day logs, custom foods, units, workouts, sleep, pains and watch values li
 
 The browser keeps a working copy in localStorage. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
-The first time a browser opens the app against an empty database, it uploads what it has in localStorage. Open the browser that holds your data first. A second browser that already has its own data then gets the server's copy instead and loses its own, so export a Backup from it before and import it with `Juntar aos meus dados` after.
+The first time a browser opens the app against an empty database, it uploads what it has in localStorage, except a store it holds only as the app's untouched starting copy, such as the default `Plano 1`. Open the browser that holds your data first. A second browser that already has its own data then gets the server's copy instead and loses its own, so export a Backup from it before and import it with `Juntar aos meus dados` after.
 
 Each store's first change of a day keeps the version from before it in the `snapshots` table, so a bad day can be undone from the file:
 

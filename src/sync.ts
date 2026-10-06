@@ -9,10 +9,14 @@ import type { StoreKey } from './domain/storeKeys.ts'
  */
 export type SyncStatus = 'ligado' | 'offline' | 'conflito'
 
-/** Device-local bookkeeping: the server rev each store was last in step with, and the stores changed here since. */
+/**
+ * Device-local bookkeeping: the server rev each store was last in step with, the stores changed here since, and the
+ * stores whose local copy is only the app's default, which no side had before and the user has not changed yet.
+ */
 interface SyncMeta {
   revs: Partial<Record<StoreKey, number>>
   pending: StoreKey[]
+  fresh: StoreKey[]
 }
 
 const SYNC_META_KEY = 'nutrition-tracking:sync'
@@ -41,15 +45,16 @@ type Remote = Partial<Record<StoreKey, { doc: string; rev: number }>>
 function readMeta(storage: BrowserStorage): SyncMeta {
   try {
     const raw: unknown = JSON.parse(storage.getItem(SYNC_META_KEY) ?? 'null')
-    if (typeof raw !== 'object' || raw === null) return { revs: {}, pending: [] }
-    const { revs, pending } = raw as Record<string, unknown>
-    const meta: SyncMeta = { revs: {}, pending: Array.isArray(pending) ? pending.filter(isStoreKey) : [] }
+    if (typeof raw !== 'object' || raw === null) return { revs: {}, pending: [], fresh: [] }
+    const { revs, pending, fresh } = raw as Record<string, unknown>
+    const keys = (list: unknown) => (Array.isArray(list) ? list.filter(isStoreKey) : [])
+    const meta: SyncMeta = { revs: {}, pending: keys(pending), fresh: keys(fresh) }
     if (typeof revs === 'object' && revs !== null) {
       for (const [key, rev] of Object.entries(revs)) if (isStoreKey(key) && Number.isInteger(rev)) meta.revs[key] = rev as number
     }
     return meta
   } catch {
-    return { revs: {}, pending: [] }
+    return { revs: {}, pending: [], fresh: [] }
   }
 }
 
@@ -68,7 +73,9 @@ function parseRemote(raw: unknown): Remote | null {
  * Brings localStorage in step with the server before the app reads it: a store changed here and not yet sent is sent
  * (it may conflict), any other store the server has replaces the local one, and a store only this browser has is
  * uploaded, which is how data from before the server arrives there. With no server it changes nothing and starts
- * `offline`. Then every change to a store through `storage` is sent after `debounceMs`.
+ * `offline`. Then every change to a store through `storage` is sent after `debounceMs`, except the first write of a
+ * store this browser did not have: that is the app saving its default, and uploading it could replace another
+ * browser's real data. Such a store is sent once a later write changes it.
  */
 export async function startSync({ storage, fetch: request = globalThis.fetch, base = '/api/stores', debounceMs = 300, timeoutMs = 4000 }: SyncOptions): Promise<Sync> {
   const meta = readMeta(storage)
@@ -157,30 +164,37 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
           storage.setItem(key, server.doc)
           meta.revs[key] = server.rev
           unpend(key)
+          meta.fresh = meta.fresh.filter((k) => k !== key)
         } catch {
           // a full storage keeps the old copy and its old rev, so a later change here conflicts instead of overwriting
         }
-      } else if (local !== null) {
+      } else if (local !== null && !meta.fresh.includes(key)) {
         delete meta.revs[key]
         meta.pending = [...meta.pending, key]
       }
     }
-    saveMeta()
-    await flush()
   } else {
     status = 'offline'
   }
+  for (const key of STORE_KEYS) if (storage.getItem(key) === null && !meta.fresh.includes(key)) meta.fresh = [...meta.fresh, key]
+  saveMeta()
+  if (remote) await flush()
 
   return {
     storage: {
       getItem: (key) => storage.getItem(key),
       setItem(key, value) {
-        const changed = isStoreKey(key) && storage.getItem(key) !== value
+        const previous = storage.getItem(key)
         storage.setItem(key, value)
-        if (changed) markPending(key)
+        if (!isStoreKey(key) || previous === value) return
+        if (meta.fresh.includes(key)) {
+          if (previous === null) return
+          meta.fresh = meta.fresh.filter((k) => k !== key)
+        }
+        markPending(key)
       },
       removeItem(key) {
-        const changed = isStoreKey(key) && storage.getItem(key) !== null
+        const changed = isStoreKey(key) && !meta.fresh.includes(key) && storage.getItem(key) !== null
         storage.removeItem(key)
         if (changed) markPending(key)
       },

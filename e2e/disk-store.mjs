@@ -64,6 +64,12 @@ await b.page.getByRole('status').filter({ hasText: OFFLINE }).waitFor({ state: '
 assert(JSON.parse(row('sleep').doc).entries[0].quality === 3, 'back online, the offline change reaches the server: sleep 3')
 
 await resetServer(a.page, URL)
+const empty = await device()
+await empty.open()
+await empty.page.getByRole('navigation', { name: 'Planos' }).getByText('Plano 1').waitFor()
+await synced(empty.page)
+await empty.page.waitForTimeout(1000)
+assert(row('plans') === undefined, 'an empty browser on an empty server shows Plano 1 and does not upload it')
 const old = await device()
 const v1Plans = { version: 1, state: { plans: [{ id: 'old', name: 'Plano antigo', meals: [{ id: 'm0', name: 'Pequeno-almoço', entries: [{ id: 'e0', foodId: '430', grams: 120 }] }] }], selectedId: 'old' } }
 await old.page.addInitScript((doc) => localStorage.getItem('nutrition-tracking:plans') ?? localStorage.setItem('nutrition-tracking:plans', doc), JSON.stringify(v1Plans))
@@ -74,7 +80,8 @@ const uploaded = JSON.parse(row('plans').doc)
 assert(uploaded.version === 3 && uploaded.state.plans[0].name === 'Plano antigo', 'the browser’s plans reach an empty server, saved as version 3')
 const later = await device()
 await later.open()
-assert(await later.page.getByRole('navigation', { name: 'Planos' }).getByText('Plano antigo').count() === 1, 'another fresh browser opens on Plano antigo')
+const laterTabs = await later.page.getByRole('navigation', { name: 'Planos' }).getByRole('button').allTextContents()
+assert(laterTabs.includes('Plano antigo') && !laterTabs.includes('Plano 1'), `another fresh browser opens on Plano antigo, not Plano 1 (${laterTabs.join(', ')})`)
 
 const [download] = await Promise.all([later.page.waitForEvent('download'), later.page.getByRole('button', { name: 'Exportar dados' }).click()])
 const file = `${S}/disk-store-backup.json`

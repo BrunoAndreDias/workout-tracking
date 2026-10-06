@@ -19,6 +19,7 @@ export type PutResult = { readonly ok: true; readonly rev: number } | { readonly
 
 export interface Stores {
   all(): Partial<Record<StoreKey, Stored>>
+  get(key: StoreKey): Stored | null
   /** Writes when `baseRev` is the current rev (null for a store never written), or when `doc` is already the current doc. */
   put(key: StoreKey, doc: string, baseRev: number | null): PutResult
   /** Empties the database. Only the test server's API reaches it. */
@@ -71,6 +72,9 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
         if (isStoreKey(row.key)) out[row.key] = { doc: row.doc, rev: row.rev }
       }
       return out
+    },
+    get(key) {
+      return (existing()?.selectOne.get(key) as Stored | undefined) ?? null
     },
     put(key, doc, baseRev) {
       const { db, selectOne, snapshot, upsert } = (opened ??= open())
@@ -153,7 +157,7 @@ function readStoredHealth(doc: string) {
 function receiveHealth(stores: Stores, text: string): { status: number; body: unknown } {
   const parsed = parseHealthImport(text)
   if (!parsed.ok) return { status: 400, body: { error: parsed.error } }
-  let current = stores.all()[STORE_KEY.health] ?? null
+  let current = stores.get(STORE_KEY.health)
   // Another process on the same database (a second server) can write between the read and the put.
   for (let attempt = 0; attempt < 3; attempt++) {
     const log = current ? readStoredHealth(current.doc) : {}
@@ -167,7 +171,8 @@ function receiveHealth(stores: Stores, text: string): { status: number; body: un
 
 /**
  * The store API, for any request under `/api/`:
- * `GET /api/stores` → `{ [key]: { doc, rev } }`; `PUT /api/stores/:key` with `{ doc, baseRev }` → `{ rev }`, or 409
+ * `GET /api/stores` → `{ [key]: { doc, rev } }`; `GET /api/stores/:key` → `{ doc, rev }` (null and 0 for a store never
+ * written); `PUT /api/stores/:key` with `{ doc, baseRev }` → `{ rev }`, or 409
  * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first. `DELETE /api/stores` empties
  * the database only when `allowReset`, which only the test server sets. `POST /api/health` with the Apple Watch
  * Shortcut's text → `{ count, from, to }`, or 400 `{ error }` for text the paste would reject.
@@ -194,6 +199,7 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
     if (!match) return send(res, 404, { error: 'not found' })
     const key = decodeURIComponent(match[1])
     if (!isStoreKey(key)) return send(res, 404, { error: `unknown store ${key}`, stores: STORE_KEYS })
+    if (req.method === 'GET') return send(res, 200, stores().get(key) ?? { doc: null, rev: 0 })
     if (req.method !== 'PUT') return send(res, 405, { error: 'method not allowed' })
     const text = await readBody(req)
     const body = text === null ? null : parsePut(text)

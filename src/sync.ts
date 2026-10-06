@@ -177,12 +177,21 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     }
   }
 
+  async function fetchOne(key: StoreKey): Promise<{ doc: string; rev: number } | null> {
+    try {
+      const res = await request(`${base}/${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(timeoutMs) })
+      return res.ok ? (parseRemote({ [key]: await res.json() })?.[key] ?? null) : null
+    } catch {
+      return null
+    }
+  }
+
+  /** Fetches only `keys`, so a refresh on focus never downloads the whole history. */
   async function pull(keys: readonly StoreKey[]): Promise<StoreKey[]> {
-    const remote = await fetchRemote()
-    if (!remote) return []
+    const remote = await Promise.all(keys.map(fetchOne))
     const changed: StoreKey[] = []
-    for (const key of keys) {
-      const server = remote[key]
+    for (const [i, key] of keys.entries()) {
+      const server = remote[i]
       const rev = meta.revs[key]
       // Checked after the request: a change made here while it was in flight must win over the server's older view.
       if (!server || meta.pending.includes(key) || conflicts.has(key) || (rev !== undefined && server.rev <= rev)) continue

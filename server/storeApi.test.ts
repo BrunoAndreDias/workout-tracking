@@ -57,6 +57,14 @@ describe('store API', () => {
     expect(await api.get()).toEqual({ [PLANS]: { doc: '{"version":3,"x":1}', rev: 2 } })
   })
 
+  it('returns one store by key, and null at rev 0 for one never written', async () => {
+    const api = await start()
+    await api.put(PLANS, '{"version":3}', null)
+    const one = async (key: string) => (await fetch(`${api.base}/${encodeURIComponent(key)}`)).json()
+    expect(await one(PLANS)).toEqual({ doc: '{"version":3}', rev: 1 })
+    expect(await one(SLEEP)).toEqual({ doc: null, rev: 0 })
+  })
+
   it('answers a stale rev with 409 and the current doc, and changes nothing', async () => {
     const api = await start()
     await api.put(SLEEP, '{"a":1}', null)
@@ -181,8 +189,8 @@ describe('POST /api/health', () => {
     const api = await start({
       wrap: (stores) => ({
         ...stores,
-        all() {
-          const seen = stores.all()
+        get(key) {
+          const seen = stores.get(key)
           if (!raced) {
             raced = true
             stores.put(HEALTH, OTHER, null)

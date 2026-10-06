@@ -23,6 +23,8 @@ function storeApi(): Plugin {
 export default defineConfig({
   plugins: [react(), storeApi()],
   server: { port: 5180, strictPort: true },
+  // Only the whisper worker imports it, and the dependency scan skips workers. Without this, vite finds it on the first mic tap and reloads the page mid-recording.
+  optimizeDeps: { include: ['@huggingface/transformers'] },
   // Agent worktrees hold whole copies of the repo.
   test: { exclude: [...configDefaults.exclude, '.claude/**'] },
 })

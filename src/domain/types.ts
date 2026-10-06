@@ -11,6 +11,7 @@ export type ExerciseId = Brand<string, 'ExerciseId'>
 export type WorkoutPlanId = Brand<string, 'WorkoutPlanId'>
 export type WorkoutDayId = Brand<string, 'WorkoutDayId'>
 export type WorkoutSessionId = Brand<string, 'WorkoutSessionId'>
+export type PainEntryId = Brand<string, 'PainEntryId'>
 
 export const NUTRIENTS = [
   { key: 'energyKcal', label: 'Energia', unit: 'kcal' },

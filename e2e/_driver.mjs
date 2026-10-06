@@ -2,7 +2,7 @@
 // so a UI change is fixed here once instead of in every script's copy.
 // Every quantity field opens in grams (2fc4aaf), so typing grams needs no unit switch.
 
-const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions']
+const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions', 'sleep', 'pains', 'health']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {

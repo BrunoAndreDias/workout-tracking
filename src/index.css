@@ -487,7 +487,8 @@ small { font-size: 0.85em; color: var(--muted); }
 @media (max-width: 480px) {
   .meal-bar { display: none; }
   /* Four views and the theme toggle share one row on a phone. */
-  .view-link { padding: 0 11px; }
+  .top-row { column-gap: 8px; }
+  .view-link { padding: 0 8px; }
 }
 @media (max-width: 380px) {
   .swap-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

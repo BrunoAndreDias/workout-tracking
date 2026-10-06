@@ -27,5 +27,10 @@ await page.getByRole('navigation', { name: 'Planos' }).waitFor()
 await page.getByRole('region', { name: 'Almoço', exact: true }).waitFor()
 assert(await current() === 'Alimentação', 'the Alimentação tab is current and shows the plan editor')
 
+await page.setViewportSize({ width: 375, height: 812 })
+const navBox = await views.boundingBox()
+const toggleBox = await page.locator('.theme-toggle').boundingBox()
+assert(toggleBox.y < navBox.y + navBox.height, 'at 375 px the theme toggle shares the tab row')
+
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

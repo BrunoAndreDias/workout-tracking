@@ -13,6 +13,8 @@ export type ExerciseId = Brand<string, 'ExerciseId'>
 export type WorkoutPlanId = Brand<string, 'WorkoutPlanId'>
 export type WorkoutDayId = Brand<string, 'WorkoutDayId'>
 export type WorkoutSessionId = Brand<string, 'WorkoutSessionId'>
+/** A Watch Workout's start instant in UTC and its activity, so the same workout read from two exports has one id. */
+export type WatchWorkoutId = Brand<string, 'WatchWorkoutId'>
 
 export const NUTRIENTS = [
   { key: 'energyKcal', label: 'Energia', unit: 'kcal' },

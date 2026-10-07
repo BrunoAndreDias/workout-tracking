@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { importSpan, parseHealthImport, upsertSamples } from '../src/domain/health.ts'
+import { signedShortcut } from './healthShortcut.ts'
 import { isStoreKey, STORE_KEY, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
 import { serializeStore, STORES } from '../src/domain/stores.ts'
@@ -142,6 +143,14 @@ function parsePut(text: string): { doc: string; baseRev: number | null } | null 
   }
 }
 
+/** The address the Shortcut posts to, as `href`, when `raw` is an http(s) address of `/api/health` and nothing else. */
+function healthPostUrl(raw: string | null): string | null {
+  if (!raw || !URL.canParse(raw)) return null
+  const url = new URL(raw)
+  const ok = (url.protocol === 'http:' || url.protocol === 'https:') && url.pathname === '/api/health' && !url.search && !url.hash && !url.username && !url.password
+  return ok ? url.href : null
+}
+
 function readStoredHealth(doc: string) {
   try {
     return STORES.health.parse(JSON.parse(doc))
@@ -176,10 +185,30 @@ function receiveHealth(stores: Stores, text: string): { status: number; body: un
  * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first. `DELETE /api/stores` empties
  * the database only when `allowReset`, which only the test server sets. `POST /api/health` with the Apple Watch
  * Shortcut's text → `{ count, from, to }`, or 400 `{ error }` for text the paste would reject.
+ * `GET /api/health/shortcut?url=<http(s) address ending in /api/health>` → the signed Shortcut that posts there, 400
+ * for any other `url`, or 503 `{ error }` where it cannot be signed.
  */
-export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
+export function storeHandler(stores: () => Stores, { allowReset = false, shortcut = signedShortcut } = {}) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const path = new URL(req.url ?? '/', 'http://localhost').pathname
+    const url = new URL(req.url ?? '/', 'http://localhost')
+    const path = url.pathname
+    if (path === '/api/health/shortcut') {
+      if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' })
+      const postUrl = healthPostUrl(url.searchParams.get('url'))
+      if (!postUrl) return send(res, 400, { error: 'url tem de ser um endereço http(s) que acaba em /api/health' })
+      let file: Buffer
+      try {
+        file = await shortcut(postUrl)
+      } catch {
+        return send(res, 503, { error: 'Este servidor não consegue assinar o atalho: só um Mac com a app Atalhos o consegue. Usa o Colar manualmente.' })
+      }
+      res.writeHead(200, {
+        'content-type': 'application/octet-stream',
+        'content-disposition': 'attachment; filename="Plano - Saude.shortcut"',
+        'cache-control': 'no-store',
+      })
+      return void res.end(file)
+    }
     if (path === '/api/stores') {
       if (req.method === 'GET') return send(res, 200, stores().all())
       if (req.method === 'DELETE' && allowReset) {

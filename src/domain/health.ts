@@ -60,7 +60,11 @@ export type ParsedImport = { ok: true; samples: ImportedSamples } | { ok: false;
 
 const NOTHING_CHANGED = 'Não foi alterado nada.'
 
-/** The pasted text of the iOS Shortcut: `{ "samples": [...] }` or the bare list. Any bad row rejects the whole paste. */
+/**
+ * The text of the iOS Shortcut: `{ "samples": [...] }`, the bare list, or one sample on its own, which the installed
+ * Shortcut posts once per metric because a flat JSON body is the shape Shortcuts builds most reliably. Any bad row
+ * rejects the whole text.
+ */
 export function parseHealthImport(text: string): ParsedImport {
   let raw: unknown
   try {
@@ -68,8 +72,8 @@ export function parseHealthImport(text: string): ParsedImport {
   } catch {
     return { ok: false, error: `O texto não é JSON válido. ${NOTHING_CHANGED}` }
   }
-  const rows = Array.isArray(raw) ? raw : isRecord(raw) && Array.isArray(raw.samples) ? raw.samples : null
-  if (!rows) return { ok: false, error: `Esperava { "samples": [ … ] } ou uma lista de valores. ${NOTHING_CHANGED}` }
+  const rows = Array.isArray(raw) ? raw : !isRecord(raw) ? null : Array.isArray(raw.samples) ? raw.samples : 'metric' in raw ? [raw] : null
+  if (!rows) return { ok: false, error: `Esperava { "samples": [ … ] }, uma lista de valores ou um só valor. ${NOTHING_CHANGED}` }
   const read = readSamples(rows)
   if (!read.ok) return { ok: false, error: `Valor n.º ${read.row}: ${read.reason}. ${NOTHING_CHANGED}` }
   const [first, ...rest] = read.samples

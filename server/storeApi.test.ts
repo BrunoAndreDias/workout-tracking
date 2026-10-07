@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync } from 'node:fs'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -19,11 +20,11 @@ afterEach(() => {
 })
 
 /** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
-async function start({ allowReset = false, wrap = (stores: Stores) => stores } = {}) {
+async function start({ allowReset = false, wrap = (stores: Stores) => stores, shortcut }: { allowReset?: boolean; wrap?: (stores: Stores) => Stores; shortcut?: (postUrl: string) => Promise<Buffer> } = {}) {
   const file = join(mkdtempSync(join(tmpdir(), 'plano-store-')), 'plano.sqlite')
   const clock = { now: new Date(2026, 9, 6, 9, 0) }
   const stores = openStores(file, () => clock.now)
-  const server = createServer(storeHandler(() => wrap(stores), { allowReset }))
+  const server = createServer(storeHandler(() => wrap(stores), { allowReset, shortcut }))
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   close = () => {
     server.close()
@@ -213,6 +214,45 @@ describe('POST /api/health', () => {
     expect((await fetch(api.base.replace('/api/stores', '/api/health'))).status).toBe(405)
     expect(await api.get()).toEqual({})
   })
+})
+
+describe('GET /api/health/shortcut', () => {
+  const canSign = process.platform === 'darwin' && spawnSync('shortcuts', ['--help']).status === 0
+  const shortcutUrl = (base: string, url: string) => `${base.replace('/api/stores', '/api/health/shortcut')}?url=${encodeURIComponent(url)}`
+
+  it.each([
+    ['a missing url', ''],
+    ['another path', 'http://192.168.1.5:4173/api/stores'],
+    ['a query after /api/health', 'http://192.168.1.5:4173/api/health?x=1'],
+    ['another scheme', 'ftp://192.168.1.5/api/health'],
+    ['text that is no address', 'api/health'],
+  ])('refuses %s with 400 and signs nothing', async (_, url) => {
+    const signed: string[] = []
+    const api = await start({ shortcut: async (postUrl) => (signed.push(postUrl), Buffer.from('x')) })
+    const res = await fetch(shortcutUrl(api.base, url))
+    expect([res.status, await res.json(), signed]).toEqual([400, { error: 'url tem de ser um endereço http(s) que acaba em /api/health' }, []])
+  })
+
+  it('answers 503 with a message for the panel where the Shortcut cannot be signed', async () => {
+    const api = await start({ shortcut: () => Promise.reject(new Error('spawn shortcuts ENOENT')) })
+    const res = await fetch(shortcutUrl(api.base, 'http://192.168.1.5:4173/api/health'))
+    expect([res.status, await res.json()]).toEqual([
+      503,
+      { error: 'Este servidor não consegue assinar o atalho: só um Mac com a app Atalhos o consegue. Usa o Colar manualmente.' },
+    ])
+  })
+
+  it.runIf(canSign)('answers the signed Shortcut as a download on a Mac', async () => {
+    const api = await start()
+    const res = await fetch(shortcutUrl(api.base, 'https://mac.tail1234.ts.net/api/health'))
+    const body = Buffer.from(await res.arrayBuffer())
+    expect([res.status, res.headers.get('content-type'), res.headers.get('content-disposition'), body.subarray(0, 4).toString()]).toEqual([
+      200,
+      'application/octet-stream',
+      'attachment; filename="Plano - Saude.shortcut"',
+      'AEA1',
+    ])
+  }, 30_000)
 })
 
 describe('a database that does not exist yet', () => {

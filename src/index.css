@@ -428,6 +428,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .health-import > .secondary { align-self: flex-start; }
 .health-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 .health-latest { margin: 0; font: 500 20px/1.3 var(--font-serif); }
+.health-install { display: inline-flex; align-items: center; align-self: flex-start; text-decoration: none; }
 .health-url { display: grid; gap: 6px; }
 .health-url-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .health-url-row { display: flex; gap: 8px; }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { importSpan, latestSampleDate, parseHealthImport } from '../domain/health.ts'
 import type { HealthLog, HealthSample, ImportedSamples } from '../domain/health.ts'
 import { formatDayMonth, formatShortDate } from './format.ts'
@@ -26,8 +26,24 @@ export function HealthImport({ log, onImport }: Props) {
   const urlField = useRef<HTMLInputElement>(null)
   const parsed = text.trim() === '' ? null : parseHealthImport(text)
   const url = `${window.location.origin}/api/health`
+  const shortcutHref = `${window.location.origin}/api/health/shortcut?url=${encodeURIComponent(url)}`
+  const [shortcutError, setShortcutError] = useState<string | null>(null)
   const latest = latestSampleDate(log)
   const thisComputerOnly = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
+
+  // Signing takes seconds and works only on a Mac, so asking for the file on open warms the server's copy for the tap and
+  // shows why it cannot be had instead of a link to an error page.
+  useEffect(() => {
+    if (!open) return
+    let current = true
+    void fetch(shortcutHref)
+      .then(async (res) => (res.ok ? null : ((await res.json()) as { error: string }).error))
+      .catch(() => 'Sem ligação ao servidor. Não deu para preparar o atalho.')
+      .then((error) => current && setShortcutError(error))
+    return () => {
+      current = false
+    }
+  }, [open, shortcutHref])
 
   const close = () => {
     setOpen(false)
@@ -76,7 +92,36 @@ export function HealthImport({ log, onImport }: Props) {
         <Panel eyebrow="Apple Watch" title="Ligar Apple Watch" onClose={close}>
           <div className="panel-body backup-body health-import">
             <p className="health-latest">{latest ? `Último valor do relógio: ${formatDayMonth(latest)}` : 'Ainda não chegou nenhum valor do relógio.'}</p>
-            <p className="goals-hint">Um Atalho no iPhone envia os valores do relógio para a app todos os dias, sem tocar em nada. Enviar outra vez os mesmos dias só substitui os valores.</p>
+            <p className="goals-hint">Um Atalho no iPhone envia os valores do relógio de ontem para a app todos os dias, sem tocar em nada. Enviar outra vez os mesmos dias só substitui os valores.</p>
+            {shortcutError ? (
+              <p className="backup-error" role="alert">
+                {shortcutError}
+              </p>
+            ) : (
+              <a className="primary health-install" href={shortcutHref}>
+                Instalar atalho
+              </a>
+            )}
+            <p className="goals-hint">
+              {thisComputerOnly
+                ? 'Aberta em localhost, a app dá um atalho que só funciona neste computador. Abre-a no iPhone pelo endereço do computador na rede Wi-Fi ou na VPN privada e instala o atalho daí.'
+                : 'O iPhone tem de chegar a este endereço: na mesma rede Wi-Fi ou por uma VPN privada.'}
+            </p>
+            <ol className="health-steps">
+              <li>
+                Abre esta página no iPhone, toca em <strong>Instalar atalho</strong> e abre o ficheiro transferido.
+              </li>
+              <li>
+                Toca em <strong>Adicionar atalho</strong>.
+              </li>
+              <li>
+                Corre-o uma vez e toca em <strong>Permitir</strong> no pedido do Saúde.
+              </li>
+              <li>
+                Em Atalhos → Automação, cria uma automação diária (<strong>Hora do dia</strong>, <strong>Executar imediatamente</strong>) com este atalho.
+              </li>
+            </ol>
+            <p className="goals-hint">O atalho ainda não envia o sono nem as horas em pé.</p>
             <label className="health-url">
               <span className="health-url-label">Endereço do Atalho</span>
               <span className="health-url-row">
@@ -91,22 +136,6 @@ export function HealthImport({ log, onImport }: Props) {
                 {copyNote}
               </p>
             )}
-            <ol className="health-steps">
-              <li>
-                No Atalho, depois de juntar os valores, acrescenta <strong>Obter conteúdo do URL</strong> com este endereço, método <strong>POST</strong> e corpo <strong>JSON</strong> com os valores.
-              </li>
-              <li>
-                Em Atalhos → Automação, cria uma <strong>Automação pessoal</strong> → <strong>Hora do dia</strong>, diariamente, de manhã.
-              </li>
-              <li>
-                Escolhe <strong>Executar imediatamente</strong> e o Atalho.
-              </li>
-            </ol>
-            <p className="goals-hint">
-              {thisComputerOnly
-                ? 'Este endereço só funciona neste computador. Abre a app pelo endereço do computador na rede Wi-Fi ou na VPN privada, e copia o endereço daí.'
-                : 'O iPhone tem de chegar a este endereço: na mesma rede Wi-Fi ou por uma VPN privada.'}
-            </p>
             <details className="health-manual">
               <summary>Colar manualmente</summary>
               <div className="health-import">

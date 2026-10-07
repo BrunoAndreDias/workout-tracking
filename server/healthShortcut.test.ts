@@ -24,43 +24,75 @@ describe('shortcutFor', () => {
     expect(JSON.stringify(actionsOf('https://mac.tail1234.ts.net/api/health'))).toContain('"WFURL":"https://mac.tail1234.ts.net/api/health"')
   })
 
-  it('posts each metric the value of the Health type it found, as a number', () => {
+  const loopOf = (post: Action) => {
+    const i = actions.indexOf(post)
+    const start = actions.slice(0, i).reverse().find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.repeat.each')!
+    const end = actions.slice(i + 1).find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.repeat.each')!
+    return { start: start.WFWorkflowActionParameters, end: end.WFWorkflowActionParameters, inside: actions.slice(actions.indexOf(start) + 1, actions.indexOf(end)) }
+  }
+  const repeatItem = { Type: 'Variable', VariableName: 'Repeat Item' }
+
+  it('posts each metric once per day found, inside a Repeat with Each over that metric\'s Health type', () => {
     const sent = posts.map((post) => {
-      const value = jsonField(post, 'value')
-      const find = byUuid(actions, tokenUuid(value.WFValue))
+      const { start, end } = loopOf(post)
+      const find = byUuid(actions, tokenUuid(start.WFInput))
       const [typeRow] = find.WFWorkflowActionParameters.WFContentItemFilter.Value.WFActionParameterFilterTemplates
-      return [jsonField(post, 'metric').WFValue.Value.string, typeRow.Values.Enumeration.Value, value.WFItemType, find.WFWorkflowActionParameters.WFHKSampleFilteringGroupBy]
+      expect([start.WFControlFlowMode, end.WFControlFlowMode, start.GroupingIdentifier === end.GroupingIdentifier]).toEqual([0, 2, true])
+      return [jsonField(post, 'metric').WFValue.Value.string, typeRow.Values.Enumeration.Value]
     })
     expect(sent).toEqual([
-      ['standMinutes', 'Stand Time', 3, 'Day'],
-      ['steps', 'Steps', 3, 'Day'],
-      ['activeEnergy', 'Active Calories', 3, 'Day'],
-      ['exerciseMinutes', 'Exercise Time', 3, 'Day'],
-      ['restingHeartRate', 'Resting Heart Rate', 3, 'Day'],
+      ['standMinutes', 'Stand Time'],
+      ['steps', 'Steps'],
+      ['activeEnergy', 'Active Calories'],
+      ['exerciseMinutes', 'Exercise Time'],
+      ['restingHeartRate', 'Resting Heart Rate'],
     ])
   })
 
-  it('sends a metric only inside an If that its samples have any value', () => {
+  it('finds the last 15 days as one sample per day, with no sort and no limit', () => {
     for (const post of posts) {
-      const i = actions.indexOf(post)
-      const [opening, closing] = [actions[i - 1].WFWorkflowActionParameters, actions[i + 1].WFWorkflowActionParameters]
-      expect([opening.WFCondition, opening.WFControlFlowMode, closing.WFControlFlowMode, opening.GroupingIdentifier === closing.GroupingIdentifier]).toEqual([100, 0, 2, true])
-      expect(tokenUuid(opening.WFInput.Variable)).toBe(tokenUuid(jsonField(post, 'value').WFValue))
+      const find = byUuid(actions, tokenUuid(loopOf(post).start.WFInput)).WFWorkflowActionParameters
+      const [, windowRow] = find.WFContentItemFilter.Value.WFActionParameterFilterTemplates
+      expect(windowRow).toEqual({ Bounded: true, Operator: 1001, Property: 'Start Date', Removable: false, Values: { Unit: 16, Number: '15' } })
+      expect([find.WFHKSampleFilteringGroupBy, find.WFHKSampleFilteringFillMissing]).toEqual(['Day', false])
+      expect(Object.keys(find).filter((k) => /Sort|Limit/.test(k))).toEqual([])
     }
   })
 
-  it('dates every value yesterday, as yyyy-MM-dd, and finds samples that started between its start and its last second', () => {
-    const format = byUuid(actions, tokenUuid(jsonField(posts[0], 'date').WFValue)).WFWorkflowActionParameters
-    const yesterday = byUuid(actions, tokenUuid(format.WFDate)).WFWorkflowActionParameters
-    const startOfToday = byUuid(actions, tokenUuid(yesterday.WFDate)).WFWorkflowActionParameters
-    const now = byUuid(actions, tokenUuid(startOfToday.WFDate)).WFWorkflowActionParameters
-    expect([format.WFDateFormatStyle, format.WFDateFormat]).toEqual(['Custom', 'yyyy-MM-dd'])
-    expect([yesterday.WFAdjustOperation, yesterday.WFDuration.Value]).toEqual(['Subtract', { Magnitude: '1', Unit: 'days' }])
-    expect([startOfToday.WFAdjustOperation, now.WFDateActionMode]).toEqual(['Get Start of Day', 'Current Date'])
+  it('posts only inside an If that skips the window\'s first day, 15 days back, by date', () => {
+    for (const post of posts) {
+      const i = actions.indexOf(post)
+      const open = actions.slice(0, i).reverse().find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.conditional')!.WFWorkflowActionParameters
+      const close = actions.slice(i + 1).find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.conditional')!.WFWorkflowActionParameters
+      expect([open.WFControlFlowMode, open.WFCondition, close.WFControlFlowMode, open.GroupingIdentifier === close.GroupingIdentifier]).toEqual([0, 5, 2, true])
+      const day = byUuid(actions, tokenUuid(jsonField(post, 'date').WFValue)).WFWorkflowActionParameters
+      expect(open.WFInput.Variable.Value.OutputUUID).toBe(day.UUID)
 
-    const [, dateRow] = byUuid(actions, tokenUuid(jsonField(posts[0], 'value').WFValue)).WFWorkflowActionParameters.WFContentItemFilter.Value.WFActionParameterFilterTemplates
-    const end = byUuid(actions, tokenUuid(dateRow.Values.AnotherDate)).WFWorkflowActionParameters
-    expect([dateRow.Property, dateRow.Operator, tokenUuid(dateRow.Values.Date)]).toEqual(['Start Date', 1003, yesterday.UUID])
-    expect([tokenUuid(end.WFDate), end.WFAdjustOperation, end.WFDuration.Value]).toEqual([startOfToday.UUID, 'Subtract', { Magnitude: '1', Unit: 'sec' }])
+      const first = byUuid(actions, tokenUuid(open.WFConditionalActionString)).WFWorkflowActionParameters
+      const back = byUuid(actions, tokenUuid(first.WFDate)).WFWorkflowActionParameters
+      const now = byUuid(actions, tokenUuid(back.WFDate)).WFWorkflowActionParameters
+      expect([first.WFDateFormatStyle, first.WFDateFormat]).toEqual(['Custom', 'yyyy-MM-dd'])
+      expect([back.WFAdjustOperation, back.WFDuration.Value]).toEqual(['Subtract', { Magnitude: '15', Unit: 'days' }])
+      expect(now.WFDateActionMode).toBe('Current Date')
+    }
+  })
+
+  it('dates each post with its day sample\'s Start Date as yyyy-MM-dd, and sends the day sample as the value', () => {
+    for (const post of posts) {
+      const format = byUuid(actions, tokenUuid(jsonField(post, 'date').WFValue)).WFWorkflowActionParameters
+      const details = byUuid(actions, tokenUuid(format.WFDate)).WFWorkflowActionParameters
+      expect([format.WFDateFormatStyle, format.WFDateFormat]).toEqual(['Custom', 'yyyy-MM-dd'])
+      expect([details.WFContentItemPropertyName, details.WFInput.Value]).toEqual(['Start Date', repeatItem])
+      const value = jsonField(post, 'value')
+      expect([value.WFItemType, value.WFValue.Value.attachmentsByRange['{0, 1}']]).toEqual([3, repeatItem])
+      expect(loopOf(post).inside).toContain(byUuid(actions, details.UUID))
+    }
+  })
+
+  it('uses only these actions, with the date arithmetic once at the top', () => {
+    const ids = actions.map((a) => a.WFWorkflowActionIdentifier.replace('is.workflow.actions.', ''))
+    expect(ids.slice(0, 3)).toEqual(['date', 'adjustdate', 'format.date'])
+    expect([...new Set(ids)].sort()).toEqual(['adjustdate', 'conditional', 'date', 'downloadurl', 'filter.health.quantity', 'format.date', 'properties.health.quantity', 'repeat.each'])
+    expect(ids.filter((id) => id === 'adjustdate')).toHaveLength(1)
   })
 })

@@ -5,10 +5,11 @@ Scope: what `server/healthShortcut.ts` writes into the Shortcut `Instalar atalho
 
 ## Decision summary
 
-The Shortcut uses six Shortcuts actions: Date, Adjust Date, Format Date, Find Health Samples, If, and Get Contents of URL. For each metric it finds yesterday's samples grouped by day and, if there are any, posts one flat JSON object `{ "date", "metric", "value" }`. Three choices follow from the sources:
+The Shortcut uses these actions: Date, Adjust Date and Format Date once at the top, then per metric Find Health Samples, Repeat with Each, Get Details of Health Sample, Format Date, If, Get Contents of URL, End If and End Repeat. For each metric it finds the samples of the last 15 days grouped by day. Then, for each day sample except the window's first day, it posts one flat JSON object `{ "date", "metric", "value" }`. That is today plus the 14 days before, so a run that was skipped for days still fills them in. Four choices follow from the sources:
 
-- **Group by day instead of Calculate Statistics.** Find Health Samples has a `Group by` parameter. With it, ActionKit asks HealthKit for statistics per day, which sums cumulative types and averages discrete ones and merges the iPhone and the Watch. Summing raw samples would count steps from both devices twice.
-- **One flat POST per metric.** Shortcuts' JSON request body is reliable for flat key and value pairs; nested arrays of dictionaries are where generated shortcuts break. The server now also takes one sample on its own, so the Shortcut never builds an array.
+- **Group by day instead of Calculate Statistics.** Find Health Samples has a `Group by` parameter. Summing raw samples would count steps from both devices twice. The decompiled action shows ActionKit grouping the fetched samples into day buckets itself (`fhs.m`), so whether the sum de-duplicates iPhone and Watch steps the way HealthKit statistics would is now unconfirmed. An earlier version of this note claimed HealthKit statistics did the merge.
+- **Skip the first day by date, with no sort or limit.** A rolling 15-day window can start mid-day, so its oldest day bucket may be partial. The first device run (2026-10-07, about 21:2x) showed that Find Health Samples applies its limit to the raw samples before grouping. With sort `Start Date`, `Latest First` and limit 15 it posted only 5 values: today's steps 1046, stand 20 min, active 90 kcal, exercise 3 min, and exercise 12 min for 2026-10-06. The exercise samples are one minute each, and 3 + 12 = 15, exactly the limit. This corrects the earlier reading of the decompiled code, which had the slice applying to the grouped items. So the sort and limit are gone. A Date, Adjust Date (Subtract 15 days) and Format Date at the top give the window's first day, and an If around each POST skips it by comparing dates. That works in any group order, and if the window is calendar-based the skipped day is whole and today plus 14 full days still go out.
+- **One flat POST per day and metric.** Shortcuts' JSON request body is reliable for flat key and value pairs; nested arrays of dictionaries are where generated shortcuts break. The server takes one sample on its own, so the Shortcut never builds an array. Posting a day again replaces it, so a run that repeats a day is harmless.
 - **No sleep and no stand hours.** Both are category samples. Shortcuts gives a category sample's value only as a localized word (`Stood` is `Tempo de pé` on a Portuguese iPhone, `Asleep` is `A dormir`), so a value filter written in one language misses on a phone in another.
 
 ## Sources
@@ -39,27 +40,31 @@ Read and not relied on: [vxnsin's `health-sync.shortcut.xml`](https://github.com
 
 | Action | What the plist sets | Confidence and source |
 |---|---|---|
-| Date | `WFDateActionMode: Current Date` | Confirmed: Cherri, viticci tests, fcandi. |
-| Adjust Date, start of today | `WFDate` token of Date, `WFAdjustOperation: Get Start of Day` | Operation name from Cherri's enum only; no export seen. |
-| Adjust Date, yesterday | `WFAdjustOperation: Subtract`, `WFDuration {Magnitude "1", Unit "days"}` | Confirmed: fcandi (device-validated) and Cherri. |
-| Adjust Date, last second of yesterday | same, `Unit "sec"` | `sec` from Cherri's unit enum; no export seen. |
-| Format Date | `WFDateFormatStyle: Custom`, `WFDateFormat: yyyy-MM-dd` | Confirmed: a real export and Cherri. |
 | Find Health Samples, type | locked `Type` row, `Operator 4`, `Enumeration` `WFStringSubstitutableState` | Confirmed: viticci's iOS export, fcandi, decompiled `readableSampleType`. |
 | Find Health Samples, type names | `Stand Time`, `Steps`, `Active Calories`, `Exercise Time`, `Resting Heart Rate` | Confirmed against ActionKit's table on this Mac; fcandi uses the same five. viticci's docs say `Exercise Minutes`, which is not in the table. |
-| Find Health Samples, dates | `Start Date` row, `Operator 1003`, `Values.Date` and `Values.AnotherDate` as `WFTextTokenAttachment` | Inferred. `1003` with `Date` and `AnotherDate` is from an Apple-built Reminders sample, where `Date` was a literal date and only `AnotherDate` a variable. A variable in `Values.Date` is documented for `Start Date is after` (`Operator 2`) in Find Calendar Events (viticci `FILTERS.md`), not yet for `is between` in Health. |
+| Find Health Samples, relative date | `Start Date` row, `Operator 1001`, `Values {Unit 16, Number "15"}`: "is in the last 15 days" | Confirmed: fcandi `generate-shortcut.py` (device-validated). |
+| Find Health Samples, no sort or limit | none of `WFContentItemSortProperty`, `WFContentItemSortOrder`, `WFContentItemLimitEnabled`, `WFContentItemLimitNumber` | Device observation 2026-10-07: the limit applied to raw samples before grouping and cut the run to 5 values (see the decision summary). |
+| Preamble: Date, Adjust Date, Format Date | `is.workflow.actions.date` `{UUID, WFDateActionMode: Current Date}`; `adjustdate` `{UUID, WFDate: token, WFAdjustOperation: Subtract, WFDuration: {Value: {Magnitude: "15", Unit: days}, WFSerializationType: WFQuantityFieldValue}}`; `format.date` `Custom`, `yyyy-MM-dd`. Its output is the window's first day. | Same shapes as the earlier yesterday version. Subtract with days is device-validated by fcandi; Cherri `calendar.cherri` has the keys. |
+| If around each POST | `is.workflow.actions.conditional` `{GroupingIdentifier, WFControlFlowMode 0, WFCondition 5, WFInput {Type: Variable, Variable: <attachment of the loop's Format Date>}, WFConditionalActionString: token of the first day}`, then the POST, then `conditional` `{GroupingIdentifier, UUID, WFControlFlowMode 2}` | Integer condition codes (5 is "is not") and the `WFInput` variable shape: viticci `CONTROL_FLOW.md`. A `WFConditionalActionString` holding a `WFTextTokenString` with an `ActionOutput` attachment: real export `golden-shortcuts/xml/332c12a0060043b388b22b806be7ab58.xml` at `2de03bffe4ce8802e06d184931d9e4ec366a2ef2`. Not yet run on a device. |
 | Find Health Samples, grouping | `WFHKSampleFilteringGroupBy: Day`, `WFHKSampleFilteringFillMissing: false` | Confirmed: decompiled action and fcandi. |
 | Find Health Samples, unit | not set: the Health app's preferred unit | Confirmed default from the decompiled helper. Active Energy in kJ on the phone would arrive as kJ. |
-| If | `WFCondition 100`, `WFInput {Type: Variable, Variable: <attachment>}`, End If `WFControlFlowMode 2` | Confirmed: a real export and viticci's condition table. |
+| Repeat with Each, start | `is.workflow.actions.repeat.each`, `GroupingIdentifier`, `WFControlFlowMode 0`, `WFInput` an `ActionOutput` attachment of the Find; no `UUID` | Confirmed: viticci golden exports `8ab0d39826ab4249be58672763caa3ba.xml` and `51cc4e26d1044893a0c3f2f3630cf2d2.xml` at `2de03bffe4ce8802e06d184931d9e4ec366a2ef2`. |
+| Get Details of Health Sample | `is.workflow.actions.properties.health.quantity`, `WFContentItemPropertyName: Start Date`, `WFInput` the `Repeat Item` variable | The action and property are device-validated by fcandi `generate-shortcut.py` (`extract_start_date`) on a list. Use on one item of a loop is inferred. A grouped day sample's Start Date is local midnight of its day (decompiled grouping transformer). |
+| Repeat Item reference | `{Type: Variable, VariableName: Repeat Item}`, as an input attachment and as the `value` token | Confirmed in the same viticci exports. |
+| End Repeat | `repeat.each`, same `GroupingIdentifier`, `WFControlFlowMode 2`, with a `UUID` | Confirmed: the same viticci exports. |
 | Get Contents of URL | `WFURL` (literal), `WFHTTPMethod POST`, `WFHTTPBodyType JSON` | Confirmed: a real export, viticci, vxnsin. |
-| JSON body | `WFJSONValues` with `date` (`WFItemType 0`, token of Format Date), `metric` (`0`, literal), `value` (`3`, token of the samples) | Item types confirmed by real exports (`3` holds numbers). That a grouped Health sample in a Number field turns into a JSON number is inferred from its `NSNumber` coercion in the decompiled content item. |
+| JSON body | `WFJSONValues` with `date` (`WFItemType 0`, token of Format Date), `metric` (`0`, literal), `value` (`3`, token of the Repeat Item) | Item types confirmed by real exports (`3` holds numbers). That a grouped Health sample in a Number field turns into a JSON number is inferred from its `NSNumber` coercion in the decompiled content item. |
 | Top level | `WFWorkflowClientVersion 2602.0.5`, `WFWorkflowMinimumClientVersion 900`, icon, empty types and questions | Confirmed: fcandi; `shortcuts sign` keeps them and fills the rest. |
 
 Each UUID is fixed per position, so one address always builds the same plist. `OutputName` values are labels only; the `OutputUUID` links outputs.
 
 ## Open risks for the first run
 
-1. A variable in the `Date` bound of `Start Date is between` may import empty. Then the filter is open-ended and a grouped search returns one value per day, and the number field takes the first.
-2. `Get Start of Day` and `sec` have no export behind them.
-3. If the Number field sends the sample as text, the server answers 400 and that metric is missing in the Diário.
-4. The first run asks for Health access per type, and may ask for local network access for an `http://` address.
-5. A Personal Automation that runs while the iPhone is locked finds no Health data (fcandi).
+1. Get Details of Health Sample on the Repeat Item is inferred. If it returns nothing, the date is empty and the server rejects the post.
+2. 75 POSTs in one run (5 metrics times 15 days) are untested. A slow or throttled run could stop part way.
+3. Whether the "last 15 days" window is rolling or calendar is unconfirmed. Skipping its first day by date is safe either way.
+4. Whether steps from the iPhone and the Watch are de-duplicated by ActionKit's own grouping is unconfirmed (see the decision summary).
+5. If the Number field sends the sample as text, the server answers 400 and the metric is missing in the Diário.
+6. The If is untested on a device: the compare string is a token of a Format Date, and a text comparison of two dates must match. If it never matches, the first day is posted too, partial.
+7. The first run asks for Health access per type, and may ask for local network access for an `http://` address.
+8. A run while the iPhone is locked finds no Health data (fcandi).

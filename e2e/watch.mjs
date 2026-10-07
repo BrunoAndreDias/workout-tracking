@@ -42,6 +42,7 @@ if (process.platform === 'darwin') {
   const head = (await file.body()).subarray(0, 4).toString()
   assert(file.status() === 200 && head === 'AEA1' && file.headers()['content-disposition'] === 'attachment; filename="Plano - Saude.shortcut"', `on a Mac, the link downloads a signed Shortcut (got ${file.status()} ${head})`)
 }
+assert(await dialog.getByText('os valores do relógio dos últimos 14 dias e de hoje', { exact: false }).count() === 1, 'the hint says the Shortcut sends the last 14 days and today')
 assert(await dialog.getByText('Aberta em localhost, a app dá um atalho que só funciona neste computador.', { exact: false }).count() === 1, 'a localhost address is flagged as unreachable from the iPhone')
 assert(await dialog.locator('.health-latest').textContent() === 'Ainda não chegou nenhum valor do relógio.', 'with no value yet, the panel says so')
 await dialog.getByRole('button', { name: 'Copiar' }).click()

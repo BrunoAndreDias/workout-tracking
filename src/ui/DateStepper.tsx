@@ -13,11 +13,11 @@ interface Props {
 /** Previous and next day around the date, never past today. */
 export function DateStepper({ date, today, onDate, label }: Props) {
   return (
-    <section className="card workout-date" aria-label={label}>
+    <section className="card date-stepper" aria-label={label}>
       <button type="button" className="icon-btn" aria-label="Dia anterior" onClick={() => onDate(addDays(date, -1))}>
         <ChevronIcon left />
       </button>
-      <div className="workout-date-title">
+      <div className="date-stepper-title">
         <h2 className="cal-title">
           <span className="date-title">{formatLongDate(date)}</span>
         </h2>

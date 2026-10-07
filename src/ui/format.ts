@@ -11,7 +11,9 @@ const one = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 0, maximumFr
 const oneFixed = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const two = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
-export const formatKcal = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
+/** A whole number, thousands grouped: "1 234". */
+export const formatCount = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
+export const formatKcal = formatCount
 export const formatGrams = (v: number) => one.format(v)
 /** Fixed one decimal, for macro columns where aligned digits matter. */
 export const formatMacro = (v: number) => oneFixed.format(v)
@@ -54,6 +56,9 @@ export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(dat
 export const formatRepeatDate = (date: IsoDate) => formatLongDate(date).replace('-feira', '')
 /** "5/10", for chart axes and tiles where space is tight. */
 export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
+const monthName = new Intl.DateTimeFormat('pt-PT', { month: 'long' })
+/** "outubro" */
+export const formatMonthName = (date: IsoDate) => monthName.format(fromIsoDate(date))
 /** "outubro de 2026" */
 export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))
 
@@ -61,9 +66,12 @@ export const formatMonth = (year: number, month: number) => monthYear.format(new
 export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) =>
   `${sets} × ${reps.min === reps.max ? reps.min : `${reps.min}–${reps.max}`}`
 
+/** "1 noite", "3 noites" */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 /** "1 exercício, 3 séries" */
 export const formatLoggedCounts = ({ exercises, sets }: { exercises: number; sets: number }) =>
-  `${exercises} ${exercises === 1 ? 'exercício' : 'exercícios'}, ${sets} ${sets === 1 ? 'série' : 'séries'}`
+  `${plural(exercises, 'exercício', 'exercícios')}, ${plural(sets, 'série', 'séries')}`
 
 /** The Workout Day a session started from, by its current name. */
 export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {
@@ -75,6 +83,9 @@ const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 const dayMonth = (at: IsoDate | LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
 /** "6 out" */
 export const formatDayMonth = (date: IsoDate) => dayMonth(date)
+/** "5–11 out", or "28 set – 4 out" across two months. */
+export const formatDayRange = (from: IsoDate, to: IsoDate) =>
+  from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${dayMonth(to)}` : `${dayMonth(from)} – ${dayMonth(to)}`
 const clock = (at: LocalDateTime) => at.slice(11, 16)
 
 /** "Escrito a 6 out, 18:50 · editado 19:02"; no edit part within the same minute, and the date again when edited on another day. */

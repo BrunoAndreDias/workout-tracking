@@ -15,14 +15,15 @@ import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
 import { workoutReducer } from './domain/workouts.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
+import { CorpoView } from './ui/CorpoView.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DayEditor } from './ui/DayEditor.tsx'
 import { DayLog } from './ui/DayLog.tsx'
-import { DayLogView } from './ui/DayLogView.tsx'
 import type { FoodKit } from './ui/DayEditor.tsx'
 import { Footer } from './ui/Footer.tsx'
 import { HealthImport } from './ui/HealthImport.tsx'
 import { HistoryView } from './ui/HistoryView.tsx'
+import { HomeView } from './ui/HomeView.tsx'
 import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
@@ -33,9 +34,9 @@ import type { Sync } from './sync.ts'
 
 const VIEWS = [
   { id: 'diario', label: 'Diário' },
-  { id: 'historico', label: 'Histórico' },
   { id: 'treino', label: 'Treino' },
   { id: 'alimentacao', label: 'Alimentação' },
+  { id: 'corpo', label: 'Corpo' },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -43,20 +44,24 @@ type View = (typeof VIEWS)[number]['id']
 const FOOD_TABS = [
   { id: 'planos', label: 'Planos', hash: 'alimentacao' },
   { id: 'hoje', label: 'Hoje', hash: 'alimentacao/hoje' },
+  { id: 'historico', label: 'Histórico', hash: 'alimentacao/historico' },
 ] as const
 
 type FoodTab = (typeof FOOD_TABS)[number]['id']
 
 /**
- * `#treino/2026-10-06` opens the Treino view on that date; a bare `#treino` opens it on today.
- * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's.
- * `#alimentacao` and any other argument open the plans. A malformed date reads as none.
+ * `#diario/2026-10-06`, `#treino/2026-10-06` and `#corpo/2026-10-06` open that view on that date; a bare `#diario`, `#treino` or `#corpo`
+ * opens on today and follows it past midnight.
+ * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's,
+ * `#alimentacao/historico` on the history. `#alimentacao` and any other argument open the plans. A malformed date reads as none.
  */
 function routeFromHash(): { view: View; date: IsoDate | null; foodTab: FoodTab } {
-  const [id, arg, dateArg] = window.location.hash.slice(1).split('/')
+  const hash = window.location.hash.slice(1)
+  // Histórico was a view of its own before it moved under Alimentação, and old links still name it.
+  const [id, arg, dateArg] = (hash === 'historico' ? 'alimentacao/historico' : hash).split('/')
   const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
-  const foodTab: FoodTab = view === 'alimentacao' && arg === 'hoje' ? 'hoje' : 'planos'
-  const raw = view === 'treino' ? arg : foodTab === 'hoje' ? dateArg : undefined
+  const foodTab: FoodTab = FOOD_TABS.find((t) => view === 'alimentacao' && t.id === arg)?.id ?? 'planos'
+  const raw = view !== 'alimentacao' ? arg : foodTab === 'hoje' ? dateArg : undefined
   return { view, date: raw ? parseIsoDate(raw) : null, foodTab }
 }
 
@@ -192,6 +197,7 @@ export default function App({ sync }: { sync: Sync | null }) {
           </header>
 
           <main className="main">
+            {view === 'alimentacao' && foodTab === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
             {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={routeDate ?? today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} />}
             {view === 'alimentacao' && foodTab === 'planos' && (
               <>
@@ -217,10 +223,31 @@ export default function App({ sync }: { sync: Sync | null }) {
                 />
               </>
             )}
-            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} body={body} dispatchBody={dispatchBody} health={health} />}
-            {view === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
+            {view === 'diario' && (
+              <HomeView
+                date={routeDate ?? today}
+                today={today}
+                onDate={(date) => (window.location.hash = `diario/${date}`)}
+                days={dayState.days}
+                foods={foodsById}
+                workouts={workouts}
+                body={body}
+                health={health}
+              />
+            )}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
+            )}
+            {view === 'corpo' && (
+              <CorpoView
+                // Sleep and mood are logged on waking or after the fact, so a future date opens today instead.
+                date={routeDate && routeDate <= today ? routeDate : today}
+                today={today}
+                onDate={(date) => (window.location.hash = `corpo/${date}`)}
+                body={body}
+                dispatchBody={dispatchBody}
+                health={health}
+              />
             )}
           </main>
           <BackupSection>

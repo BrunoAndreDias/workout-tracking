@@ -150,26 +150,23 @@ export async function setGoals(page, goals) {
 /** The local calendar date as YYYY-MM-DD, which is the date the app calls today. */
 export const todayIso = () => new Date().toLocaleDateString('sv-SE')
 
-const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
-const monthYear = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' })
+/** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
+export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 const localDate = (iso) => new Date(...iso.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))
 
-/** Selects `date` (YYYY-MM-DD) in the Diário calendar, paging months as a user would. The Diário must already be open. */
+/** Opens `date`'s (YYYY-MM-DD) Day Log on Alimentação → Hoje, where its meals are edited, through `#alimentacao/hoje/<date>`. */
 export async function openDay(page, date) {
-  const target = localDate(date)
-  const shown = await page.locator('#calendario-titulo').textContent()
-  const monthsAhead = Array.from({ length: 241 }, (_, i) => i - 120).find((k) => monthYear.format(new Date(target.getFullYear(), target.getMonth() + k, 1)) === shown)
-  if (monthsAhead === undefined) throw new FlowError(`the calendar shows "${shown}", too far from ${date}`, 'pick a date within ten years of the month shown')
-  const step = page.getByRole('button', { name: monthsAhead > 0 ? 'Mês anterior' : 'Mês seguinte', exact: true })
-  for (let i = 0; i < Math.abs(monthsAhead); i++) await step.click()
-  const label = longDate.format(target)
-  const day = page.getByRole('button', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(,|$)`) })
-  try {
-    await day.click()
-  } catch {
-    throw new FlowError(`no day button for ${date} in ${monthYear.format(target)}`, 'dates are YYYY-MM-DD and must exist in that month')
-  }
-  await page.getByRole('heading', { level: 2 }).filter({ hasText: label }).first().waitFor()
+  await page.evaluate((hash) => { location.hash = hash }, `alimentacao/hoje/${date}`)
+  await page.getByRole('navigation', { name: 'Alimentação' }).waitFor()
+  await page.locator('main h2').filter({ hasText: longDate.format(localDate(date)) }).first().waitFor()
+}
+
+/** Opens an Alimentação sub-tab ('Planos', 'Hoje', 'Histórico') through the header links and waits until it is current. */
+export async function openFoodTab(page, name) {
+  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Alimentação', exact: true }).click()
+  const link = page.getByRole('navigation', { name: 'Alimentação' }).getByRole('link', { name, exact: true })
+  await link.click()
+  await link.and(page.locator('[aria-current="page"]')).waitFor()
 }
 
 /** Starts the selected empty day from a plan (`plan`: its name), blank (`blank`) or by repeating the last logged day (`repeat`). */

@@ -380,11 +380,11 @@ small { font-size: 0.85em; color: var(--muted); }
 
 /* Tools fade only where hover exists; keyboard focus and touch keep them reachable. */
 /* workouts */
-.workout-date { padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
-.workout-date .icon-btn { width: 44px; height: 44px; color: var(--ink-2); }
-.workout-date-title { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; }
-.workout-date .cal-title { text-align: center; font-size: 22px; }
-.workout-date .link-btn { min-height: 28px; padding: 0; font-size: 13px; }
+.date-stepper { padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+.date-stepper .icon-btn { width: 44px; height: 44px; color: var(--ink-2); }
+.date-stepper-title { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.date-stepper .cal-title { text-align: center; font-size: 22px; }
+.date-stepper .link-btn { min-height: 28px; padding: 0; font-size: 13px; }
 .session, .workout-day { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 .session-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
 .session-title { font: 500 26px/1.15 var(--font-serif); min-width: 0; }
@@ -413,13 +413,14 @@ small { font-size: 0.85em; color: var(--muted); }
 .planned-fields { display: inline-flex; align-items: center; gap: 6px; }
 .planned-fields .count-input { width: 52px; }
 .planned-fields .reps-input { width: 76px; }
+.home-day { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.home-date { font: 500 30px/1.15 var(--font-serif); letter-spacing: -0.01em; margin-right: auto; }
 .workout-line { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; color: var(--muted); font-size: 14px; text-decoration: none; }
 .workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
 .workout-line-name { font-weight: 600; color: var(--ink); }
 
 /* body log */
 .body-log { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
-.body-title { font: 500 22px/1.2 var(--font-serif); }
 .body-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
 .body-label { width: 52px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
 .sleep-scale { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -537,4 +538,48 @@ small { font-size: 0.85em; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
   .meal-tools { transition: opacity 0.15s ease; }
   .result, .filter-chip, .preset, .swap-btn { transition: background-color 0.15s ease, border-color 0.15s ease; }
+}
+
+/* ruled tables */
+.ruled-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ruled-table th, .ruled-table td { border-top: 1px solid var(--rule); }
+.ruled-table thead th, .ruled-table thead td { border-top: 0; }
+.ruled-table tr > :first-child { padding-left: 0; }
+
+/* overview */
+.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.ov-card { padding: 16px 24px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ov-title { font: 500 22px/1.2 var(--font-serif); }
+.ov-title a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: inherit; text-decoration: none; }
+.ov-title a:hover { color: var(--accent); }
+.ov-title svg { color: var(--faint); }
+.ov-table { table-layout: fixed; }
+.ov-table th, .ov-table td { padding: 8px 0 8px 8px; text-align: right; vertical-align: top; overflow-wrap: anywhere; }
+.ov-table thead th, .ov-table thead td { padding-top: 0; vertical-align: bottom; }
+.ov-table thead th { width: 25%; }
+.ov-table thead th.ov-quiet { width: 20%; }
+.ov-table tr > :first-child { text-align: left; }
+.ov-table tbody th { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: normal; }
+.ov-col { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.ov-value { display: block; font-weight: 600; }
+.ov-value.met { color: var(--accent); }
+.ov-value.under { color: var(--under-fg); }
+.ov-value.over { color: var(--over-fg); }
+.ov-sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+.ov-quiet { font-size: 13px; }
+.ov-quiet .ov-col, .ov-quiet .ov-value:not(.met, .under, .over) { font-weight: 500; color: var(--muted); }
+.ov-quiet .ov-sub { font-size: 11px; }
+
+/* corpo */
+.body-days th, .body-days td { padding: 4px 0 4px 8px; text-align: left; }
+.body-days thead th { font-size: 12px; font-weight: 500; color: var(--muted); }
+.body-days tbody th { font-weight: 500; white-space: nowrap; }
+.body-days .link-btn { color: var(--ink); min-height: 44px; }
+.body-days tr[aria-current='date'] { background: var(--accent-tint); }
+.body-days tr[aria-current='date'] .link-btn { font-weight: 600; }
+
+@media (max-width: 640px) {
+  .ov-card { padding: 12px 16px 14px; }
+  .ruled-table { font-size: 13px; }
+  .body-days th, .body-days td { padding-left: 6px; }
 }

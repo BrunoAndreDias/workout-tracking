@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { openFresh, readStored, reloadApp } from './_driver.mjs'
+import { longDate, openFresh, readStored, reloadApp } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -14,7 +14,6 @@ await openFresh(page, URL + '#alimentacao')
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const daysAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - n); return d }
-const longDate = (d) => new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
 const view = (name) => page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name })
 const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const region = (name) => page.getByRole('region', { name, exact: true })
@@ -48,8 +47,8 @@ await tab('Registo').click()
 await page.getByRole('button', { name: 'Dia anterior' }).click()
 const yesterday = iso(daysAgo(1))
 assert(page.url().endsWith(`#treino/${yesterday}`), 'the logged date is in the URL hash')
-await page.locator('.workout-date h2', { hasText: longDate(daysAgo(1)) }).waitFor()
-assert((await page.locator('.workout-date h2').textContent()) === longDate(daysAgo(1)), `the header names yesterday (got ${await page.locator('.workout-date h2').textContent()})`)
+await page.locator('.date-stepper h2', { hasText: longDate.format(daysAgo(1)) }).waitFor()
+assert((await page.locator('.date-stepper h2').textContent()) === longDate.format(daysAgo(1)), `the header names yesterday (got ${await page.locator('.date-stepper h2').textContent()})`)
 await page.getByRole('button', { name: 'Peito', exact: true }).click()
 const session = region('Peito')
 const supino = session.getByRole('group', { name: 'Supino' })
@@ -98,7 +97,7 @@ assert(stored.exercises.exercises.map((e) => e.name).join('|') === 'Supino|Eleva
 
 await view('Diário').click()
 await page.locator('.calendar').waitFor()
-await page.getByRole('button', { name: new RegExp(`^${longDate(daysAgo(1))}(,|$)`) }).click()
+await page.getByRole('button', { name: new RegExp(`^${longDate.format(daysAgo(1))}(,|$)`) }).click()
 const line = page.locator('.workout-line')
 assert((await line.textContent()) === 'TreinoPeito2 exercícios, 5 séries', `Diário shows the session line (got ${await line.textContent()})`)
 await page.screenshot({ path: `${S}/workout-diario-line.png`, fullPage: true })
@@ -107,7 +106,7 @@ assert(page.url().endsWith(`#treino/${yesterday}`), 'the Diário line links to t
 await region('Peito').waitFor()
 
 await page.getByRole('button', { name: 'Dia seguinte' }).click()
-await page.locator('.workout-date h2', { hasText: longDate(daysAgo(0)) }).waitFor()
+await page.locator('.date-stepper h2', { hasText: longDate.format(daysAgo(0)) }).waitFor()
 assert(await page.getByRole('button', { name: 'Dia seguinte' }).isDisabled(), 'today is the last day that can be logged')
 await page.getByRole('button', { name: 'Peito', exact: true }).click()
 assert(JSON.stringify(await values(supino, 'Repetições')) === '["8","7","7","7"]', 'a second session pre-fills Supino reps from the last time, repeating the last set')

@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import type { Dispatch } from 'react'
-import { addDays } from '../domain/days.ts'
 import { newId } from '../domain/plans.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { findDay, sessionsOn } from '../domain/workouts.ts'
 import type { WorkoutAction, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
-import { formatLongDate, sessionTitle } from './format.ts'
-import { ChevronIcon } from './icons.tsx'
+import { DateStepper } from './DateStepper.tsx'
+import { sessionTitle } from './format.ts'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
 import { WorkoutSessionCard } from './WorkoutSessionCard.tsx'
 
@@ -54,24 +53,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate }: Props) {
         <WorkoutPlanEditor state={state} dispatch={dispatch} />
       ) : (
         <>
-          <section className="card workout-date" aria-label="Data do treino">
-            <button type="button" className="icon-btn" aria-label="Dia anterior" onClick={() => goTo(addDays(date, -1))}>
-              <ChevronIcon left />
-            </button>
-            <div className="workout-date-title">
-              <h2 className="cal-title">
-                <span className="date-title">{formatLongDate(date)}</span>
-              </h2>
-              {date !== today && (
-                <button type="button" className="link-btn" onClick={() => goTo(today)}>
-                  Voltar a hoje
-                </button>
-              )}
-            </div>
-            <button type="button" className="icon-btn" aria-label="Dia seguinte" disabled={date >= today} onClick={() => goTo(addDays(date, 1))}>
-              <ChevronIcon left={false} />
-            </button>
-          </section>
+          <DateStepper date={date} today={today} onDate={goTo} label="Data do treino" />
 
           {sessions.map((s) => {
             const day = s.workoutDayId === null ? undefined : findDay(state.plans, s.workoutDayId)

@@ -11,7 +11,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await openFresh(page, URL)
-await page.goto(URL + '#diario')
+await page.goto(URL + '#corpo')
 
 const pad = (n) => String(n).padStart(2, '0')
 const now = new Date()
@@ -88,8 +88,8 @@ assert((await serverHealth()).rev === 3, 'and changes nothing')
 
 await reloadApp(page)
 await corpo.waitFor()
-assert(await watchLine() === 'RelógioEm pé 9 h · 9 001 passos · 412 kcal ativas', `after a reload the Diário shows the newest values (got ${await watchLine()})`)
-await page.screenshot({ path: `${S}/watch-diario.png`, fullPage: true })
+assert(await watchLine() === 'RelógioEm pé 9 h · 9 001 passos · 412 kcal ativas', `after a reload Corpo shows the newest values (got ${await watchLine()})`)
+await page.screenshot({ path: `${S}/watch-corpo.png`, fullPage: true })
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

@@ -168,7 +168,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     const local = storage.getItem(key)
     if (local !== null && local !== server.doc && meta.revs[key] === undefined && !meta.fresh.includes(key)) preserveCopy(storage, key, local, 'unsynced')
     try {
-      storage.setItem(key, server.doc)
+      if (local !== server.doc) storage.setItem(key, server.doc)
       meta.revs[key] = server.rev
       unpend(key)
       meta.fresh = meta.fresh.filter((k) => k !== key)

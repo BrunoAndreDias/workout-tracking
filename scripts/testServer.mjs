@@ -9,7 +9,7 @@ import { join } from 'node:path'
 const USER_DEV_PORT = '5180'
 
 /** A port the OS says is free right now, so parallel runs and a user's dev server never collide. */
-const freePort = () =>
+export const freePort = () =>
   new Promise((resolve, reject) => {
     const probe = createServer()
     probe.once('error', reject)

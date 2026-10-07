@@ -33,3 +33,4 @@ e2e/shots/
 # Claude Code agent worktrees
 .claude/worktrees/
 e2e/.cache/
+perf-results/

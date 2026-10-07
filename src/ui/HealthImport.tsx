@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { importSpan, latestSampleDate, parseHealthImport } from '../domain/health.ts'
 import type { HealthLog, HealthSample, ImportedSamples } from '../domain/health.ts'
+import type { WatchWorkout, WatchWorkoutLog } from '../domain/watchWorkouts.ts'
 import { formatDayMonth, formatShortDate } from './format.ts'
 import { Panel } from './Panel.tsx'
+import { WatchWorkoutImport } from './WatchWorkoutImport.tsx'
 
 interface Props {
   log: HealthLog
   onImport: (samples: readonly HealthSample[]) => void
+  watchWorkouts: WatchWorkoutLog
+  onImportWorkouts: (workouts: readonly WatchWorkout[]) => void
 }
 
 /** "3 valores, de 4/10 a 5/10" */
@@ -17,7 +21,7 @@ function describeSamples(samples: ImportedSamples): string {
 }
 
 /** The Shortcut posts to the server on its own each day; pasting what it copied stays for a phone that cannot reach it. */
-export function HealthImport({ log, onImport }: Props) {
+export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }: Props) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [copyNote, setCopyNote] = useState<string | null>(null)
@@ -136,6 +140,14 @@ export function HealthImport({ log, onImport }: Props) {
                 {copyNote}
               </p>
             )}
+            <WatchWorkoutImport
+              log={watchWorkouts}
+              onImport={onImportWorkouts}
+              onDone={(message) => {
+                setDone(message)
+                close()
+              }}
+            />
             <details className="health-manual">
               <summary>Colar manualmente</summary>
               <div className="health-import">

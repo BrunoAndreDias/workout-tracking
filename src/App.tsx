@@ -6,6 +6,7 @@ import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from '.
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
 import { upsertSamples } from './domain/health.ts'
+import { upsertWatchWorkouts } from './domain/watchWorkouts.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
 import { planReducer } from './domain/plans.ts'
 import { buildSearchIndex } from './domain/search.ts'
@@ -101,6 +102,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, { exercises: stored.exercises, ...stored.workoutPlans, sessions: stored.workoutSessions })
   const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, moods: stored.moods })
   const [health, setHealth] = useState(stored.health)
+  const [watchWorkouts, setWatchWorkouts] = useState(stored.watchWorkouts)
   const [{ view, date: routeDate, foodTab }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
@@ -115,6 +117,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   useEffect(() => void saveStore(STORES.sleep, body.sleep), [body.sleep])
   useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
   useEffect(() => void saveStore(STORES.health, health), [health])
+  useEffect(() => void saveStore(STORES.watchWorkouts, watchWorkouts), [watchWorkouts])
   // The iPhone posts watch values straight to the server, so an open tab looks for them each time it comes back.
   useEffect(() => {
     if (!sync) return
@@ -198,7 +201,7 @@ export default function App({ sync }: { sync: Sync | null }) {
 
           <main className="main">
             {view === 'alimentacao' && foodTab === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
-            {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={routeDate ?? today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} />}
+            {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={routeDate ?? today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} watch={watchWorkouts} />}
             {view === 'alimentacao' && foodTab === 'planos' && (
               <>
                 <DayEditor
@@ -233,10 +236,11 @@ export default function App({ sync }: { sync: Sync | null }) {
                 workouts={workouts}
                 body={body}
                 health={health}
+                watch={watchWorkouts}
               />
             )}
             {view === 'treino' && (
-              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
+              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} watch={watchWorkouts} />
             )}
             {view === 'corpo' && (
               <CorpoView
@@ -251,7 +255,12 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
           </main>
           <BackupSection>
-            <HealthImport log={health} onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
+            <HealthImport
+              log={health}
+              onImport={(samples) => setHealth((log) => upsertSamples(log, samples))}
+              watchWorkouts={watchWorkouts}
+              onImportWorkouts={(workouts) => setWatchWorkouts((log) => upsertWatchWorkouts(log, workouts))}
+            />
           </BackupSection>
           <Footer />
         </div>

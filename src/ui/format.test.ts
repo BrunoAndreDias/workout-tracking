@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
-import { formatAmount, formatDayMonth, formatDayRange, formatMonthName, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatSleepDuration } from './format.ts'
+import { formatAmount, formatDayMonth, formatDayRange, formatMonthName, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatDuration, formatWatchWorkout } from './format.ts'
+import type { WatchWorkout } from '../domain/watchWorkouts.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
@@ -23,11 +24,17 @@ describe('pt-PT formatting', () => {
     expect(formatPortionCount(4.16)).toBe('4,2')
   })
 
-  it('writes sleep minutes as hours and minutes', () => {
-    expect(formatSleepDuration(452)).toBe('7 h 32 min')
-    expect(formatSleepDuration(480)).toBe('8 h')
-    expect(formatSleepDuration(45)).toBe('45 min')
-    expect(formatSleepDuration(431.6)).toBe('7 h 12 min')
+  it('writes minutes as hours and minutes', () => {
+    expect(formatDuration(452)).toBe('7 h 32 min')
+    expect(formatDuration(480)).toBe('8 h')
+    expect(formatDuration(45)).toBe('45 min')
+    expect(formatDuration(431.6)).toBe('7 h 12 min')
+  })
+
+  it('writes a watch workout’s start, duration, energy and distance, leaving out what it lacks', () => {
+    const lift = { id: 'x', date: '2026-10-06', start: '18:02', activity: 'TraditionalStrengthTraining', minutes: 52.3, kcal: 310.5 } as unknown as WatchWorkout
+    expect(formatWatchWorkout(lift)).toBe('18:02 · 52 min · 311 kcal')
+    expect(formatWatchWorkout({ ...lift, minutes: 90, kcal: undefined, km: 4.99 })).toBe('18:02 · 1 h 30 min · 4,99 km')
   })
 
   it('signs deltas and avoids a signed zero', () => {

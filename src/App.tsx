@@ -50,7 +50,8 @@ const FOOD_TABS = [
 type FoodTab = (typeof FOOD_TABS)[number]['id']
 
 /**
- * `#treino/2026-10-06` opens the Treino view on that date, and `#corpo/2026-10-06` the Corpo view; a bare `#treino` or `#corpo` opens on today.
+ * `#diario/2026-10-06`, `#treino/2026-10-06` and `#corpo/2026-10-06` open that view on that date; a bare `#diario`, `#treino` or `#corpo`
+ * opens on today and follows it past midnight.
  * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's,
  * `#alimentacao/historico` on the history. `#alimentacao` and any other argument open the plans. A malformed date reads as none.
  */
@@ -60,7 +61,7 @@ function routeFromHash(): { view: View; date: IsoDate | null; foodTab: FoodTab }
   const [id, arg, dateArg] = (hash === 'historico' ? 'alimentacao/historico' : hash).split('/')
   const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
   const foodTab: FoodTab = (view === 'alimentacao' && FOOD_TABS.find((t) => t.id === arg)?.id) || 'planos'
-  const raw = view === 'treino' || view === 'corpo' ? arg : foodTab === 'hoje' ? dateArg : undefined
+  const raw = view !== 'alimentacao' ? arg : foodTab === 'hoje' ? dateArg : undefined
   return { view, date: raw ? parseIsoDate(raw) : null, foodTab }
 }
 
@@ -222,7 +223,18 @@ export default function App({ sync }: { sync: Sync | null }) {
                 />
               </>
             )}
-            {view === 'diario' && <HomeView today={today} days={dayState.days} foods={foodsById} workouts={workouts} body={body} health={health} />}
+            {view === 'diario' && (
+              <HomeView
+                date={routeDate ?? today}
+                today={today}
+                onDate={(date) => (window.location.hash = `diario/${date}`)}
+                days={dayState.days}
+                foods={foodsById}
+                workouts={workouts}
+                body={body}
+                health={health}
+              />
+            )}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
             )}

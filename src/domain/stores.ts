@@ -114,6 +114,10 @@ export const STORE_NAMES = Object.keys(STORES) as StoreName[]
 /** What the stores hold once parsed. */
 export type AppData = { readonly [N in StoreName]: (typeof STORES)[N] extends StoreDef<infer T> ? T : never }
 
+// The text each value was read from, at the current version. The app saves every store as it starts, and writing one
+// back over the very text it was read from costs a year of data's serialization for nothing.
+const readFrom = new WeakMap<object, string>()
+
 /**
  * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
  * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. A
@@ -132,6 +136,7 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
     const value = def.parse(raw)
     if (value !== null) {
       if (isRecord(raw) && raw.version !== def.version) preserveCopy(storage, def.key, text, 'migrated')
+      else if (typeof value === 'object') readFrom.set(value, text)
       return value
     }
   } catch {
@@ -145,9 +150,11 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
 export const serializeStore = <T>(def: StoreDef<T>, value: T): string =>
   def.text ? def.text(value) : JSON.stringify({ version: def.version, ...def.toDoc(value) })
 
-/** False when the write failed or there is no storage. */
+/** False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
   try {
+    const text = typeof value === 'object' && value !== null ? readFrom.get(value) : undefined
+    if (text !== undefined && storage?.getItem(def.key) === text) return true
     storage?.setItem(def.key, serializeStore(def, value))
     return storage !== null
   } catch {

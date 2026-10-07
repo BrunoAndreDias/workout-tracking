@@ -42,13 +42,13 @@ Tests never open this file. `npm run e2e` and the verify-plano skill give each d
 
 ## Apple Watch import
 
-A web page cannot read HealthKit, so an iOS Shortcut does: once a day a Personal Automation runs it without a tap, and it posts the day's values to the app's server. `Ligar Apple Watch`, next to the backup buttons, shows the address to post to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the steps below in short.
+A web page cannot read HealthKit, so an iOS Shortcut does: once a day a Personal Automation runs it without a tap, and it posts the day's values to the app's server. `Ligar Apple Watch`, next to the backup buttons, leads with `Instalar atalho`, which downloads that Shortcut ready-made (see [Atalho iOS](#atalho-ios)), and shows the address it posts to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the install steps in short.
 
-**Untested on a device.** The endpoint, the panel and the merge are tested here (`server/storeApi.test.ts`, `e2e/watch.mjs`); the Shortcut and the automation were written from the Shortcuts documentation and have not run on an iPhone.
+**Untested on a device.** The endpoint, the signing, the panel and the merge are tested here (`server/storeApi.test.ts`, `server/healthShortcut.test.ts`, `e2e/watch.mjs`); the Shortcut and the automation have not run on an iPhone.
 
 The phone must reach the server. `npm run dev` and `npm run serve` listen on this machine only, so:
 
-- **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open the app on the iPhone at `http://<the Mac's local IP>:4173/` and copy the address from `Ligar Apple Watch` there. A `localhost` address works only on the Mac, and the panel says so. Everyone else on that Wi-Fi can then reach the app too, so do this only on a network you trust.
+- **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open the app on the iPhone at `http://<the Mac's local IP>:4173/` and install the Shortcut from `Ligar Apple Watch` there. A `localhost` address works only on the Mac, and the panel says so. Everyone else on that Wi-Fi can then reach the app too, so do this only on a network you trust.
 - **Anywhere.** A private VPN such as Tailscale, with the iPhone and the Mac on it, and the Mac's VPN address in place of the local IP.
 
 The API has no login: anyone who reaches it reads and changes everything. Keep it on your own network or VPN, and never expose it to the internet.
@@ -66,7 +66,7 @@ The API has no login: anyone who reaches it reads and changes everything. Keep i
 
 It answers `200 { "count": 2, "from": "2026-10-05", "to": "2026-10-05" }`. A body the paste would reject answers `400 { "error": "<the same message>" }` and stores nothing. The server merges the values into the health store itself, so this is the one store whose contents it reads. If the stored health document cannot be read, it answers `409` and leaves it alone; open the app, which keeps an unreadable copy aside before it starts again. An open tab picks the new values up when you come back to it.
 
-A bare list of the same objects works too. `date` is `YYYY-MM-DD`, `value` is a number of at least 0, and `metric` is one of:
+A bare list of the same objects works too, and so does one object on its own, which is what the installed Shortcut posts. `date` is `YYYY-MM-DD`, `value` is a number of at least 0, and `metric` is one of:
 
 | `metric` | Unit | Shown as |
 |---|---|---|
@@ -82,33 +82,30 @@ A date and metric already stored is overwritten, so sending the same values twic
 
 ### Atalho iOS
 
-**Untested on a device.** These steps were written from the Shortcuts documentation, not run on an iPhone; action and Health type names can differ between iOS versions and languages.
+**Untested on a device.** The Shortcut is built from Shortcuts' own action definitions and from shortcuts other people run, not run on an iPhone here. `docs/research/ios-shortcut-plist.md` lists each action, its source, and what is still a guess.
 
-Build a shortcut that sends yesterday:
+`Ligar Apple Watch` → `Instalar atalho` downloads `Plano - Saude.shortcut`, a Shortcut already set up for this app. The server builds it for the address you opened the app at (`server/healthShortcut.ts`) and signs it with the Mac's `shortcuts sign --mode anyone`, so any iPhone can add it. Only a Mac can sign: elsewhere the panel says so, and you build the Shortcut by hand (below) or use `Colar manualmente`.
 
-1. **Date**, set to `Current Date`, then **Adjust Date**: subtract 1 day. Then **Format Date** with a custom format `yyyy-MM-dd`, and **Set Variable** `day` to the result.
-2. For each metric, add a block:
-   1. **Find Health Samples** where `Type` is the Health type from the table below and `Start Date` is `yesterday`. Group by `Day` for the summed types.
-   2. **Calculate Statistics** on the samples' values with the statistic from the table, then **Round Number** if you want whole numbers.
-   3. **Dictionary** with `date` = `day` (text), `metric` = the key (text) and `value` = the result (number).
-   4. **Add to Variable** `samples`.
-3. **Dictionary** with one key, `samples`, of type array, set to the variable `samples`.
-4. **Get Contents of URL** (`Obter conteúdo do URL`) with the address from `Ligar Apple Watch`, method `POST`, and request body `JSON` with one field, `samples`, of type array, set to the variable `samples`. If the body will not take the variable as an array, choose request body `File` with the dictionary from step 3: Shortcuts should write a dictionary as JSON text.
-5. In Shortcuts → Automation, add a **Personal Automation** (`Automação pessoal`) → **Time of Day** (`Hora do dia`), daily, in the morning. Turn on **Run Immediately** (`Executar imediatamente`) and pick the shortcut.
+On the iPhone:
 
-When the phone cannot reach the server yet, end the shortcut with **Copy to Clipboard** instead, then in the app tap `Ligar Apple Watch` → `Colar manualmente` → `Colar da área de transferência`, check the preview and tap `Importar`.
+1. Open the app at the Mac's network or VPN address (not `localhost`) and tap `Ligar Apple Watch` → `Instalar atalho`. Safari downloads the file; open it from the downloads.
+2. Tap **Add Shortcut** (`Adicionar atalho`).
+3. Run it once in Shortcuts and tap **Allow** (`Permitir`) on the Health sheet, for every type it asks for. The phone may also ask to reach devices on the local network: allow that too.
+4. In Shortcuts → Automation, add a **Time of Day** (`Hora do dia`) automation, daily, in the morning after you are up, set to **Run Immediately** (`Executar imediatamente`), running `Plano - Saude`. Health is locked while the iPhone is, so a run in the night can find nothing.
 
-| `metric` | Health type | Statistic |
+It sends yesterday. For each metric below it finds the samples that started yesterday, grouped by day, so HealthKit sums or averages them and merges iPhone and Watch the way the Health app does, and when there are any it posts `{ "date", "metric", "value" }` to `/api/health`. A metric with no samples sends nothing. Values come in the unit the Health app shows, so Active Energy must show kcal there.
+
+| `metric` | Find Health Samples type | Day value |
 |---|---|---|
-| `standHours` | Stand Hours (Apple Stand Hour), samples whose value is `Stood` | Count |
-| `standMinutes` | Stand Minutes (Apple Stand Time) | Sum |
+| `standMinutes` | Stand Time | Sum |
 | `steps` | Steps | Sum |
-| `activeEnergy` | Active Energy | Sum |
-| `exerciseMinutes` | Exercise Minutes (Apple Exercise Time) | Sum |
-| `sleepMinutes` | Sleep, asleep samples ending on the date, by duration in minutes | Sum |
+| `activeEnergy` | Active Calories | Sum |
+| `exerciseMinutes` | Exercise Time | Sum |
 | `restingHeartRate` | Resting Heart Rate | Average |
 
-Leave out a metric the watch has no data for rather than sending 0. A day with no rows at all is rejected as "Não há valores para importar."
+It cannot send `sleepMinutes` or `standHours`. Their Health samples are categories (asleep or awake, stood or idle), and Shortcuts gives their value only as a word in the phone's language, so no filter in the Shortcut works on every phone. To send them, add your own blocks to the Shortcut: **Find Health Samples** of type `Sleep` or `Stand Hour` with the value filter your phone offers, then a sum of durations in minutes or a count, and a **Get Contents of URL** like the others.
+
+When the phone cannot reach the server yet, a hand-built Shortcut can end with **Copy to Clipboard**, then in the app tap `Ligar Apple Watch` → `Colar manualmente` → `Colar da área de transferência`, check the preview and tap `Importar`. A day with no rows at all is rejected as "Não há valores para importar."
 
 ## Data
 

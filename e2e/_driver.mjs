@@ -154,8 +154,15 @@ const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numer
 const monthYear = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' })
 const localDate = (iso) => new Date(...iso.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))
 
-/** Selects `date` (YYYY-MM-DD) in the Diário calendar, paging months as a user would. The Diário must already be open. */
+/** Opens `date`'s (YYYY-MM-DD) Day Log on Alimentação → Hoje, where its meals are edited, through `#alimentacao/hoje/<date>`. */
 export async function openDay(page, date) {
+  await page.evaluate((hash) => { location.hash = hash }, `alimentacao/hoje/${date}`)
+  await page.getByRole('navigation', { name: 'Alimentação' }).waitFor()
+  await page.locator('main h2').filter({ hasText: longDate.format(localDate(date)) }).first().waitFor()
+}
+
+/** Selects `date` (YYYY-MM-DD) in the Diário calendar, paging months as a user would, so the Overview shows it. The Diário must already be open. */
+export async function selectDay(page, date) {
   const target = localDate(date)
   const shown = await page.locator('#calendario-titulo').textContent()
   const monthsAhead = Array.from({ length: 241 }, (_, i) => i - 120).find((k) => monthYear.format(new Date(target.getFullYear(), target.getMonth() + k, 1)) === shown)
@@ -169,7 +176,7 @@ export async function openDay(page, date) {
   } catch {
     throw new FlowError(`no day button for ${date} in ${monthYear.format(target)}`, 'dates are YYYY-MM-DD and must exist in that month')
   }
-  await page.getByRole('heading', { level: 2 }).filter({ hasText: label }).first().waitFor()
+  await page.locator('.home-date', { hasText: label }).waitFor()
 }
 
 /** Starts the selected empty day from a plan (`plan`: its name), blank (`blank`) or by repeating the last logged day (`repeat`). */

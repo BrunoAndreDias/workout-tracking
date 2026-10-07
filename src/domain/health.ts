@@ -2,7 +2,7 @@ import { parseIsoDate } from './days.ts'
 import { isRecord } from './persistence.ts'
 import type { IsoDate } from './types.ts'
 
-/** What the Apple Watch reports per day. `show` writes one value as the Diário reads it, from the value already formatted. */
+/** What the Apple Watch reports per day. `show` writes one value as the Corpo card reads it, from the value already formatted. */
 export const HEALTH_METRICS = [
   { key: 'standHours', label: 'Horas em pé', unit: 'h', show: (v: string) => `Em pé ${v} h` },
   { key: 'standMinutes', label: 'Tempo em pé', unit: 'min', show: (v: string) => `Em pé ${v} min` },

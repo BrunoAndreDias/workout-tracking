@@ -413,6 +413,8 @@ small { font-size: 0.85em; color: var(--muted); }
 .planned-fields { display: inline-flex; align-items: center; gap: 6px; }
 .planned-fields .count-input { width: 52px; }
 .planned-fields .reps-input { width: 76px; }
+.home-day { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.home-date { font: 500 30px/1.15 var(--font-serif); letter-spacing: -0.01em; margin-right: auto; }
 .workout-line { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; color: var(--muted); font-size: 14px; text-decoration: none; }
 .workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
 .workout-line-name { font-weight: 600; color: var(--ink); }

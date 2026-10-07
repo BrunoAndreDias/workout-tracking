@@ -19,11 +19,11 @@ import { CorpoView } from './ui/CorpoView.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DayEditor } from './ui/DayEditor.tsx'
 import { DayLog } from './ui/DayLog.tsx'
-import { DayLogView } from './ui/DayLogView.tsx'
 import type { FoodKit } from './ui/DayEditor.tsx'
 import { Footer } from './ui/Footer.tsx'
 import { HealthImport } from './ui/HealthImport.tsx'
 import { HistoryView } from './ui/HistoryView.tsx'
+import { HomeView } from './ui/HomeView.tsx'
 import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
@@ -222,7 +222,7 @@ export default function App({ sync }: { sync: Sync | null }) {
                 />
               </>
             )}
-            {view === 'diario' && <DayLogView state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} today={today} workouts={workouts} />}
+            {view === 'diario' && <HomeView today={today} days={dayState.days} foods={foodsById} workouts={workouts} body={body} health={health} />}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} />
             )}

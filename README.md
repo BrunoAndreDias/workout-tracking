@@ -38,7 +38,7 @@ PORT=8080 PLANO_DB=/path/to/plano.sqlite npm run serve
 
 It listens on this machine only. `HOST=0.0.0.0` would open it to your network, and it has no login: anyone who can reach it reads and changes everything. Put it behind authentication before that, and never deploy it publicly (see the licence note above).
 
-Tests never open this file.
+Tests never open this file. `npm run e2e` and the verify-plano skill give each dev server they start a temp `PLANO_DB` and `PLANO_TEST=1`, which is also the only way the API allows `DELETE /api/stores`.
 
 ## No iPhone
 
@@ -50,13 +50,13 @@ The app installs on the iPhone home screen as a web app, with its own icon and n
 The phone must reach the server, the same as for the [Apple Watch import](#apple-watch-import):
 
 - **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open `http://<the Mac's local IP>:4173/` on the iPhone. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
-- **Tailscale.** Install it on the Mac and the iPhone (it is not installed on this Mac yet). `tailscale serve --bg 4173` gives an HTTPS address on your tailnet, and the server keeps listening on `127.0.0.1` only.
+- **Tailscale.** Install it on the Mac and the iPhone. `tailscale serve --bg 4173` gives an HTTPS address on your tailnet, and the server keeps listening on `127.0.0.1` only.
 
 The microphone needs HTTPS, so dictation works on the phone only through the Tailscale address. Over plain `http://` on the Wi-Fi, the rest of the app works and the mic button does not.
 
 There is no service worker. The app needs the Mac's server for its data anyway, so it does not launch offline. The manifest and icons are static files in `public/`. `node scripts/build-icons.mjs` redraws the icons from `public/favicon.svg`.
 
-**Untested on a device.** The manifest, the icons and the head tags are checked in `e2e/pwa.mjs`. Adding to the home screen has not been tried on an iPhone. `npm run e2e` and the verify-plano skill give each dev server they start a temp `PLANO_DB` and `PLANO_TEST=1`, which is also the only way the API allows `DELETE /api/stores`.
+**Untested on a device.** The manifest, the icons and the head tags are checked in `e2e/pwa.mjs`. Adding to the home screen has not been tried on an iPhone.
 
 ## Apple Watch import
 

@@ -132,9 +132,17 @@ export default function App({ sync }: { sync: Sync | null }) {
     }
   }, [sync])
   useEffect(() => {
-    const onHash = () => setRoute(routeFromHash())
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    // popstate fires with the navigation itself and hashchange only after the next frame, so whichever comes first routes.
+    const onNavigate = () => {
+      const next = routeFromHash()
+      setRoute((route) => (route.view === next.view && route.date === next.date && route.foodTab === next.foodTab ? route : next))
+    }
+    window.addEventListener('popstate', onNavigate)
+    window.addEventListener('hashchange', onNavigate)
+    return () => {
+      window.removeEventListener('popstate', onNavigate)
+      window.removeEventListener('hashchange', onNavigate)
+    }
   }, [])
   const units = useMemo(() => ({ user: userUnits, dispatch: dispatchUnits }), [userUnits])
 

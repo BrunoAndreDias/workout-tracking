@@ -49,12 +49,15 @@ type FoodTab = (typeof FOOD_TABS)[number]['id']
 
 /**
  * `#treino/2026-10-06` opens the Treino view on that date; a bare `#treino` opens it on today.
- * `#alimentacao/hoje` opens Alimentação on today's intake; `#alimentacao` and any other argument open the plans.
+ * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's.
+ * `#alimentacao` and any other argument open the plans. A malformed date reads as none.
  */
 function routeFromHash(): { view: View; date: IsoDate | null; foodTab: FoodTab } {
-  const [id, arg] = window.location.hash.slice(1).split('/')
+  const [id, arg, dateArg] = window.location.hash.slice(1).split('/')
   const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
-  return { view, date: view === 'treino' && arg ? parseIsoDate(arg) : null, foodTab: view === 'alimentacao' && arg === 'hoje' ? 'hoje' : 'planos' }
+  const foodTab: FoodTab = view === 'alimentacao' && arg === 'hoje' ? 'hoje' : 'planos'
+  const raw = view === 'treino' ? arg : foodTab === 'hoje' ? dateArg : undefined
+  return { view, date: raw ? parseIsoDate(raw) : null, foodTab }
 }
 
 /** The local date, kept current past midnight and when the tab comes back after sleeping. */
@@ -189,7 +192,7 @@ export default function App({ sync }: { sync: Sync | null }) {
           </header>
 
           <main className="main">
-            {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} />}
+            {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={routeDate ?? today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} />}
             {view === 'alimentacao' && foodTab === 'planos' && (
               <>
                 <DayEditor

@@ -36,7 +36,10 @@ const server = createServer(async (req, res) => {
   }
   try {
     const body = await readFile(path)
-    res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' }).end(body)
+    const headers: Record<string, string> = { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' }
+    // Vite names each built asset by its content hash, so a new build is a new URL.
+    if (pathname.startsWith('/assets/')) headers['cache-control'] = 'public, max-age=31536000, immutable'
+    res.writeHead(200, headers).end(body)
   } catch {
     res.writeHead(404).end()
   }

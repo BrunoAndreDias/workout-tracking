@@ -225,7 +225,12 @@ small { font-size: 0.85em; color: var(--muted); }
 .cal-grid { border-collapse: separate; border-spacing: 4px; table-layout: fixed; margin: 0 -4px; width: calc(100% + 8px); }
 .cal-grid th { font-size: 12px; font-weight: 500; color: var(--muted); padding-bottom: 2px; }
 .cal-grid td { padding: 0; }
-.cal-day { width: 100%; height: 64px; padding: 6px 4px; border: 1px solid transparent; border-radius: 10px; background: var(--field); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 2px; color: var(--ink-2); }
+.cal-day { position: relative; width: 100%; height: 64px; padding: 6px 4px; border: 1px solid transparent; border-radius: 10px; background: var(--field); display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 2px; color: var(--ink-2); }
+.cal-marks { height: 8px; display: flex; }
+.cal-mouth { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; }
+.cal-trained { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.cal-day .cal-trained { position: absolute; top: 6px; right: 6px; }
+.cal-legend-faces { display: inline-flex; gap: 4px; color: var(--ink-2); }
 .cal-day:hover { border-color: var(--input-border); }
 .cal-num { font-size: 14px; font-weight: 500; }
 .cal-kcal { font-size: 12px; font-weight: 600; white-space: nowrap; }

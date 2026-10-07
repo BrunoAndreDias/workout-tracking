@@ -23,7 +23,7 @@ async function device(hash = '#alimentacao', width = 1280) {
   return { context, page, open: async () => { await page.goto(URL + hash); await rendered(page) } }
 }
 const kcal = async (page) => (await page.locator('.donut-figure').textContent()).replace(/\s/g, '')
-const sleepButton = (page, label) => page.getByRole('region', { name: 'Como te sentes' }).getByRole('group', { name: 'Sono' }).getByRole('button', { name: label })
+const sleepButton = (page, label) => page.getByRole('region', { name: 'Como te sentes neste dia', exact: true }).getByRole('group', { name: 'Sono' }).getByRole('button', { name: label })
 const pressed = async (page, label) => (await sleepButton(page, label).getAttribute('aria-pressed')) === 'true'
 
 const a = await device('#diario')

@@ -49,19 +49,31 @@ describe('shortcutFor', () => {
     ])
   })
 
-  it('finds the last 15 days as one sample per day, newest first, keeping 15 so the partial oldest day drops', () => {
+  it('finds the last 15 days as one sample per day, with no sort and no limit', () => {
     for (const post of posts) {
       const find = byUuid(actions, tokenUuid(loopOf(post).start.WFInput)).WFWorkflowActionParameters
       const [, windowRow] = find.WFContentItemFilter.Value.WFActionParameterFilterTemplates
       expect(windowRow).toEqual({ Bounded: true, Operator: 1001, Property: 'Start Date', Removable: false, Values: { Unit: 16, Number: '15' } })
-      expect([find.WFHKSampleFilteringGroupBy, find.WFHKSampleFilteringFillMissing, find.WFContentItemSortProperty, find.WFContentItemSortOrder, find.WFContentItemLimitEnabled, find.WFContentItemLimitNumber]).toEqual([
-        'Day',
-        false,
-        'Start Date',
-        'Latest First',
-        true,
-        15,
-      ])
+      expect([find.WFHKSampleFilteringGroupBy, find.WFHKSampleFilteringFillMissing]).toEqual(['Day', false])
+      expect(Object.keys(find).filter((k) => /Sort|Limit/.test(k))).toEqual([])
+    }
+  })
+
+  it('posts only inside an If that skips the window\'s first day, 15 days back, by date', () => {
+    for (const post of posts) {
+      const i = actions.indexOf(post)
+      const open = actions.slice(0, i).reverse().find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.conditional')!.WFWorkflowActionParameters
+      const close = actions.slice(i + 1).find((a) => a.WFWorkflowActionIdentifier === 'is.workflow.actions.conditional')!.WFWorkflowActionParameters
+      expect([open.WFControlFlowMode, open.WFCondition, close.WFControlFlowMode, open.GroupingIdentifier === close.GroupingIdentifier]).toEqual([0, 5, 2, true])
+      const day = byUuid(actions, tokenUuid(jsonField(post, 'date').WFValue)).WFWorkflowActionParameters
+      expect(open.WFInput.Variable.Value.OutputUUID).toBe(day.UUID)
+
+      const first = byUuid(actions, tokenUuid(open.WFConditionalActionString)).WFWorkflowActionParameters
+      const back = byUuid(actions, tokenUuid(first.WFDate)).WFWorkflowActionParameters
+      const now = byUuid(actions, tokenUuid(back.WFDate)).WFWorkflowActionParameters
+      expect([first.WFDateFormatStyle, first.WFDateFormat]).toEqual(['Custom', 'yyyy-MM-dd'])
+      expect([back.WFAdjustOperation, back.WFDuration.Value]).toEqual(['Subtract', { Magnitude: '15', Unit: 'days' }])
+      expect(now.WFDateActionMode).toBe('Current Date')
     }
   })
 
@@ -77,8 +89,10 @@ describe('shortcutFor', () => {
     }
   })
 
-  it('has no date arithmetic and no If, since a day with no samples is never looped over', () => {
-    const ids = new Set(actions.map((a) => a.WFWorkflowActionIdentifier.replace('is.workflow.actions.', '')))
-    expect([...ids].sort()).toEqual(['downloadurl', 'filter.health.quantity', 'format.date', 'properties.health.quantity', 'repeat.each'])
+  it('uses only these actions, with the date arithmetic once at the top', () => {
+    const ids = actions.map((a) => a.WFWorkflowActionIdentifier.replace('is.workflow.actions.', ''))
+    expect(ids.slice(0, 3)).toEqual(['date', 'adjustdate', 'format.date'])
+    expect([...new Set(ids)].sort()).toEqual(['adjustdate', 'conditional', 'date', 'downloadurl', 'filter.health.quantity', 'format.date', 'properties.health.quantity', 'repeat.each'])
+    expect(ids.filter((id) => id === 'adjustdate')).toHaveLength(1)
   })
 })

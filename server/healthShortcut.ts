@@ -48,8 +48,9 @@ const DAYS_BEFORE_TODAY = 14
 const uuid = (n: number) => `5A1DE000-0000-4000-8000-${n.toString(16).toUpperCase().padStart(12, '0')}`
 
 /**
- * Find Health Samples of one type, one sample per day, newest first. The 15-day window can start mid-day, so its oldest
- * day may be partial. The limit keeps today and the 14 days before it and drops that partial day.
+ * Find Health Samples of one type, one sample per day. The 15-day window can start mid-day, so its oldest day may be
+ * partial. There is no sort or limit, because the limit counts raw samples before the grouping. The If around the POST
+ * skips that first day by date.
  */
 function findRecentDays(id: string, type: string) {
   const window = DAYS_BEFORE_TODAY + 1
@@ -68,10 +69,6 @@ function findRecentDays(id: string, type: string) {
     },
     WFHKSampleFilteringGroupBy: 'Day',
     WFHKSampleFilteringFillMissing: false,
-    WFContentItemSortProperty: 'Start Date',
-    WFContentItemSortOrder: 'Latest First',
-    WFContentItemLimitEnabled: true,
-    WFContentItemLimitNumber: window,
   })
 }
 
@@ -90,24 +87,51 @@ function postSample(id: string, postUrl: string, day: Output, metric: ShortcutMe
   })
 }
 
+/** Date, Adjust Date and Format Date, once at the top: the window's first day as yyyy-MM-dd, 15 days back. */
+function windowFirstDay(ids: [string, string, string]) {
+  const [now, back, firstDay] = [output(ids[0], 'Date'), output(ids[1], 'Adjusted Date'), output(ids[2], 'Formatted Date')]
+  const actions = [
+    action('date', { UUID: now.OutputUUID, WFDateActionMode: 'Current Date' }),
+    action('adjustdate', {
+      UUID: back.OutputUUID,
+      WFDate: tokenText(now),
+      WFAdjustOperation: 'Subtract',
+      WFDuration: { Value: { Magnitude: String(DAYS_BEFORE_TODAY + 1), Unit: 'days' }, WFSerializationType: 'WFQuantityFieldValue' },
+    }),
+    action('format.date', { UUID: firstDay.OutputUUID, WFDate: tokenText(back), WFDateFormatStyle: 'Custom', WFDateFormat: 'yyyy-MM-dd' }),
+  ]
+  return { actions, firstDay }
+}
+
 /**
  * The unsigned Shortcut: for each metric, finds today and the 14 days before as one sample per day and posts each day's
- * value to `postUrl`. A day with no samples sends nothing rather than 0.
+ * value to `postUrl`, skipping the window's first day, which can be partial. A day with no samples sends nothing rather
+ * than 0.
  */
 export function shortcutFor(postUrl: string): Plist {
   let next = 0
   const id = () => uuid(++next)
+  const { actions: preamble, firstDay } = windowFirstDay([id(), id(), id()])
   const perMetric = (Object.entries(SHORTCUT_HEALTH_TYPES) as [ShortcutMetric, string][]).flatMap(([metric, type]) => {
     const samples = output(id(), 'Health Samples')
     const startDate = output(id(), 'Details of Health Samples')
     const day = output(id(), 'Formatted Date')
     const group = id()
+    const skip = id()
     return [
       findRecentDays(samples.OutputUUID, type),
       action('repeat.each', { GroupingIdentifier: group, WFControlFlowMode: 0, WFInput: attachment(samples) }),
       action('properties.health.quantity', { UUID: startDate.OutputUUID, WFContentItemPropertyName: 'Start Date', WFInput: repeatItem }),
       action('format.date', { UUID: day.OutputUUID, WFDate: tokenText(startDate), WFDateFormatStyle: 'Custom', WFDateFormat: 'yyyy-MM-dd' }),
+      action('conditional', {
+        GroupingIdentifier: skip,
+        WFControlFlowMode: 0,
+        WFCondition: 5,
+        WFInput: { Type: 'Variable', Variable: attachment(day) },
+        WFConditionalActionString: tokenText(firstDay),
+      }),
       postSample(id(), postUrl, day, metric),
+      action('conditional', { GroupingIdentifier: skip, UUID: id(), WFControlFlowMode: 2 }),
       action('repeat.each', { GroupingIdentifier: group, UUID: id(), WFControlFlowMode: 2 }),
     ]
   })
@@ -119,7 +143,7 @@ export function shortcutFor(postUrl: string): Plist {
     WFWorkflowTypes: [],
     WFWorkflowInputContentItemClasses: [],
     WFWorkflowImportQuestions: [],
-    WFWorkflowActions: perMetric,
+    WFWorkflowActions: [...preamble, ...perMetric],
   }
 }
 

@@ -17,6 +17,9 @@ import type { StoreKey } from './storeKeys.ts'
 import type { CustomFoodDef, IsoDate } from './types.ts'
 import type { FoodUnit } from './units.ts'
 import { parseUnits, UNITS_SCHEMA_VERSION } from './unitsStorage.ts'
+import { byStart } from './watchWorkouts.ts'
+import type { WatchWorkoutLog } from './watchWorkouts.ts'
+import { parseWatchWorkouts, WATCH_WORKOUTS_SCHEMA_VERSION } from './watchWorkoutsStorage.ts'
 import { EXERCISES_SCHEMA_VERSION, parseExercises, parseWorkoutPlans, parseWorkoutSessions, WORKOUT_PLANS_SCHEMA_VERSION, WORKOUT_SESSIONS_SCHEMA_VERSION } from './workoutStorage.ts'
 import type { Exercise, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
@@ -86,6 +89,14 @@ export const STORES = {
     fresh: () => ({}),
   }),
   health: store<HealthLog>({ key: STORE_KEY.health, label: 'valores do relógio', version: HEALTH_SCHEMA_VERSION, parse: parseHealth, toDoc: (log) => ({ samples: logSamples(log) }), fresh: () => ({}) }),
+  watchWorkouts: store<WatchWorkoutLog>({
+    key: STORE_KEY.watchWorkouts,
+    label: 'treinos do relógio',
+    version: WATCH_WORKOUTS_SCHEMA_VERSION,
+    parse: parseWatchWorkouts,
+    toDoc: (log) => ({ workouts: Object.values(log).sort(byStart) }),
+    fresh: () => ({}),
+  }),
 } satisfies Record<keyof typeof STORE_KEY, unknown>
 
 export type StoreName = keyof typeof STORES

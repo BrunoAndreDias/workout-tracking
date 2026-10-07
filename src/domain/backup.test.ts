@@ -6,7 +6,8 @@ import type { TimedNote } from './notes.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
-import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, MealId, NutrientValues, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, MealId, NutrientValues, PlanId, WatchWorkoutId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { WatchWorkout } from './watchWorkouts.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { loadAll, saveStore, STORES } from './stores.ts'
 
@@ -59,9 +60,11 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   exercises: [{ exerciseId, sets: [{ reps: 8, kg: 60 }] }],
 })
 const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
-const NO_BODY = { sleep: {}, moods: {}, health: {} }
+const NO_BODY = { sleep: {}, moods: {}, health: {}, watchWorkouts: {} }
 const sleepOn = (date: string, quality: SleepQuality): SleepEntry => ({ date: date as IsoDate, quality })
 const mood = (text: string, at = '2026-05-01T21:00:00'): TimedNote => ({ text, createdAt: at as LocalDateTime, updatedAt: at as LocalDateTime })
+const watchWorkout = (id: string, date: string, minutes: number): WatchWorkout => ({ id: id as WatchWorkoutId, date: date as IsoDate, start: '07:30', activity: 'Running', minutes })
+const RUN = watchWorkout('2026-05-01T06:30:00Z Running', '2026-05-01', 31.5)
 const OLD_PAIN = { id: 'pain-1', date: '2026-05-01', region: 'kneeLeft', intensity: 4, time: '08:30', note: 'escadas' }
 
 function filled() {
@@ -76,6 +79,7 @@ function filled() {
   saveStore(STORES.sleep, { ['2026-05-01' as IsoDate]: sleepOn('2026-05-01', 4) }, storage)
   saveStore(STORES.moods, { ['2026-05-01' as IsoDate]: mood('Bem disposto') }, storage)
   saveStore(STORES.health, { ['2026-05-01' as IsoDate]: { steps: 8123, standHours: 9 } }, storage)
+  saveStore(STORES.watchWorkouts, { [RUN.id]: RUN }, storage)
   return storage
 }
 
@@ -98,13 +102,13 @@ describe('backup', () => {
     expect(file.stores.plans).toEqual(JSON.parse(storage.data[STORES.plans.key]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
-    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino, 1 noite de sono, 1 nota de humor, 2 valores do relógio')
+    expect(describeBackup(data)).toBe('1 plano, 1 alimento meu, 1 unidade, 1 dia, 1 plano de treino, 1 treino, 1 noite de sono, 1 nota de humor, 2 valores do relógio, 1 treino do relógio')
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
-    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos, 0 noites de sono, 0 notas de humor, 0 valores do relógio')
+    expect(describeBackup(parsed(file))).toBe('0 planos, 0 alimentos meus, 0 unidades, 0 dias, 0 planos de treino, 0 treinos, 0 noites de sono, 0 notas de humor, 0 valores do relógio, 0 treinos do relógio')
   })
 
   it('reads a backup whose sleep entries still carry manual hours and drops them', () => {
@@ -253,6 +257,16 @@ describe('backup', () => {
     })
   })
 
+  it('merges watch workouts by id: the user’s copy wins, a new id is added, and merging twice changes nothing', () => {
+    const incoming: BackupData = { ...NO_PLANS, watchWorkouts: { [RUN.id]: { ...RUN, minutes: 99 }, ['2026-05-02T17:00:00Z Yoga' as WatchWorkoutId]: watchWorkout('2026-05-02T17:00:00Z Yoga', '2026-05-02', 45) } }
+    const once = mergeBackup(loadAll(filled()), incoming).data
+    expect(Object.values(once.watchWorkouts).map((w) => [w.id, w.minutes])).toEqual([
+      ['2026-05-01T06:30:00Z Running', 31.5],
+      ['2026-05-02T17:00:00Z Yoga', 45],
+    ])
+    expect(mergeBackup(once, incoming).data.watchWorkouts).toEqual(once.watchWorkouts)
+  })
+
   it('rejects a whole file whose older pains store holds an intensity above 10', () => {
     const r = parseBackup({ app: 'plano-alimentar', version: 1, stores: { pains: { version: 1, pains: [{ ...OLD_PAIN, intensity: 11 }] } } })
     expect(r).toEqual({ ok: false, error: 'A cópia de segurança está danificada: os dados de humor não são válidos. Não foi alterado nada.' })
@@ -329,7 +343,7 @@ describe('backup', () => {
       storage.data[STORES.units.key] = JSON.stringify({ version: 99, units: [] })
       const { file, skipped } = exportBackup(storage)
       expect(skipped).toEqual(['units'])
-      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions', 'sleep', 'moods', 'health'])
+      expect(Object.keys(file.stores)).toEqual(['plans', 'foods', 'days', 'exercises', 'workoutPlans', 'workoutSessions', 'sleep', 'moods', 'health', 'watchWorkouts'])
     })
 
     it('lists corrupt JSON too, but not a store that was never saved', () => {

@@ -122,7 +122,7 @@ function mergeWorkouts(current: AppData, incoming: BackupData): Pick<AppData, 'e
 
 /**
  * Plans are appended; one whose id is taken gets a fresh id (and its days follow it), and the suffix " (importado)" only when its name is taken too.
- * Foods and units are added by id, days and Sleep Entries by date, and Health Samples by date and metric; what is already there wins.
+ * Foods, units and Watch Workouts are added by id, days and Sleep Entries by date, and Health Samples by date and metric; what is already there wins.
  * A Mood Note gets the incoming note's lines it lacks, so nothing written on either side is lost and merging twice changes nothing.
  */
 export function mergeBackup(current: AppData, incoming: BackupData, makeId: () => PlanId = newId<PlanId>): MergeResult {
@@ -163,6 +163,7 @@ export function mergeBackup(current: AppData, incoming: BackupData, makeId: () =
       sleep: { ...incoming.sleep, ...current.sleep },
       moods: mergeMoods(current.moods, incoming.moods),
       health: fillMissing(current.health, incoming.health),
+      watchWorkouts: { ...incoming.watchWorkouts, ...current.watchWorkouts },
     },
     skippedFoods: incoming.foods.length - (foods.length - current.foods.length),
     skippedUnits: incoming.units.length - (units.length - current.units.length),
@@ -205,8 +206,8 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
   return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
 }
 
-/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos, 5 noites de sono, 2 notas de humor, 14 valores do relógio" */
-export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions, sleep, moods, health }: BackupData): string {
+/** "2 planos, 1 alimento meu, 4 unidades, 0 dias, 1 plano de treino, 3 treinos, 5 noites de sono, 2 notas de humor, 14 valores do relógio, 6 treinos do relógio" */
+export function describeBackup({ plans, foods, units, days, workoutPlans, workoutSessions, sleep, moods, health, watchWorkouts }: BackupData): string {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   return [
     count(plans?.plans.length ?? 0, 'plano', 'planos'),
@@ -218,5 +219,6 @@ export function describeBackup({ plans, foods, units, days, workoutPlans, workou
     count(Object.keys(sleep).length, 'noite de sono', 'noites de sono'),
     count(Object.keys(moods).length, 'nota de humor', 'notas de humor'),
     count(countSamples(health), 'valor do relógio', 'valores do relógio'),
+    count(Object.keys(watchWorkouts).length, 'treino do relógio', 'treinos do relógio'),
   ].join(', ')
 }

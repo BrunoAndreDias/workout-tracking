@@ -540,6 +540,12 @@ small { font-size: 0.85em; color: var(--muted); }
   .result, .filter-chip, .preset, .swap-btn { transition: background-color 0.15s ease, border-color 0.15s ease; }
 }
 
+/* ruled tables */
+.ruled-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ruled-table th, .ruled-table td { border-top: 1px solid var(--rule); }
+.ruled-table thead th, .ruled-table thead td { border-top: 0; }
+.ruled-table tr > :first-child { padding-left: 0; }
+
 /* overview */
 .overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
 .ov-card { padding: 16px 24px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -547,12 +553,12 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-title a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: inherit; text-decoration: none; }
 .ov-title a:hover { color: var(--accent); }
 .ov-title svg { color: var(--faint); }
-.ov-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
-.ov-table th, .ov-table td { padding: 8px 0 8px 8px; text-align: right; vertical-align: top; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
-.ov-table thead th, .ov-table thead td { border-top: 0; padding-top: 0; vertical-align: bottom; }
+.ov-table { table-layout: fixed; }
+.ov-table th, .ov-table td { padding: 8px 0 8px 8px; text-align: right; vertical-align: top; overflow-wrap: anywhere; }
+.ov-table thead th, .ov-table thead td { padding-top: 0; vertical-align: bottom; }
 .ov-table thead th { width: 25%; }
 .ov-table thead th.ov-quiet { width: 20%; }
-.ov-table tr > :first-child { padding-left: 0; text-align: left; }
+.ov-table tr > :first-child { text-align: left; }
 .ov-table tbody th { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: normal; }
 .ov-col { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .ov-value { display: block; font-weight: 600; }
@@ -565,10 +571,8 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-quiet .ov-sub { font-size: 11px; }
 
 /* corpo */
-.body-days { width: 100%; border-collapse: collapse; font-size: 14px; }
-.body-days th, .body-days td { padding: 4px 0 4px 8px; text-align: left; border-top: 1px solid var(--rule); }
-.body-days thead th { border-top: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
-.body-days tr > :first-child { padding-left: 0; }
+.body-days th, .body-days td { padding: 4px 0 4px 8px; text-align: left; }
+.body-days thead th { font-size: 12px; font-weight: 500; color: var(--muted); }
 .body-days tbody th { font-weight: 500; white-space: nowrap; }
 .body-days .link-btn { color: var(--ink); min-height: 44px; }
 .body-days tr[aria-current='date'] { background: var(--accent-tint); }
@@ -576,6 +580,6 @@ small { font-size: 0.85em; color: var(--muted); }
 
 @media (max-width: 640px) {
   .ov-card { padding: 12px 16px 14px; }
-  .ov-table, .body-days { font-size: 13px; }
+  .ruled-table { font-size: 13px; }
   .body-days th, .body-days td { padding-left: 6px; }
 }

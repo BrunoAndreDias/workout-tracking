@@ -11,7 +11,9 @@ const one = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 0, maximumFr
 const oneFixed = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const two = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
-export const formatKcal = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
+/** A whole number, thousands grouped: "1 234". */
+export const formatCount = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
+export const formatKcal = formatCount
 export const formatGrams = (v: number) => one.format(v)
 /** Fixed one decimal, for macro columns where aligned digits matter. */
 export const formatMacro = (v: number) => oneFixed.format(v)
@@ -64,9 +66,12 @@ export const formatMonth = (year: number, month: number) => monthYear.format(new
 export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) =>
   `${sets} × ${reps.min === reps.max ? reps.min : `${reps.min}–${reps.max}`}`
 
+/** "1 noite", "3 noites" */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 /** "1 exercício, 3 séries" */
 export const formatLoggedCounts = ({ exercises, sets }: { exercises: number; sets: number }) =>
-  `${exercises} ${exercises === 1 ? 'exercício' : 'exercícios'}, ${sets} ${sets === 1 ? 'série' : 'séries'}`
+  `${plural(exercises, 'exercício', 'exercícios')}, ${plural(sets, 'série', 'séries')}`
 
 /** The Workout Day a session started from, by its current name. */
 export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {

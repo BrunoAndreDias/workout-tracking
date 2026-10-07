@@ -551,7 +551,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-table th, .ov-table td { padding: 8px 0 8px 8px; text-align: right; vertical-align: top; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
 .ov-table thead th, .ov-table thead td { border-top: 0; padding-top: 0; vertical-align: bottom; }
 .ov-table thead th { width: 25%; }
-.ov-table thead th.ov-month { width: 20%; }
+.ov-table thead th.ov-quiet { width: 20%; }
 .ov-table tr > :first-child { padding-left: 0; text-align: left; }
 .ov-table tbody th { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: normal; }
 .ov-col { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
@@ -560,9 +560,9 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-value.under { color: var(--under-fg); }
 .ov-value.over { color: var(--over-fg); }
 .ov-sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
-.ov-month { font-size: 13px; }
-.ov-month .ov-col, .ov-month .ov-value:not(.met, .under, .over) { font-weight: 500; color: var(--muted); }
-.ov-month .ov-sub { font-size: 11px; }
+.ov-quiet { font-size: 13px; }
+.ov-quiet .ov-col, .ov-quiet .ov-value:not(.met, .under, .over) { font-weight: 500; color: var(--muted); }
+.ov-quiet .ov-sub { font-size: 11px; }
 
 /* corpo */
 .body-days { width: 100%; border-collapse: collapse; font-size: 14px; }

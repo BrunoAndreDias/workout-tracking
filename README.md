@@ -40,6 +40,24 @@ It listens on this machine only. `HOST=0.0.0.0` would open it to your network, a
 
 Tests never open this file. `npm run e2e` and the verify-plano skill give each dev server they start a temp `PLANO_DB` and `PLANO_TEST=1`, which is also the only way the API allows `DELETE /api/stores`.
 
+## No iPhone
+
+The app installs on the iPhone home screen as a web app, with its own icon and no browser bars. There is no App Store step.
+
+1. Open the app in Safari on the iPhone (see below for the address).
+2. Tap `Partilhar`, then `Adicionar ao ecrã principal`.
+
+The phone must reach the server, the same as for the [Apple Watch import](#apple-watch-import):
+
+- **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open `http://<the Mac's local IP>:4173/` on the iPhone. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
+- **Tailscale.** Install it on the Mac and the iPhone. `tailscale serve --bg 4173` gives an HTTPS address on your tailnet, and the server keeps listening on `127.0.0.1` only.
+
+The microphone needs HTTPS, so dictation works on the phone only through the Tailscale address. Over plain `http://` on the Wi-Fi, the rest of the app works and the mic button does not.
+
+There is no service worker. The app needs the Mac's server for its data anyway, so it does not launch offline. The manifest and icons are static files in `public/`. `node scripts/build-icons.mjs` redraws the icons from `public/favicon.svg`.
+
+**Untested on a device.** The manifest, the icons and the head tags are checked in `e2e/pwa.mjs`. Adding to the home screen has not been tried on an iPhone.
+
 ## Apple Watch import
 
 A web page cannot read HealthKit, so an iOS Shortcut does: once a day a Personal Automation runs it without a tap, and it posts the day's values to the app's server. `Ligar Apple Watch`, next to the backup buttons, shows the address to post to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the steps below in short.

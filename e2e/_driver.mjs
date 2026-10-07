@@ -222,7 +222,7 @@ export async function importPlan(page, mealName, label = mealName) {
   try {
     await select.selectOption({ label }, { timeout: 1000 })
   } catch {
-    const labels = (await select.locator('option').allTextContents()).filter((o) => !o.endsWith('…'))
+    const labels = await select.locator('option:not([value=""])').allTextContents()
     throw new FlowError(`nothing to import as "${label}" into ${mealName}`, `plan meals with food: ${labels.join(' | ') || '(none: add food to the plan first, or this is not a started day)'}`)
   }
   await page.waitForFunction(([node, n]) => node.querySelectorAll('.entries li').length > n, [await meal.elementHandle(), before])

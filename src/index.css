@@ -416,24 +416,35 @@ small { font-size: 0.85em; color: var(--muted); }
 .planned-fields { display: inline-flex; align-items: center; gap: 6px; }
 .planned-fields .count-input { width: 52px; }
 .planned-fields .reps-input { width: 76px; }
-.home-day { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
-.home-date { font: 500 30px/1.15 var(--font-serif); letter-spacing: -0.01em; margin-right: auto; }
+.home-day { display: flex; flex-direction: column; gap: 12px; }
+.home-date { font: 500 30px/1.15 var(--font-serif); letter-spacing: -0.01em; }
+.home-workouts { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.home-workouts:empty { display: none; }
 .workout-line { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; color: var(--muted); font-size: 14px; text-decoration: none; }
 .workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
 .workout-line-name { font-weight: 600; color: var(--ink); }
 
 /* body log */
 .body-log { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
-.body-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.body-log > p { margin: 0; }
 .body-label { width: 52px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
-.sleep-scale { display: flex; flex-wrap: wrap; gap: 6px; }
-.sleep-pick { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--input-border); background: var(--surface); font-size: 14px; font-weight: 500; }
-.sleep-pick:hover { border-color: var(--muted); }
-.sleep-pick[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
-.body-watch-sleep { font-size: 14px; color: var(--ink-2); }
-.body-mood { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--rule); }
-.body-samples { margin: 0; padding-top: 12px; border-top: 1px solid var(--rule); display: flex; gap: 4px 12px; font-size: 14px; color: var(--ink-2); }
+.body-samples { display: flex; gap: 4px 12px; font-size: 14px; color: var(--ink-2); }
 .body-samples .body-label { flex: none; }
+
+/* the 1–5 rating scale */
+.rating-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: 520px; }
+.rating-pick { min-height: 44px; padding: 4px 6px; border-radius: 10px; border: 1px solid var(--input-border); background: var(--surface); font-size: 14px; font-weight: 500; line-height: 1.2; }
+.rating-pick:hover { border-color: var(--muted); }
+.rating-pick[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+
+/* daily check-in on the Diário */
+.check-in { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+.check-in-title { font: 500 22px/1.2 var(--font-serif); }
+.check-in-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 6px 12px; }
+.check-in-label { display: flex; flex-direction: column; font-size: 14px; font-weight: 600; color: var(--ink); }
+.check-in-hint { font-size: 12px; font-weight: 400; color: var(--muted); }
+.check-in-watch { grid-column: 2; font-size: 13px; color: var(--ink-2); }
+.check-in > p { margin: 0; }
 .backup-done { margin: 0; font-size: 14px; color: var(--ink-2); flex: 1 1 100%; }
 .health-import { display: flex; flex-direction: column; gap: 12px; padding-inline: 16px; }
 .health-import > .secondary { align-self: flex-start; }
@@ -524,7 +535,11 @@ small { font-size: 0.85em; color: var(--muted); }
   .ingredient { grid-template-columns: minmax(0, 1fr) auto; }
   .ingredient-name { grid-column: 1 / -1; }
   .session, .workout-day { padding: 16px; gap: 12px; }
-  .body-log { padding: 14px 16px 16px; }
+  .body-log, .check-in { padding: 14px 16px 16px; }
+  .check-in-row { grid-template-columns: minmax(0, 1fr); }
+  .check-in-label { flex-direction: row; align-items: baseline; gap: 8px; }
+  .check-in-watch { grid-column: 1; }
+  .rating-pick { padding: 4px 2px; font-size: 13px; }
   .session-title { font-size: 23px; }
   .workout-plan-title { font-size: 30px; }
   .workout-plan-note { margin-top: -10px; }

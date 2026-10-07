@@ -236,6 +236,7 @@ export default function App({ sync }: { sync: Sync | null }) {
                 foods={foodsById}
                 workouts={workouts}
                 body={body}
+                dispatchBody={dispatchBody}
                 health={health}
                 watch={watchWorkouts}
               />
@@ -245,12 +246,10 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
             {view === 'corpo' && (
               <CorpoView
-                // Sleep and mood are logged on waking or after the fact, so a future date opens today instead.
+                // The watch has recorded nothing for a future date, so one opens today instead.
                 date={routeDate && routeDate <= today ? routeDate : today}
                 today={today}
                 onDate={(date) => (window.location.hash = `corpo/${date}`)}
-                body={body}
-                dispatchBody={dispatchBody}
                 health={health}
               />
             )}

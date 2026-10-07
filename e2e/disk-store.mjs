@@ -23,11 +23,11 @@ async function device(hash = '#alimentacao', width = 1280) {
   return { context, page, open: async () => { await page.goto(URL + hash); await rendered(page) } }
 }
 const kcal = async (page) => (await page.locator('.donut-figure').textContent()).replace(/\s/g, '')
-const sleepButton = (page, label) => page.getByRole('region', { name: 'Corpo' }).getByRole('group', { name: 'Sono' }).getByRole('button', { name: label })
+const sleepButton = (page, label) => page.getByRole('region', { name: 'Como te sentes' }).getByRole('group', { name: 'Sono' }).getByRole('button', { name: label })
 const pressed = async (page, label) => (await sleepButton(page, label).getAttribute('aria-pressed')) === 'true'
 
-const a = await device('#corpo')
-await openFresh(a.page, URL + '#corpo')
+const a = await device('#diario')
+await openFresh(a.page, URL + '#diario')
 await sleepButton(a.page, 'Sono: Bem').click()
 await a.page.goto(URL + '#alimentacao/hoje')
 await a.page.getByRole('button', { name: 'Começar em branco' }).click()
@@ -39,12 +39,12 @@ assert(JSON.parse(row('sleep').doc).entries[0].quality === 4, `the sleep row on 
 const b = await device('#alimentacao/hoje', 390)
 await b.open()
 assert(await kcal(b.page) === '326', 'a fresh browser on the same server shows the 326 kcal day')
-await b.page.goto(URL + '#corpo')
+await b.page.goto(URL + '#diario')
 assert(await pressed(b.page, 'Sono: Bem'), 'and sleep 4')
 
 await sleepButton(b.page, 'Sono: Mal').click()
 await synced(b.page)
-await a.page.goto(URL + '#corpo')
+await a.page.goto(URL + '#diario')
 await sleepButton(a.page, 'Sono: Muito bem').click()
 const conflict = a.page.getByRole('alert').filter({ hasText: 'Os dados mudaram noutro dispositivo.' })
 await conflict.waitFor()

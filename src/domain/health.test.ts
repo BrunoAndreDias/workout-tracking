@@ -25,7 +25,7 @@ function memoryStorage() {
 }
 
 describe('health import', () => {
-  it('reads the samples object and the bare list alike', () => {
+  it('reads the samples object, the bare list and one sample on its own alike', () => {
     const expected = [
       { date: '2026-10-05', metric: 'steps', value: 8123 },
       { date: '2026-10-05', metric: 'standHours', value: 9 },
@@ -33,12 +33,14 @@ describe('health import', () => {
     ]
     expect(samples(PASTE)).toEqual(expected)
     expect(samples(JSON.stringify(JSON.parse(PASTE).samples))).toEqual(expected)
+    expect(samples('{"date":"2026-10-05","metric":"steps","value":8123}')).toEqual([expected[0]])
   })
 
   it.each([
     ['text that is not JSON', 'steps: 8123', 'O texto não é JSON válido. Não foi alterado nada.'],
-    ['an object without samples', '{"data": []}', 'Esperava { "samples": [ … ] } ou uma lista de valores. Não foi alterado nada.'],
+    ['an object without samples', '{"data": []}', 'Esperava { "samples": [ … ] }, uma lista de valores ou um só valor. Não foi alterado nada.'],
     ['an empty list', '[]', 'Não há valores para importar.'],
+    ['one sample with no value', '{"date":"2026-10-05","metric":"steps"}', 'Valor n.º 1: o valor undefined não é um número maior ou igual a zero. Não foi alterado nada.'],
     [
       'an unknown metric in row 2',
       '[{"date":"2026-10-05","metric":"steps","value":1},{"date":"2026-10-05","metric":"sittingHours","value":3}]',

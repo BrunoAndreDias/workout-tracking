@@ -52,8 +52,8 @@ function Recent({ session, title, date, names, dispatch }: RecentProps) {
           {session.feel !== undefined && ` · no fim: ${ratingWord(session.feel)}`}
         </span>
       </h3>
-      <span className="rating-label" aria-hidden="true">Como está hoje</span>
-      <TimedNoteField note={today.get(null)?.note} label="Como está hoje" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
+      <span className="rating-label" aria-hidden="true">Como está o corpo</span>
+      <TimedNoteField note={today.get(null)?.note} label="Como está o corpo" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
       {session.exercises.map((e) => (
         <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={filledSets(e)} effect={today.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
       ))}

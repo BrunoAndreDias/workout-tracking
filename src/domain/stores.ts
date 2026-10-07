@@ -3,7 +3,7 @@ import { MOODS_SCHEMA_VERSION, parseMoods, parseSleep, SLEEP_SCHEMA_VERSION } fr
 import type { SleepLog } from './bodyStorage.ts'
 import { FOODS_SCHEMA_VERSION, parseCustomFoods } from './customFoodsStorage.ts'
 import type { DayState } from './days.ts'
-import { DAYS_SCHEMA_VERSION, parseDays } from './daysStorage.ts'
+import { DAYS_SCHEMA_VERSION, daysText, parseDays, storedDay } from './daysStorage.ts'
 import { logSamples } from './health.ts'
 import type { HealthLog } from './health.ts'
 import { HEALTH_SCHEMA_VERSION, parseHealth } from './healthStorage.ts'
@@ -23,7 +23,7 @@ import type { Exercise, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 /**
  * A Store: one versioned document under its own key. `parse` reads every version this build understands, or returns
  * null; `toDoc` is what is saved beside `version`; `fresh` is the value when there is no readable document; `label`
- * names the store to the user.
+ * names the store to the user. `text`, when given, writes the same JSON as `toDoc` would, faster.
  */
 export interface StoreDef<T> {
   readonly key: StoreKey
@@ -31,6 +31,7 @@ export interface StoreDef<T> {
   readonly version: number
   parse(raw: unknown): T | null
   toDoc(value: T): object
+  text?(value: T): string
   fresh(): T
 }
 
@@ -47,7 +48,8 @@ export const STORES = {
     label: 'dias',
     version: DAYS_SCHEMA_VERSION,
     parse: parseDays,
-    toDoc: (state) => ({ days: Object.values(state.days).sort(byDate) }),
+    toDoc: (state) => ({ days: Object.values(state.days).sort(byDate).map(storedDay) }),
+    text: daysText,
     fresh: () => ({ days: {} }),
   }),
   exercises: store<readonly Exercise[]>({
@@ -120,10 +122,14 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
   return def.fresh()
 }
 
+/** The exact text a store is saved as, in the browser and by the server. */
+export const serializeStore = <T>(def: StoreDef<T>, value: T): string =>
+  def.text ? def.text(value) : JSON.stringify({ version: def.version, ...def.toDoc(value) })
+
 /** False when the write failed or there is no storage. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
   try {
-    storage?.setItem(def.key, JSON.stringify({ version: def.version, ...def.toDoc(value) }))
+    storage?.setItem(def.key, serializeStore(def, value))
     return storage !== null
   } catch {
     return false

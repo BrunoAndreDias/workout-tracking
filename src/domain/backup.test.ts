@@ -43,7 +43,7 @@ const withEntry = (planId: PlanId, name: string) =>
 
 const day = (date: string, planId: PlanId | null): DayLog => {
   const plan = withEntry(A, 'x').plans[0]
-  return { date: date as IsoDate, planId, goals: plan.goals, meals: plan.meals, baseline: plan.meals }
+  return { date: date as IsoDate, planId, goals: plan.goals, meals: plan.meals, baseline: plan.meals, eaten: [] }
 }
 
 const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }

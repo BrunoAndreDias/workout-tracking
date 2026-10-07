@@ -79,7 +79,10 @@ await page.getByRole('button', { name: 'Parar ditado' }).waitFor()
 assert(await page.getByRole('status').filter({ hasText: 'A ouvir…' }).count() === 1, 'the status line says A ouvir… while recording')
 await page.waitForTimeout(11000) // the clip is 10 s of speech, then silence
 const stoppedAt = Date.now()
-const micState = await page.evaluate(() => [...document.querySelectorAll('.dictate-btn')].map((b) => b.getAttribute('aria-label')).join(', ') + ` at ${location.href}`)
+const micState = await page.evaluate(
+  () => [...document.querySelectorAll('.dictate-btn')].map((b) => `${b.getAttribute('aria-label')}${b.disabled ? ' (disabled)' : ''}`).join(', ') +
+    ` / status "${[...document.querySelectorAll('.dictate-status')].map((p) => p.textContent).join('|')}" at ${location.href}`,
+)
 assert(micState.startsWith('Parar ditado'), `still recording before the stop tap (${micState})`)
 await page.getByRole('button', { name: 'Parar ditado' }).click()
 await page.waitForFunction(() => document.querySelector('[aria-label="Notas do plano"]').value.length > 12, null, { timeout: 600_000 })

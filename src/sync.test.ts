@@ -28,8 +28,9 @@ function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) 
     fetch: async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
       if (!server.up) throw new TypeError('Failed to fetch')
       const path = String(url)
-      if (!init?.method) return Response.json(Object.fromEntries(stores))
+      if (!init?.method && path === '/api/stores') return Response.json(Object.fromEntries(stores))
       const key = decodeURIComponent(path.slice('/api/stores/'.length))
+      if (!init?.method) return Response.json(stores.get(key) ?? { doc: null, rev: 0 })
       const { doc, baseRev } = JSON.parse(String(init.body)) as { doc: string; baseRev: number | null }
       const current = stores.get(key)
       if (current?.doc !== doc && (current?.rev ?? null) !== baseRev) return Response.json({ doc: current?.doc ?? null, rev: current?.rev ?? 0 }, { status: 409 })
@@ -154,5 +155,90 @@ describe('startSync', () => {
     sync.dropConflicts()
     await startSync({ storage, fetch: server.fetch })
     expect(storage.data[SLEEP]).toBe('"other device"')
+  })
+})
+
+describe('refresh', () => {
+  const HEALTH = 'nutrition-tracking:health'
+
+  it('takes another writer’s newer copy of the stores it is given and of no other', async () => {
+    const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 }, [SLEEP]: { doc: '"s1"', rev: 1 } })
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch })
+    server.stores.set(HEALTH, { doc: '"h2"', rev: 2 })
+    server.stores.set(SLEEP, { doc: '"s2"', rev: 2 })
+    expect(await sync.refresh([HEALTH])).toEqual([HEALTH])
+    expect(storage.data[HEALTH]).toBe('"h2"')
+    expect(storage.data[SLEEP]).toBe('"s1"')
+    expect(await sync.refresh([HEALTH])).toEqual([])
+  })
+
+  it('takes a store this browser did not have yet, and a later change here is sent on its rev', async () => {
+    const server = fakeServer()
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch, debounceMs: 60_000 })
+    server.stores.set(HEALTH, { doc: '"h1"', rev: 1 })
+    expect(await sync.refresh([HEALTH])).toEqual([HEALTH])
+    sync.storage.setItem(HEALTH, '"h1 edited"')
+    await sync.flush()
+    expect(server.stores.get(HEALTH)).toEqual({ doc: '"h1 edited"', rev: 2 })
+    expect(sync.status()).toBe('ligado')
+  })
+
+  it('keeps a change made here and not yet sent, which then conflicts as before', async () => {
+    const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 } })
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch, debounceMs: 60_000 })
+    sync.storage.setItem(HEALTH, '"here"')
+    server.stores.set(HEALTH, { doc: '"h2"', rev: 2 })
+    expect(await sync.refresh([HEALTH])).toEqual([])
+    expect(storage.data[HEALTH]).toBe('"here"')
+    await sync.flush()
+    expect(sync.status()).toBe('conflito')
+    expect(await sync.refresh([HEALTH])).toEqual([])
+    expect(storage.data[HEALTH]).toBe('"here"')
+  })
+
+  it('keeps a change made here while its request was in flight', async () => {
+    const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 } })
+    let release = () => {}
+    let gated = false
+    const fetch: typeof server.fetch = async (url, init) => {
+      if (gated && !init?.method) await new Promise<void>((resolve) => (release = resolve))
+      return server.fetch(url, init)
+    }
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch, debounceMs: 60_000 })
+    server.stores.set(HEALTH, { doc: '"h2"', rev: 2 })
+    gated = true
+    const refreshed = sync.refresh([HEALTH])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    sync.storage.setItem(HEALTH, '"typed meanwhile"')
+    release()
+    expect(await refreshed).toEqual([])
+    expect(storage.data[HEALTH]).toBe('"typed meanwhile"')
+  })
+
+  it('does not go back to an older copy than the one this browser last sent', async () => {
+    const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 } })
+    let stale: Response | null = null
+    const fetch: typeof server.fetch = async (url, init) => (!init?.method && stale ? stale.clone() : server.fetch(url, init))
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch, debounceMs: 60_000 })
+    stale = await server.fetch(`/api/stores/${encodeURIComponent(HEALTH)}`)
+    sync.storage.setItem(HEALTH, '"h2 here"')
+    await sync.flush()
+    expect(await sync.refresh([HEALTH])).toEqual([])
+    expect(storage.data[HEALTH]).toBe('"h2 here"')
+  })
+
+  it('changes nothing when the server does not answer', async () => {
+    const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 } })
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch })
+    server.stores.set(HEALTH, { doc: '"h2"', rev: 2 })
+    server.up = false
+    expect(await sync.refresh([HEALTH])).toEqual([])
+    expect(storage.data[HEALTH]).toBe('"h1"')
   })
 })

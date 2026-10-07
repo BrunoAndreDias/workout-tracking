@@ -72,7 +72,9 @@ export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPla
 }
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const
-const dayMonth = (at: LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
+const dayMonth = (at: IsoDate | LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
+/** "6 out" */
+export const formatDayMonth = (date: IsoDate) => dayMonth(date)
 const clock = (at: LocalDateTime) => at.slice(11, 16)
 
 /** "Escrito a 6 out, 18:50 · editado 19:02"; no edit part within the same minute, and the date again when edited on another day. */

@@ -31,6 +31,12 @@ export interface Sync {
   readonly flush: () => Promise<void>
   /** Forgets this browser's changes to the conflicting stores, so the next start takes the server's copies. */
   readonly dropConflicts: () => void
+  /**
+   * Takes the server's newer copy of each of `keys` that has no change waiting here, and resolves to the keys whose
+   * local copy changed. Only for stores whose caller then re-reads them: an app state still holding the old copy would
+   * save it back over the new one.
+   */
+  readonly refresh: (keys: readonly StoreKey[]) => Promise<StoreKey[]>
 }
 
 export interface SyncOptions {
@@ -149,29 +155,62 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     timer = setTimeout(() => void flush(), debounceMs)
   }
 
-  let remote: Remote | null = null
-  try {
-    const res = await request(base, { signal: AbortSignal.timeout(timeoutMs) })
-    if (res.ok) remote = parseRemote(await res.json())
-  } catch {
-    // unreachable: start from this browser's copy
+  async function fetchRemote(): Promise<Remote | null> {
+    try {
+      const res = await request(base, { signal: AbortSignal.timeout(timeoutMs) })
+      return res.ok ? parseRemote(await res.json()) : null
+    } catch {
+      return null
+    }
   }
+
+  function take(key: StoreKey, server: { doc: string; rev: number }) {
+    const local = storage.getItem(key)
+    if (local !== null && local !== server.doc && meta.revs[key] === undefined && !meta.fresh.includes(key)) preserveCopy(storage, key, local, 'unsynced')
+    try {
+      storage.setItem(key, server.doc)
+      meta.revs[key] = server.rev
+      unpend(key)
+      meta.fresh = meta.fresh.filter((k) => k !== key)
+    } catch {
+      // a full storage keeps the old copy and its old rev, so a later change here conflicts instead of overwriting
+    }
+  }
+
+  async function fetchOne(key: StoreKey): Promise<{ doc: string; rev: number } | null> {
+    try {
+      const res = await request(`${base}/${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(timeoutMs) })
+      return res.ok ? (parseRemote({ [key]: await res.json() })?.[key] ?? null) : null
+    } catch {
+      return null
+    }
+  }
+
+  /** Fetches only `keys`, so a refresh on focus never downloads the whole history. */
+  async function pull(keys: readonly StoreKey[]): Promise<StoreKey[]> {
+    const remote = await Promise.all(keys.map(fetchOne))
+    const changed: StoreKey[] = []
+    for (const [i, key] of keys.entries()) {
+      const server = remote[i]
+      const rev = meta.revs[key]
+      // Checked after the request: a change made here while it was in flight must win over the server's older view.
+      if (!server || meta.pending.includes(key) || conflicts.has(key) || (rev !== undefined && server.rev <= rev)) continue
+      const before = storage.getItem(key)
+      take(key, server)
+      if (storage.getItem(key) !== before) changed.push(key)
+    }
+    saveMeta()
+    return changed
+  }
+
+  const remote = await fetchRemote()
   if (remote) {
     for (const key of STORE_KEYS) {
       const local = storage.getItem(key)
       const server = remote[key]
       if (local !== null && meta.pending.includes(key)) continue
-      if (server) {
-        if (local !== null && local !== server.doc && meta.revs[key] === undefined && !meta.fresh.includes(key)) preserveCopy(storage, key, local, 'unsynced')
-        try {
-          storage.setItem(key, server.doc)
-          meta.revs[key] = server.rev
-          unpend(key)
-          meta.fresh = meta.fresh.filter((k) => k !== key)
-        } catch {
-          // a full storage keeps the old copy and its old rev, so a later change here conflicts instead of overwriting
-        }
-      } else if (local !== null && !meta.fresh.includes(key)) {
+      if (server) take(key, server)
+      else if (local !== null && !meta.fresh.includes(key)) {
         delete meta.revs[key]
         meta.pending = [...meta.pending, key]
       }
@@ -218,6 +257,11 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
         delete meta.revs[key]
       }
       saveMeta()
+    },
+    refresh(keys) {
+      const pulled = queue.then(() => pull(keys))
+      queue = pulled.then(() => undefined)
+      return pulled
     },
   }
 }

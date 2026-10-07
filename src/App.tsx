@@ -9,7 +9,7 @@ import { upsertSamples } from './domain/health.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
 import { planReducer } from './domain/plans.ts'
 import { buildSearchIndex } from './domain/search.ts'
-import { loadAll, saveStore, STORES } from './domain/stores.ts'
+import { loadAll, loadStore, saveStore, STORES } from './domain/stores.ts'
 import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
@@ -96,6 +96,18 @@ export default function App({ sync }: { sync: Sync | null }) {
   useEffect(() => void saveStore(STORES.sleep, body.sleep), [body.sleep])
   useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
   useEffect(() => void saveStore(STORES.health, health), [health])
+  // The iPhone posts watch values straight to the server, so an open tab looks for them each time it comes back.
+  useEffect(() => {
+    if (!sync) return
+    const pull = () => void sync.refresh([STORES.health.key]).then((changed) => changed.length > 0 && setHealth(loadStore(STORES.health)))
+    const onVisible = () => document.visibilityState === 'visible' && pull()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', pull)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', pull)
+    }
+  }, [sync])
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash())
     window.addEventListener('hashchange', onHash)
@@ -132,7 +144,7 @@ export default function App({ sync }: { sync: Sync | null }) {
     catalogIndex,
     ingredientIndex,
     table,
-    usedFoods: foodsByUse(allMeals),
+    usedFoods: () => foodsByUse(allMeals),
     dispatchFoods,
   }
   const plan = state.plans.find((p) => p.id === state.selectedId)!
@@ -188,7 +200,7 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
           </main>
           <BackupSection>
-            <HealthImport onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
+            <HealthImport log={health} onImport={(samples) => setHealth((log) => upsertSamples(log, samples))} />
           </BackupSection>
           <Footer />
         </div>

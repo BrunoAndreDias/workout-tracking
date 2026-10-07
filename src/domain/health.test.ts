@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { importSpan, parseHealthImport, samplesOn, upsertSamples } from './health.ts'
+import { importSpan, latestSampleDate, parseHealthImport, samplesOn, upsertSamples } from './health.ts'
 import type { HealthSample } from './health.ts'
 import { parseHealth } from './healthStorage.ts'
 import type { IsoDate } from './types.ts'
@@ -78,6 +78,13 @@ describe('health import', () => {
   it('spans the dates of a paste', () => {
     const r = parseHealthImport(PASTE)
     expect(r.ok && importSpan(r.samples)).toEqual({ count: 3, from: '2026-10-04', to: '2026-10-05' })
+  })
+})
+
+describe('latest sample date', () => {
+  it('is the latest date holding a value, and null for an empty log', () => {
+    expect(latestSampleDate(upsertSamples({}, samples(PASTE)))).toBe('2026-10-05')
+    expect(latestSampleDate({ ['2026-10-09' as IsoDate]: {} })).toBe(null)
   })
 })
 

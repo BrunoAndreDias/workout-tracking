@@ -60,7 +60,7 @@ function routeFromHash(): { view: View; date: IsoDate | null; foodTab: FoodTab }
   // Histórico was a view of its own before it moved under Alimentação, and old links still name it.
   const [id, arg, dateArg] = (hash === 'historico' ? 'alimentacao/historico' : hash).split('/')
   const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
-  const foodTab: FoodTab = (view === 'alimentacao' && FOOD_TABS.find((t) => t.id === arg)?.id) || 'planos'
+  const foodTab: FoodTab = FOOD_TABS.find((t) => view === 'alimentacao' && t.id === arg)?.id ?? 'planos'
   const raw = view !== 'alimentacao' ? arg : foodTab === 'hoje' ? dateArg : undefined
   return { view, date: raw ? parseIsoDate(raw) : null, foodTab }
 }

@@ -150,7 +150,8 @@ export async function setGoals(page, goals) {
 /** The local calendar date as YYYY-MM-DD, which is the date the app calls today. */
 export const todayIso = () => new Date().toLocaleDateString('sv-SE')
 
-const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
+/** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
+export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 const localDate = (iso) => new Date(...iso.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))
 
 /** Opens `date`'s (YYYY-MM-DD) Day Log on Alimentação → Hoje, where its meals are edited, through `#alimentacao/hoje/<date>`. */
@@ -158,6 +159,14 @@ export async function openDay(page, date) {
   await page.evaluate((hash) => { location.hash = hash }, `alimentacao/hoje/${date}`)
   await page.getByRole('navigation', { name: 'Alimentação' }).waitFor()
   await page.locator('main h2').filter({ hasText: longDate.format(localDate(date)) }).first().waitFor()
+}
+
+/** Opens an Alimentação sub-tab ('Planos', 'Hoje', 'Histórico') through the header links and waits until it is current. */
+export async function openFoodTab(page, name) {
+  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Alimentação', exact: true }).click()
+  const link = page.getByRole('navigation', { name: 'Alimentação' }).getByRole('link', { name, exact: true })
+  await link.click()
+  await link.and(page.locator('[aria-current="page"]')).waitFor()
 }
 
 /** Starts the selected empty day from a plan (`plan`: its name), blank (`blank`) or by repeating the last logged day (`repeat`). */

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { openFresh } from './_driver.mjs'
+import { longDate, openFresh } from './_driver.mjs'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
@@ -27,7 +27,6 @@ assert(await current() === 'Alimentação' && await foodTabs.locator('[aria-curr
 await foodTabs.getByRole('link', { name: 'Histórico', exact: true }).click()
 assert(page.url().endsWith('#alimentacao/historico'), 'Histórico is #alimentacao/historico in the URL')
 
-const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 const isoDaysFromToday = (n) => {
   const d = new Date()
   d.setDate(d.getDate() + n)

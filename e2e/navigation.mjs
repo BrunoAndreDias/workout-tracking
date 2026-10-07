@@ -15,10 +15,17 @@ assert(await page.title() === 'Diário', 'the page title is Diário')
 assert(await current() === 'Diário', 'a bare URL opens on the Diário')
 await page.locator('.cal-grid').waitFor()
 assert(await page.getByText('Plano alimentar', { exact: true }).count() === 0, 'the header has no Plano alimentar eyebrow')
-assert((await views.getByRole('link').allTextContents()).join(' | ') === 'Diário | Histórico | Treino | Alimentação', 'the tabs run Diário, Histórico, Treino, Alimentação')
+assert((await views.getByRole('link').allTextContents()).join(' | ') === 'Diário | Treino | Alimentação', 'the tabs run Diário, Treino, Alimentação')
 
 await page.goto(URL + '#planos')
 assert(await current() === 'Diário', 'the old #planos hash falls back to the Diário')
+
+const foodTabs = page.getByRole('navigation', { name: 'Alimentação' })
+await page.goto(URL + '#historico')
+await page.locator('.tiles').waitFor()
+assert(await current() === 'Alimentação' && await foodTabs.locator('[aria-current="page"]').textContent() === 'Histórico', 'the old #historico hash opens Alimentação → Histórico')
+await foodTabs.getByRole('link', { name: 'Histórico', exact: true }).click()
+assert(page.url().endsWith('#alimentacao/historico'), 'Histórico is #alimentacao/historico in the URL')
 
 await views.getByRole('link', { name: 'Alimentação', exact: true }).click()
 assert(page.url().endsWith('#alimentacao'), 'Alimentação is #alimentacao in the URL')

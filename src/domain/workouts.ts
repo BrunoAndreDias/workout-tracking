@@ -131,9 +131,11 @@ export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDa
   return { id, date, workoutDayId: day?.id ?? null, exercises }
 }
 
+export const filledSets = (exercise: SessionExercise): number => exercise.sets.filter(isFilled).length
+
 /** What a session holds once the unfilled sets are left out. */
 export function loggedCounts(session: WorkoutSession): { exercises: number; sets: number } {
-  const filled = session.exercises.map((e) => e.sets.filter(isFilled).length)
+  const filled = session.exercises.map(filledSets)
   return { exercises: filled.filter((n) => n > 0).length, sets: filled.reduce((a, b) => a + b, 0) }
 }
 

@@ -1,9 +1,9 @@
-import { fromIsoDate } from '../domain/days.ts'
+import { daysBetween, fromIsoDate } from '../domain/days.ts'
 import { healthMetric } from '../domain/health.ts'
 import type { HealthMetric, HealthSample } from '../domain/health.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
-import { findDay } from '../domain/workouts.ts'
+import { AFTER_EFFECT_DAYS, findDay } from '../domain/workouts.ts'
 import type { WatchWorkout } from '../domain/watchWorkouts.ts'
 import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
 
@@ -100,6 +100,19 @@ export const formatDayMonth = (date: IsoDate) => dayMonth(date)
 export const formatDayRange = (from: IsoDate, to: IsoDate) =>
   from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${dayMonth(to)}` : `${dayMonth(from)} – ${dayMonth(to)}`
 const clock = (at: LocalDateTime) => at.slice(11, 16)
+
+/** When an After-effect was felt, from its session: "Dia seguinte", "2 dias depois", or the date further on. */
+export function formatAfterDay(sessionDate: IsoDate, date: IsoDate): string {
+  const n = daysBetween(sessionDate, date)
+  if (n === 1) return 'Dia seguinte'
+  return n <= AFTER_EFFECT_DAYS ? `${n} dias depois` : dayMonth(date)
+}
+
+/** How long before `today` a date was: "ontem", "há 2 dias". */
+export const formatDaysAgo = (date: IsoDate, today: IsoDate) => {
+  const n = daysBetween(date, today)
+  return n === 1 ? 'ontem' : `há ${n} dias`
+}
 
 /** "Escrito a 6 out, 18:50 · editado 19:02"; no edit part within the same minute, and the date again when edited on another day. */
 export function formatNoteTimes({ createdAt, updatedAt }: TimedNote): string {

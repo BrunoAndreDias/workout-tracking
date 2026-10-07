@@ -12,7 +12,7 @@ What was actually eaten on one calendar date, shown in the app as "Diário". A D
 _Avoid_: Daily Journal, diary, diary entry, check-in (in code and domain naming; "Diário" is only UI copy)
 
 **Eaten Entry** (comido):
-A Food Entry of a Day Log checked as eaten. Food copied into a day, from a plan or by repeating a day, starts unchecked: it is the plan to follow, and the user checks what they ate, one food at a time or a whole meal with "Comi tudo". A food the user adds, swaps or re-weighs on the day is checked, since that edit records what was eaten. Food left unchecked was not eaten and counts for nothing, so a day with nothing checked is not logged. Comparing a day with its plan compares what was eaten, so an unchecked planned food counts as left out. Day Logs from before checks existed count every entry as eaten.
+A Food Entry of a Day Log checked as eaten. Food copied into a day, from a plan or by repeating a day, starts unchecked: it is the plan to follow, and the user checks what they ate, one food at a time or a whole meal from the meal's "Do plano" tray ("Usar o plano"). A Day Log meal lists only its Eaten Entries as rows, and unchecking one sends it back to the tray. A food the user adds, swaps or re-weighs on the day is checked, since that edit records what was eaten. Food left unchecked was not eaten and counts for nothing, so a day with nothing checked is not logged. Comparing a day with its plan compares what was eaten, so an unchecked planned food counts as left out. Day Logs from before checks existed count every entry as eaten.
 _Avoid_: Done, completed, ticked
 
 **Meal**:

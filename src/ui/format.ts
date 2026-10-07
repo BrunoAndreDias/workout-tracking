@@ -54,6 +54,9 @@ export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(dat
 export const formatRepeatDate = (date: IsoDate) => formatLongDate(date).replace('-feira', '')
 /** "5/10", for chart axes and tiles where space is tight. */
 export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
+const monthName = new Intl.DateTimeFormat('pt-PT', { month: 'long' })
+/** "outubro" */
+export const formatMonthName = (date: IsoDate) => monthName.format(fromIsoDate(date))
 /** "outubro de 2026" */
 export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))
 
@@ -75,6 +78,9 @@ const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 const dayMonth = (at: IsoDate | LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
 /** "6 out" */
 export const formatDayMonth = (date: IsoDate) => dayMonth(date)
+/** "5–11 out", or "28 set – 4 out" across two months. */
+export const formatDayRange = (from: IsoDate, to: IsoDate) =>
+  from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${dayMonth(to)}` : `${dayMonth(from)} – ${dayMonth(to)}`
 const clock = (at: LocalDateTime) => at.slice(11, 16)
 
 /** "Escrito a 6 out, 18:50 · editado 19:02"; no edit part within the same minute, and the date again when edited on another day. */

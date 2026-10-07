@@ -455,14 +455,14 @@ small { font-size: 0.85em; color: var(--muted); }
 .rating-pick:hover { border-color: var(--muted); }
 .rating-pick[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
 
-/* daily check-in on the Diário */
-.check-in { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
-.check-in-title { font: 500 22px/1.2 var(--font-serif); }
+/* how the user feels, on the Diário */
+.feeling-card { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+.feeling-title { font: 500 22px/1.2 var(--font-serif); }
 .rating-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 6px 12px; }
 .rating-label { display: flex; flex-direction: column; font-size: 14px; font-weight: 600; color: var(--ink); }
 .rating-hint { font-size: 12px; font-weight: 400; color: var(--muted); }
-.check-in-watch { grid-column: 2; font-size: 13px; color: var(--ink-2); }
-.check-in > p { margin: 0; }
+.feeling-watch { grid-column: 2; font-size: 13px; color: var(--ink-2); }
+.feeling-card > p { margin: 0; }
 .backup-done { margin: 0; font-size: 14px; color: var(--ink-2); flex: 1 1 100%; }
 .health-import { display: flex; flex-direction: column; gap: 12px; padding-inline: 16px; }
 .health-import > .secondary { align-self: flex-start; }
@@ -553,10 +553,10 @@ small { font-size: 0.85em; color: var(--muted); }
   .ingredient { grid-template-columns: minmax(0, 1fr) auto; }
   .ingredient-name { grid-column: 1 / -1; }
   .session, .workout-day { padding: 16px; gap: 12px; }
-  .body-log, .check-in { padding: 14px 16px 16px; }
+  .body-log, .feeling-card { padding: 14px 16px 16px; }
   .rating-row { grid-template-columns: minmax(0, 1fr); }
   .rating-label { flex-direction: row; align-items: baseline; gap: 8px; }
-  .check-in-watch { grid-column: 1; }
+  .feeling-watch { grid-column: 1; }
   .rating-pick { padding: 4px 2px; font-size: 13px; }
   .session-title { font-size: 23px; }
   .workout-plan-title { font-size: 30px; }

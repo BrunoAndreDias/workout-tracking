@@ -146,3 +146,100 @@ export async function setGoals(page, goals) {
   await dialog.getByRole('button', { name: 'Guardar' }).click()
   await dialog.waitFor({ state: 'detached' })
 }
+
+/** The local calendar date as YYYY-MM-DD, which is the date the app calls today. */
+export const todayIso = () => new Date().toLocaleDateString('sv-SE')
+
+const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
+const monthYear = new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' })
+const localDate = (iso) => new Date(...iso.split('-').map((n, i) => Number(n) - (i === 1 ? 1 : 0)))
+
+/** Selects `date` (YYYY-MM-DD) in the Diário calendar, paging months as a user would. The Diário must already be open. */
+export async function openDay(page, date) {
+  const target = localDate(date)
+  const shown = await page.locator('#calendario-titulo').textContent()
+  const monthsAhead = Array.from({ length: 241 }, (_, i) => i - 120).find((k) => monthYear.format(new Date(target.getFullYear(), target.getMonth() + k, 1)) === shown)
+  if (monthsAhead === undefined) throw new FlowError(`the calendar shows "${shown}", too far from ${date}`, 'pick a date within ten years of the month shown')
+  const step = page.getByRole('button', { name: monthsAhead > 0 ? 'Mês anterior' : 'Mês seguinte', exact: true })
+  for (let i = 0; i < Math.abs(monthsAhead); i++) await step.click()
+  const label = longDate.format(target)
+  const day = page.getByRole('button', { name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(,|$)`) })
+  try {
+    await day.click()
+  } catch {
+    throw new FlowError(`no day button for ${date} in ${monthYear.format(target)}`, 'dates are YYYY-MM-DD and must exist in that month')
+  }
+  await page.getByRole('heading', { level: 2 }).filter({ hasText: label }).first().waitFor()
+}
+
+/** Starts the selected empty day from a plan (`plan`: its name), blank (`blank`) or by repeating the last logged day (`repeat`). */
+export async function startDay(page, { plan, blank }) {
+  const name = plan !== undefined ? `Começar com ${plan}` : blank ? 'Começar em branco' : null
+  const button = name ? page.getByRole('button', { name, exact: true }) : page.getByRole('button', { name: /^Repetir / })
+  try {
+    await button.waitFor()
+  } catch {
+    const starts = await page.locator('.day-start button').allTextContents()
+    if (starts.length === 0) throw new FlowError('this day cannot be started: it is already started, or in the future', 'pick another --date')
+    throw new FlowError(`no start button "${name ?? 'Repetir …'}"`, `start buttons on this day: ${starts.join(' | ')}`)
+  }
+  await button.click()
+  await page.getByRole('combobox', { name: 'Plano do dia' }).waitFor()
+}
+
+/** Moves planned food from a meal's "Do plano" tray to eaten: one food (`Usar <food>`), or the whole tray. */
+export async function eatFromPlan(page, mealName, food) {
+  const meal = await requireMeal(page, mealName)
+  const button = meal.getByRole('button', { name: food === undefined ? `Usar o plano em ${mealName}` : `Usar ${food}`, exact: true })
+  try {
+    await button.waitFor()
+  } catch {
+    const chips = await meal.locator('.plan-chip').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label').replace(/^Usar /, '')))
+    throw new FlowError(food === undefined ? `nothing left to use in ${mealName}` : `no planned food "${food}" in ${mealName}`, `food in the ${mealName} tray: ${chips.join(', ') || '(none: the meal has no plan food, or all of it is used)'}`)
+  }
+  await button.click()
+  await button.waitFor({ state: 'detached' })
+}
+
+/** Checks or unchecks an eaten row (`Comi <food>`). Food still in the tray has no row: use eatFromPlan. */
+export async function setEaten(page, mealName, food, eaten) {
+  const meal = await requireMeal(page, mealName)
+  const box = meal.getByRole('checkbox', { name: `Comi ${food}`, exact: true })
+  try {
+    await box.waitFor()
+  } catch {
+    const rows = await meal.locator('input[aria-label^="Comi "]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label').slice(5)))
+    throw new FlowError(`no eaten row "${food}" in ${mealName}`, `rows in ${mealName}: ${rows.join(', ') || '(none)'}; food still in the tray needs use-plan`)
+  }
+  if ((await box.isChecked()) === eaten) return
+  const row = await box.elementHandle()
+  await box.click()
+  await page.waitForFunction(([node, want]) => !node.isConnected || node.checked === want, [row, eaten])
+}
+
+/** Imports a plan meal's food into a Diário meal, checked as eaten. `label` is the option text (`<meal>` or `<meal> · <option>`), default the meal's own name. */
+export async function importPlan(page, mealName, label = mealName) {
+  const meal = await requireMeal(page, mealName)
+  const select = meal.getByRole('combobox', { name: `Importar do plano em ${mealName}` })
+  const before = await meal.locator('.entries li').count()
+  try {
+    await select.selectOption({ label }, { timeout: 1000 })
+  } catch {
+    const labels = (await select.locator('option').allTextContents()).filter((o) => !o.endsWith('…'))
+    throw new FlowError(`nothing to import as "${label}" into ${mealName}`, `plan meals with food: ${labels.join(' | ') || '(none: add food to the plan first, or this is not a started day)'}`)
+  }
+  await page.waitForFunction(([node, n]) => node.querySelectorAll('.entries li').length > n, [await meal.elementHandle(), before])
+}
+
+/** The ARIA snapshot of the named region (a meal card, `Corpo`, …), or of `main`. */
+export async function regionAria(page, region) {
+  if (region === undefined) return page.locator('main').ariaSnapshot()
+  const target = page.getByRole('region', { name: region, exact: true })
+  try {
+    await target.waitFor()
+  } catch {
+    const names = await page.locator('section[aria-label], section[aria-labelledby]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? document.getElementById(e.getAttribute('aria-labelledby'))?.textContent))
+    throw new FlowError(`no region named "${region}"`, `regions on the page: ${names.filter(Boolean).join(', ')}`)
+  }
+  return target.ariaSnapshot()
+}

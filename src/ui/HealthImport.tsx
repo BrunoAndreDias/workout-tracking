@@ -92,7 +92,7 @@ export function HealthImport({ log, onImport }: Props) {
         <Panel eyebrow="Apple Watch" title="Ligar Apple Watch" onClose={close}>
           <div className="panel-body backup-body health-import">
             <p className="health-latest">{latest ? `Último valor do relógio: ${formatDayMonth(latest)}` : 'Ainda não chegou nenhum valor do relógio.'}</p>
-            <p className="goals-hint">Um Atalho no iPhone envia os valores do relógio de ontem para a app todos os dias, sem tocar em nada. Enviar outra vez os mesmos dias só substitui os valores.</p>
+            <p className="goals-hint">Cada vez que corre, o Atalho no iPhone envia para a app os valores do relógio dos últimos 14 dias e de hoje. Basta corrê-lo de vez em quando, e enviar outra vez os mesmos dias só substitui os valores.</p>
             {shortcutError ? (
               <p className="backup-error" role="alert">
                 {shortcutError}
@@ -118,7 +118,7 @@ export function HealthImport({ log, onImport }: Props) {
                 Corre-o uma vez e toca em <strong>Permitir</strong> no pedido do Saúde.
               </li>
               <li>
-                Em Atalhos → Automação, cria uma automação diária (<strong>Hora do dia</strong>, <strong>Executar imediatamente</strong>) com este atalho.
+                Opcional: em Atalhos → Automação, cria uma automação (<strong>Hora do dia</strong>, <strong>Executar imediatamente</strong>), por exemplo diária ou semanal, com este atalho.
               </li>
             </ol>
             <p className="goals-hint">O atalho ainda não envia o sono nem as horas em pé.</p>

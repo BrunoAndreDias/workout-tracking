@@ -60,7 +60,7 @@ There is no service worker. The app needs the Mac's server for its data anyway, 
 
 ## Apple Watch import
 
-A web page cannot read HealthKit, so an iOS Shortcut does: once a day a Personal Automation runs it without a tap, and it posts the day's values to the app's server. `Ligar Apple Watch`, next to the backup buttons, leads with `Instalar atalho`, which downloads that Shortcut ready-made (see [Atalho iOS](#atalho-ios)), and shows the address it posts to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the install steps in short.
+A web page cannot read HealthKit, so an iOS Shortcut does: each run posts the last 14 days and today to the app's server, by hand or from an optional Personal Automation. `Ligar Apple Watch`, next to the backup buttons, leads with `Instalar atalho`, which downloads that Shortcut ready-made (see [Atalho iOS](#atalho-ios)), and shows the address it posts to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the install steps in short.
 
 **Untested on a device.** The endpoint, the signing, the panel and the merge are tested here (`server/storeApi.test.ts`, `server/healthShortcut.test.ts`, `e2e/watch.mjs`); the Shortcut and the automation have not run on an iPhone.
 
@@ -109,9 +109,9 @@ On the iPhone:
 1. Open the app at the Mac's network or VPN address (not `localhost`) and tap `Ligar Apple Watch` → `Instalar atalho`. Safari downloads the file; open it from the downloads.
 2. Tap **Add Shortcut** (`Adicionar atalho`).
 3. Run it once in Shortcuts and tap **Allow** (`Permitir`) on the Health sheet, for every type it asks for. The phone may also ask to reach devices on the local network: allow that too.
-4. In Shortcuts → Automation, add a **Time of Day** (`Hora do dia`) automation, daily, in the morning after you are up, set to **Run Immediately** (`Executar imediatamente`), running `Plano - Saude`. Health is locked while the iPhone is, so a run in the night can find nothing.
+4. Optional: run it by hand now and then, or in Shortcuts → Automation add a **Time of Day** (`Hora do dia`) automation, at any frequency (daily or weekly), set to **Run Immediately** (`Executar imediatamente`), running `Plano - Saude`. Health is locked while the iPhone is, so a run in the night can find nothing.
 
-It sends yesterday. For each metric below it finds the samples that started yesterday, grouped by day, so HealthKit sums or averages them and merges iPhone and Watch the way the Health app does, and when there are any it posts `{ "date", "metric", "value" }` to `/api/health`. A metric with no samples sends nothing. Values come in the unit the Health app shows, so Active Energy must show kcal there.
+It sends the last 14 days and today each time it runs. For each metric below it finds the samples that started in the last 15 days, grouped by day, sorted newest first and limited to 15 day groups. That is today plus the 14 days before, and it drops a partial oldest day when the window starts mid-day. Then it posts one `{ "date", "metric", "value" }` to `/api/health` per day and metric (up to 75 per run). A day with no samples sends nothing. Posting a day again replaces its value, so today's partial value is replaced by a fuller one on a later run. Values come in the unit the Health app shows, so Active Energy must show kcal there.
 
 | `metric` | Find Health Samples type | Day value |
 |---|---|---|

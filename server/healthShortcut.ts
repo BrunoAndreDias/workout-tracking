@@ -13,8 +13,8 @@ type NotInShortcut = 'standHours' | 'sleepMinutes'
 
 /**
  * Each metric's Health type as Find Health Samples names it, which is ActionKit's readable-type table, not the Health
- * app's label (see docs/research/ios-shortcut-plist.md). All are quantity types, so grouping by day makes HealthKit sum
- * the cumulative ones and average resting heart rate, merging iPhone and Watch the way the Health app does.
+ * app's label (see docs/research/ios-shortcut-plist.md). All are quantity types, so grouping by day sums the
+ * cumulative ones and averages resting heart rate.
  */
 const SHORTCUT_HEALTH_TYPES = {
   standMinutes: 'Stand Time',
@@ -37,13 +37,22 @@ const attachment = (ref: Output) => ({ Value: ref, WFSerializationType: 'WFTextT
 const tokenText = (ref: Output) => ({ Value: { string: OBJECT_REPLACEMENT, attachmentsByRange: { '{0, 1}': ref } }, WFSerializationType: 'WFTextTokenString' })
 const plainText = (text: string) => ({ Value: { string: text, attachmentsByRange: {} }, WFSerializationType: 'WFTextTokenString' })
 const action = (id: string, parameters: Record<string, Plist>) => ({ WFWorkflowActionIdentifier: `is.workflow.actions.${id}`, WFWorkflowActionParameters: parameters })
-const duration = (magnitude: number, unit: 'days' | 'sec') => ({ Value: { Magnitude: String(magnitude), Unit: unit }, WFSerializationType: 'WFQuantityFieldValue' })
+const REPEAT_ITEM = { Type: 'Variable', VariableName: 'Repeat Item' } as const
+const repeatItem = { Value: REPEAT_ITEM, WFSerializationType: 'WFTextTokenAttachment' }
+const repeatItemText = { Value: { string: OBJECT_REPLACEMENT, attachmentsByRange: { '{0, 1}': REPEAT_ITEM } }, WFSerializationType: 'WFTextTokenString' }
+
+/** Days posted besides today. */
+const DAYS_BEFORE_TODAY = 14
 
 /** Stable UUIDs, so the same address always builds the same plist. */
 const uuid = (n: number) => `5A1DE000-0000-4000-8000-${n.toString(16).toUpperCase().padStart(12, '0')}`
 
-/** Find Health Samples of one type started yesterday, as one sample per day; empty when Health has none. */
-function findYesterday(id: string, type: string, from: Output, to: Output) {
+/**
+ * Find Health Samples of one type, one sample per day, newest first. The 15-day window can start mid-day, so its oldest
+ * day may be partial. The limit keeps today and the 14 days before it and drops that partial day.
+ */
+function findRecentDays(id: string, type: string) {
+  const window = DAYS_BEFORE_TODAY + 1
   return action('filter.health.quantity', {
     UUID: id,
     WFContentItemFilter: {
@@ -52,18 +61,22 @@ function findYesterday(id: string, type: string, from: Output, to: Output) {
         WFContentPredicateBoundedDate: false,
         WFActionParameterFilterTemplates: [
           { Bounded: true, Operator: 4, Property: 'Type', Removable: false, Values: { Enumeration: { Value: type, WFSerializationType: 'WFStringSubstitutableState' } } },
-          { Bounded: true, Operator: 1003, Property: 'Start Date', Removable: false, Values: { Date: attachment(from), AnotherDate: attachment(to) } },
+          { Bounded: true, Operator: 1001, Property: 'Start Date', Removable: false, Values: { Unit: 16, Number: String(window) } },
         ],
       },
       WFSerializationType: 'WFContentPredicateTableTemplate',
     },
     WFHKSampleFilteringGroupBy: 'Day',
     WFHKSampleFilteringFillMissing: false,
+    WFContentItemSortProperty: 'Start Date',
+    WFContentItemSortOrder: 'Latest First',
+    WFContentItemLimitEnabled: true,
+    WFContentItemLimitNumber: window,
   })
 }
 
 /** POSTs `{ date, metric, value }`, a flat JSON body, the one request shape Shortcuts builds without nesting. */
-function postSample(id: string, postUrl: string, day: Output, metric: ShortcutMetric, value: Output) {
+function postSample(id: string, postUrl: string, day: Output, metric: ShortcutMetric) {
   const field = (type: 0 | 3, key: string, val: Plist) => ({ WFItemType: type, WFKey: plainText(key), WFValue: val })
   return action('downloadurl', {
     UUID: id,
@@ -71,39 +84,31 @@ function postSample(id: string, postUrl: string, day: Output, metric: ShortcutMe
     WFHTTPMethod: 'POST',
     WFHTTPBodyType: 'JSON',
     WFJSONValues: {
-      Value: { WFDictionaryFieldValueItems: [field(0, 'date', tokenText(day)), field(0, 'metric', plainText(metric)), field(3, 'value', tokenText(value))] },
+      Value: { WFDictionaryFieldValueItems: [field(0, 'date', tokenText(day)), field(0, 'metric', plainText(metric)), field(3, 'value', repeatItemText)] },
       WFSerializationType: 'WFDictionaryFieldValue',
     },
   })
 }
 
 /**
- * The unsigned Shortcut: works out yesterday as `yyyy-MM-dd`, then for each metric finds yesterday's samples and, when
- * there are any, posts that day's value to `postUrl`. A metric with no samples sends nothing rather than 0.
+ * The unsigned Shortcut: for each metric, finds today and the 14 days before as one sample per day and posts each day's
+ * value to `postUrl`. A day with no samples sends nothing rather than 0.
  */
 export function shortcutFor(postUrl: string): Plist {
   let next = 0
   const id = () => uuid(++next)
-  const now = output(id(), 'Date')
-  const today = output(id(), 'Start of Today')
-  const yesterday = output(id(), 'Yesterday')
-  const yesterdayEnd = output(id(), 'End of Yesterday')
-  const day = output(id(), 'Formatted Date')
-  const dates = [
-    action('date', { UUID: now.OutputUUID, WFDateActionMode: 'Current Date' }),
-    action('adjustdate', { UUID: today.OutputUUID, WFDate: tokenText(now), WFAdjustOperation: 'Get Start of Day' }),
-    action('adjustdate', { UUID: yesterday.OutputUUID, WFDate: tokenText(today), WFAdjustOperation: 'Subtract', WFDuration: duration(1, 'days') }),
-    action('adjustdate', { UUID: yesterdayEnd.OutputUUID, WFDate: tokenText(today), WFAdjustOperation: 'Subtract', WFDuration: duration(1, 'sec') }),
-    action('format.date', { UUID: day.OutputUUID, WFDate: tokenText(yesterday), WFDateFormatStyle: 'Custom', WFDateFormat: 'yyyy-MM-dd' }),
-  ]
   const perMetric = (Object.entries(SHORTCUT_HEALTH_TYPES) as [ShortcutMetric, string][]).flatMap(([metric, type]) => {
     const samples = output(id(), 'Health Samples')
+    const startDate = output(id(), 'Details of Health Samples')
+    const day = output(id(), 'Formatted Date')
     const group = id()
     return [
-      findYesterday(samples.OutputUUID, type, yesterday, yesterdayEnd),
-      action('conditional', { GroupingIdentifier: group, WFControlFlowMode: 0, WFCondition: 100, WFInput: { Type: 'Variable', Variable: attachment(samples) } }),
-      postSample(id(), postUrl, day, metric, samples),
-      action('conditional', { GroupingIdentifier: group, WFControlFlowMode: 2 }),
+      findRecentDays(samples.OutputUUID, type),
+      action('repeat.each', { GroupingIdentifier: group, WFControlFlowMode: 0, WFInput: attachment(samples) }),
+      action('properties.health.quantity', { UUID: startDate.OutputUUID, WFContentItemPropertyName: 'Start Date', WFInput: repeatItem }),
+      action('format.date', { UUID: day.OutputUUID, WFDate: tokenText(startDate), WFDateFormatStyle: 'Custom', WFDateFormat: 'yyyy-MM-dd' }),
+      postSample(id(), postUrl, day, metric),
+      action('repeat.each', { GroupingIdentifier: group, UUID: id(), WFControlFlowMode: 2 }),
     ]
   })
   return {
@@ -114,7 +119,7 @@ export function shortcutFor(postUrl: string): Plist {
     WFWorkflowTypes: [],
     WFWorkflowInputContentItemClasses: [],
     WFWorkflowImportQuestions: [],
-    WFWorkflowActions: [...dates, ...perMetric],
+    WFWorkflowActions: perMetric,
   }
 }
 

@@ -1,3 +1,5 @@
+import type { Rating } from './body.ts'
+import { addDays } from './days.ts'
 import { editNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
@@ -45,6 +47,13 @@ export interface SessionExercise {
   readonly note?: TimedNote
 }
 
+/** How a session felt on a later date: soreness, pain, recovery. `exerciseId` null is the session as a whole. */
+export interface AfterEffect {
+  readonly date: IsoDate
+  readonly exerciseId: ExerciseId | null
+  readonly note: TimedNote
+}
+
 /** `workoutDayId` is the day it started from, null for a blank session; the day may since have been deleted. */
 export interface WorkoutSession {
   readonly id: WorkoutSessionId
@@ -53,6 +62,10 @@ export interface WorkoutSession {
   readonly exercises: readonly SessionExercise[]
   /** About the workout as a whole. */
   readonly note?: TimedNote
+  /** How the user felt at the end of it. */
+  readonly feel?: Rating
+  /** At most one per date and Exercise, each dated after the session, on the session or one of its Exercises. Never empty. */
+  readonly after?: readonly AfterEffect[]
 }
 
 /** `activePlanId` is null only when there are no plans. */
@@ -126,6 +139,15 @@ export function loggedCounts(session: WorkoutSession): { exercises: number; sets
 
 export const sessionsOn = (sessions: readonly WorkoutSession[], date: IsoDate): WorkoutSession[] => sessions.filter((s) => s.date === date)
 
+/** An injury can show a day or two late, so a session stays open to After-effects for this many days after it. */
+export const AFTER_EFFECT_DAYS = 3
+
+/** The sessions 1 to AFTER_EFFECT_DAYS days before `date`, newest first. */
+export function recentSessions(sessions: readonly WorkoutSession[], date: IsoDate): WorkoutSession[] {
+  const from = addDays(date, -AFTER_EFFECT_DAYS)
+  return sessions.filter((s) => s.date >= from && s.date < date).sort((a, b) => b.date.localeCompare(a.date))
+}
+
 export function findDay(plans: readonly WorkoutPlan[], dayId: WorkoutDayId): WorkoutDay | undefined {
   for (const plan of plans) {
     const day = plan.days.find((d) => d.id === dayId)
@@ -155,13 +177,27 @@ export type WorkoutAction =
   | { type: 'removeSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number }
   | { type: 'setExerciseNote'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; text: string; now: LocalDateTime }
   | { type: 'setSessionNote'; sessionId: WorkoutSessionId; text: string; now: LocalDateTime }
+  | { type: 'setSessionFeel'; sessionId: WorkoutSessionId; feel: Rating | null }
+  | { type: 'setAfterEffect'; sessionId: WorkoutSessionId; date: IsoDate; exerciseId: ExerciseId | null; text: string; now: LocalDateTime }
   | { type: 'deleteSession'; sessionId: WorkoutSessionId }
 
-/** `note` set, or the key left out when there is none, so a stored document never holds `note: undefined`. */
-function withNote<T extends { note?: TimedNote }>(item: T, note: TimedNote | undefined): T {
-  if (note === item.note) return item
-  const { note: _, ...rest } = item
-  return (note ? { ...rest, note } : rest) as T
+/** `key` set, or left out when `value` is undefined, so a stored document never holds `key: undefined`. */
+function withOptional<T, K extends keyof T>(item: T, key: K, value: T[K] | undefined): T {
+  if (value === item[key]) return item
+  const { [key]: _, ...rest } = item
+  return (value === undefined ? rest : { ...rest, [key]: value }) as T
+}
+
+/** Blank text removes the After-effect, and the session's list goes when it empties. */
+function editAfterEffect(session: WorkoutSession, date: IsoDate, exerciseId: ExerciseId | null, text: string, now: LocalDateTime): WorkoutSession {
+  if (date <= session.date || (exerciseId !== null && !session.exercises.some((e) => e.exerciseId === exerciseId))) return session
+  const after = session.after ?? []
+  const i = after.findIndex((a) => a.date === date && a.exerciseId === exerciseId)
+  const note = editNote(after[i]?.note, text, now)
+  if (note === after[i]?.note) return session
+  const rest = after.filter((_, j) => j !== i)
+  const next = !note ? rest : i === -1 ? [...after, { date, exerciseId, note }] : after.map((a, j) => (j === i ? { ...a, note } : a))
+  return withOptional(session, 'after', next.length > 0 ? next : undefined)
 }
 
 const DEFAULT_PLANNED = { sets: 3, reps: { min: 8, max: 12 } } as const
@@ -231,7 +267,10 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       })
     }
     case 'removeSessionExercise':
-      return updateSession(state, action.sessionId, (s) => ({ ...s, exercises: s.exercises.filter((e) => e.exerciseId !== action.exerciseId) }))
+      return updateSession(state, action.sessionId, (s) => {
+        const after = s.after?.filter((a) => a.exerciseId !== action.exerciseId)
+        return withOptional({ ...s, exercises: s.exercises.filter((e) => e.exerciseId !== action.exerciseId) }, 'after', after?.length ? after : undefined)
+      })
     case 'addSet':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => [...sets, sets[sets.length - 1] ?? EMPTY_SET])
     case 'setSet':
@@ -239,9 +278,13 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'removeSet':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.filter((_, i) => i !== action.index))
     case 'setExerciseNote':
-      return updateExercise(state, action.sessionId, action.exerciseId, (e) => withNote(e, editNote(e.note, action.text, action.now)))
+      return updateExercise(state, action.sessionId, action.exerciseId, (e) => withOptional(e, 'note', editNote(e.note, action.text, action.now)))
     case 'setSessionNote':
-      return updateSession(state, action.sessionId, (s) => withNote(s, editNote(s.note, action.text, action.now)))
+      return updateSession(state, action.sessionId, (s) => withOptional(s, 'note', editNote(s.note, action.text, action.now)))
+    case 'setSessionFeel':
+      return updateSession(state, action.sessionId, (s) => withOptional(s, 'feel', action.feel ?? undefined))
+    case 'setAfterEffect':
+      return updateSession(state, action.sessionId, (s) => editAfterEffect(s, action.date, action.exerciseId, action.text, action.now))
     case 'deleteSession':
       return { ...state, sessions: state.sessions.filter((s) => s.id !== action.sessionId) }
   }

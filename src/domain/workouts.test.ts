@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { emptyWorkouts, loggedCounts, parseRepRange, prefillSets, startSession, workoutReducer } from './workouts.ts'
+import { emptyWorkouts, loggedCounts, parseRepRange, prefillSets, recentSessions, startSession, workoutReducer } from './workouts.ts'
 import type { WorkoutAction, WorkoutDay, WorkoutSession, WorkoutState } from './workouts.ts'
 
 const SUPINO = 'ex-supino' as ExerciseId
@@ -191,5 +191,58 @@ describe('exercise notes', () => {
       start,
     )
     expect(Object.keys(s.sessions[0].exercises[1])).toEqual(['exerciseId', 'sets'])
+  })
+})
+
+describe('end feel and After-effects', () => {
+  const S1 = 's1' as WorkoutSessionId
+  const at = (s: string) => s as LocalDateTime
+  const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
+  const after = (on: string, exerciseId: ExerciseId | null, text: string, now: string): WorkoutAction => ({ type: 'setAfterEffect', sessionId: S1, date: date(on), exerciseId, text, now: at(now) })
+
+  it('rates how the session felt at its end, and null removes the key', () => {
+    const rated = run([{ type: 'setSessionFeel', sessionId: S1, feel: 2 }, { type: 'setSessionFeel', sessionId: S1, feel: 4 }], start)
+    expect(rated.sessions[0].feel).toBe(4)
+    expect(Object.keys(run([{ type: 'setSessionFeel', sessionId: S1, feel: null }], rated).sessions[0])).toEqual(['id', 'date', 'workoutDayId', 'exercises'])
+  })
+
+  it('keeps one After-effect per later date and Exercise, with when it was written and last edited', () => {
+    const s = run(
+      [
+        after('2026-10-07', null, 'Pernas pesadas', '2026-10-07T08:00:00'),
+        after('2026-10-07', SUPINO, 'Ombro dói', '2026-10-07T08:05:00'),
+        after('2026-10-08', SUPINO, 'Ombro melhor', '2026-10-08T09:00:00'),
+        after('2026-10-07', SUPINO, 'Ombro dói ao levantar o braço', '2026-10-07T21:30:00'),
+      ],
+      start,
+    )
+    expect(s.sessions[0].after).toEqual([
+      { date: '2026-10-07', exerciseId: null, note: { text: 'Pernas pesadas', createdAt: '2026-10-07T08:00:00', updatedAt: '2026-10-07T08:00:00' } },
+      { date: '2026-10-07', exerciseId: SUPINO, note: { text: 'Ombro dói ao levantar o braço', createdAt: '2026-10-07T08:05:00', updatedAt: '2026-10-07T21:30:00' } },
+      { date: '2026-10-08', exerciseId: SUPINO, note: { text: 'Ombro melhor', createdAt: '2026-10-08T09:00:00', updatedAt: '2026-10-08T09:00:00' } },
+    ])
+  })
+
+  it('removes an After-effect cleared to blank, and the key with the last one', () => {
+    const two = run([after('2026-10-07', null, 'Pernas pesadas', '2026-10-07T08:00:00'), after('2026-10-08', REMO, 'Costas ok', '2026-10-08T08:00:00')], start)
+    const one = run([after('2026-10-07', null, ' ', '2026-10-07T09:00:00')], two)
+    expect(one.sessions[0].after?.map((a) => a.note.text)).toEqual(['Costas ok'])
+    expect('after' in run([after('2026-10-08', REMO, '', '2026-10-08T09:00:00')], one).sessions[0]).toBe(false)
+  })
+
+  it('ignores an After-effect on the session’s own date or on an Exercise it does not have', () => {
+    const s = run([after('2026-10-06', null, 'Hoje', '2026-10-06T20:00:00'), after('2026-10-07', 'ex-outro' as ExerciseId, 'Outro', '2026-10-07T08:00:00')], start)
+    expect(s.sessions[0]).toEqual(start.sessions[0])
+  })
+
+  it('removing an Exercise from the session removes its After-effects', () => {
+    const s = run([after('2026-10-07', SUPINO, 'Ombro dói', '2026-10-07T08:00:00'), after('2026-10-07', REMO, 'Costas ok', '2026-10-07T08:00:00'), { type: 'removeSessionExercise', sessionId: S1, exerciseId: SUPINO }], start)
+    expect(s.sessions[0].after?.map((a) => [a.exerciseId, a.note.text])).toEqual([[REMO, 'Costas ok']])
+  })
+
+  it('lists the sessions one to three days before a date, newest first', () => {
+    expect(recentSessions(HISTORY, date('2026-10-06')).map((s) => s.id)).toEqual(['s3', 's2'])
+    expect(recentSessions(HISTORY, date('2026-10-04')).map((s) => s.id)).toEqual(['s2', 's1'])
+    expect(recentSessions(HISTORY, date('2026-10-05')).map((s) => s.id)).toEqual(['s2'])
   })
 })

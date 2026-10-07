@@ -33,6 +33,7 @@ To run the built app on its own Node server:
 
 ```sh
 npm run serve          # builds, then serves dist/ and /api/stores on http://127.0.0.1:4173
+pnpm dev-read          # the same on all interfaces, printing the addresses for the iPhone on the Wi-Fi
 PORT=8080 PLANO_DB=/path/to/plano.sqlite npm run serve
 ```
 
@@ -49,7 +50,7 @@ The app installs on the iPhone home screen as a web app, with its own icon and n
 
 The phone must reach the server, the same as for the [Apple Watch import](#apple-watch-import):
 
-- **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open `http://<the Mac's local IP>:4173/` on the iPhone. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
+- **Same Wi-Fi.** `pnpm dev-read` (or `npm run dev-read`, the same as `HOST=0.0.0.0 npm run serve`) builds, serves on port 4173 and prints the addresses to open on the iPhone. Open the `http://<Mac name>.local:4173/` one. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
 - **Tailscale.** Install it on the Mac and the iPhone. `tailscale serve --bg 4173` gives an HTTPS address on your tailnet, and the server keeps listening on `127.0.0.1` only.
 
 The microphone needs HTTPS, so dictation works on the phone only through the Tailscale address. Over plain `http://` on the Wi-Fi, the rest of the app works and the mic button does not.
@@ -66,7 +67,7 @@ A web page cannot read HealthKit, so an iOS Shortcut does: each run posts the la
 
 The phone must reach the server. `npm run dev` and `npm run serve` listen on this machine only, so:
 
-- **Same Wi-Fi.** `HOST=0.0.0.0 npm run serve`, then open the app on the iPhone at `http://<the Mac's local IP>:4173/` and install the Shortcut from `Ligar Apple Watch` there. A `localhost` address works only on the Mac, and the panel says so. Everyone else on that Wi-Fi can then reach the app too, so do this only on a network you trust.
+- **Same Wi-Fi.** `pnpm dev-read` (or `npm run dev-read`) prints the addresses to open. Open the app on the iPhone at the `http://<Mac name>.local:4173/` one and install the Shortcut from `Ligar Apple Watch` there. Prefer the `.local` name over the IP, because it stays the same when the Mac gets a new IP and the Shortcut keeps working. Untested on a device: that the iPhone's Shortcuts resolves `.local` names (iOS supports mDNS, and the Mac resolves its own name). The printed IPs skip VPN tunnels such as `utun`, which the phone cannot reach. A `localhost` address works only on the Mac, and the panel says so. Everyone else on that Wi-Fi can then reach the app too, so do this only on a network you trust.
 - **Anywhere.** A private VPN such as Tailscale, with the iPhone and the Mac on it, and the Mac's VPN address in place of the local IP.
 
 The API has no login: anyone who reaches it reads and changes everything. Keep it on your own network or VPN, and never expose it to the internet.

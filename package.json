@@ -19,7 +19,8 @@
     "plano": "node scripts/plano.mjs",
     "eval:search": "node scripts/search-eval.ts",
     "check": "npm run typecheck && npm run lint && npm test && vite build && npm run e2e",
-    "serve": "npm run build && node server/serve.ts"
+    "serve": "npm run build && node server/serve.ts",
+    "dev-read": "HOST=0.0.0.0 npm run serve"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",

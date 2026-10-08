@@ -442,13 +442,6 @@ small { font-size: 0.85em; color: var(--muted); }
 .workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
 .workout-line-name { font-weight: 600; color: var(--ink); }
 
-/* body log */
-.body-log { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
-.body-log > p { margin: 0; }
-.body-label { width: 52px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
-.body-samples { display: flex; align-items: baseline; gap: 4px 12px; font-size: 14px; color: var(--ink-2); }
-.body-samples .body-label { flex: none; }
-
 /* the 1–5 rating scale */
 .rating-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: 520px; }
 .rating-pick { min-height: 44px; padding: 4px 6px; border-radius: 10px; border: 1px solid var(--input-border); background: var(--surface); font-size: 14px; font-weight: 500; line-height: 1.2; }
@@ -553,7 +546,7 @@ small { font-size: 0.85em; color: var(--muted); }
   .ingredient { grid-template-columns: minmax(0, 1fr) auto; }
   .ingredient-name { grid-column: 1 / -1; }
   .session, .workout-day { padding: 16px; gap: 12px; }
-  .body-log, .feeling-card { padding: 14px 16px 16px; }
+  .feeling-card { padding: 14px 16px 16px; }
   .rating-row { grid-template-columns: minmax(0, 1fr); }
   .rating-label { flex-direction: row; align-items: baseline; gap: 8px; }
   .feeling-watch { grid-column: 1; }
@@ -610,16 +603,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-quiet .ov-col, .ov-quiet .ov-value:not(.met, .under, .over) { font-weight: 500; color: var(--muted); }
 .ov-quiet .ov-sub { font-size: 11px; }
 
-/* corpo */
-.body-days th, .body-days td { padding: 4px 0 4px 8px; text-align: left; }
-.body-days thead th { font-size: 12px; font-weight: 500; color: var(--muted); }
-.body-days tbody th { font-weight: 500; white-space: nowrap; }
-.body-days .link-btn { color: var(--ink); min-height: 44px; }
-.body-days tr[aria-current='date'] { background: var(--accent-tint); }
-.body-days tr[aria-current='date'] .link-btn { font-weight: 600; }
-
 @media (max-width: 640px) {
   .ov-card { padding: 12px 16px 14px; }
   .ruled-table { font-size: 13px; }
-  .body-days th, .body-days td { padding-left: 6px; }
 }

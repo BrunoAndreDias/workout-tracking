@@ -3,17 +3,17 @@ import { isRecord } from './persistence.ts'
 import type { IsoDate } from './types.ts'
 
 /**
- * What the Apple Watch reports per day. `show` writes one value as the Corpo card reads it, from the value already formatted.
+ * What the Apple Watch reports per day.
  * `unit` is null when the formatted value needs none: steps are a plain count, and sleep reads as `7 h 32 min`.
  */
 export const HEALTH_METRICS = [
-  { key: 'standHours', label: 'Horas em pé', unit: 'h', show: (v: string) => `Em pé ${v} h` },
-  { key: 'standMinutes', label: 'Tempo em pé', unit: 'min', show: (v: string) => `Em pé ${v} min` },
-  { key: 'steps', label: 'Passos', unit: null, show: (v: string) => `${v} passos` },
-  { key: 'activeEnergy', label: 'Energia ativa', unit: 'kcal', show: (v: string) => `${v} kcal ativas` },
-  { key: 'exerciseMinutes', label: 'Exercício', unit: 'min', show: (v: string) => `Exercício ${v} min` },
-  { key: 'sleepMinutes', label: 'Sono', unit: null, show: (v: string) => `Sono ${v}` },
-  { key: 'restingHeartRate', label: 'FC em repouso', unit: 'bpm', show: (v: string) => `FC em repouso ${v} bpm` },
+  { key: 'standHours', label: 'Horas em pé', unit: 'h' },
+  { key: 'standMinutes', label: 'Tempo em pé', unit: 'min' },
+  { key: 'steps', label: 'Passos', unit: null },
+  { key: 'activeEnergy', label: 'Energia ativa', unit: 'kcal' },
+  { key: 'exerciseMinutes', label: 'Exercício', unit: 'min' },
+  { key: 'sleepMinutes', label: 'Sono', unit: null },
+  { key: 'restingHeartRate', label: 'FC em repouso', unit: 'bpm' },
 ] as const
 
 export type HealthMetric = (typeof HEALTH_METRICS)[number]['key']

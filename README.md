@@ -2,7 +2,7 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
-The app opens on the `Diário`: a calendar that marks trained days and how you felt, a `Como te sentes` card where you rate the night's sleep and the day's mood and write a mood note, and the selected date's day, week and month across food, training, how you felt, and the watch. The tabs are `Diário`, `Treino`, `Alimentação` and `Corpo`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise, how each session felt at its end, and, on the following days, how it still feels, for the whole session or one exercise, so an injury that shows a day or two late can be followed. The `Corpo` tab shows, per date, the day's Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` and the `Diário` (see [Workouts from the Health export](#workouts-from-the-health-export)).
+The app opens on the `Diário`: a calendar that marks trained days and how you felt, a `Como te sentes` card where you rate the night's sleep and the day's mood and write a mood note, and the selected date's day, week and month across food, training, how you felt, and the watch. The tabs are `Diário`, `Treino` and `Alimentação`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise, how each session felt at its end, and, on the following days, how it still feels, for the whole session or one exercise, so an injury that shows a day or two late can be followed. The Diário's `Relógio` card shows the Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` and the `Diário` (see [Workouts from the Health export](#workouts-from-the-health-export)).
 
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
@@ -87,15 +87,15 @@ It answers `200 { "count": 2, "from": "2026-10-05", "to": "2026-10-05" }`. A bod
 
 A bare list of the same objects works too, and so does one object on its own, which is what the installed Shortcut posts. `date` is `YYYY-MM-DD`, `value` is a number of at least 0, and `metric` is one of:
 
-| `metric` | Unit | Shown as |
+| `metric` | Unit | Row in the Diário's Relógio card |
 |---|---|---|
-| `standHours` | h | Em pé 9 h |
-| `standMinutes` | min | Em pé 42 min |
-| `steps` | steps | 8 123 passos |
-| `activeEnergy` | kcal | 412 kcal ativas |
-| `exerciseMinutes` | min | Exercício 31 min |
-| `sleepMinutes` | min | Relógio: 7 h 11 min, beside the sleep rating on the Diário, and Sono 7 h 11 min on Corpo |
-| `restingHeartRate` | bpm | FC em repouso 54 bpm |
+| `standHours` | h | Horas em pé (h) 9 |
+| `standMinutes` | min | Tempo em pé (min) 42 |
+| `steps` | steps | Passos 8 123 |
+| `activeEnergy` | kcal | Energia ativa (kcal) 412 |
+| `exerciseMinutes` | min | Exercício (min) 31 |
+| `sleepMinutes` | min | Sono 7 h 11 min, and Relógio: 7 h 11 min beside the sleep rating |
+| `restingHeartRate` | bpm | FC em repouso (bpm) 54 |
 
 A date and metric already stored is overwritten, so sending the same values twice changes nothing. Any bad row (unknown metric, bad date, negative or non-number value, or a date and metric repeated in the paste) rejects the whole request or paste with a message naming the row, and nothing is stored. `sleepMinutes` belongs to the date you woke up, like a Sleep Entry.
 

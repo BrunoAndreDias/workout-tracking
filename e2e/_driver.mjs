@@ -228,7 +228,7 @@ export async function importPlan(page, mealName, label = mealName) {
   await page.waitForFunction(([node, n]) => node.querySelectorAll('.entries li').length > n, [await meal.elementHandle(), before])
 }
 
-/** The ARIA snapshot of the named region (a meal card, `Corpo`, …), or of `main`. */
+/** The ARIA snapshot of the named region (a meal card, `Relógio`, …), or of `main`. */
 export async function regionAria(page, region) {
   if (region === undefined) return page.locator('main').ariaSnapshot()
   const target = page.getByRole('region', { name: region, exact: true })
@@ -240,3 +240,16 @@ export async function regionAria(page, region) {
   }
   return target.ariaSnapshot()
 }
+
+/** The Diário's `Relógio` card, its Dia column as `<row> <value>` for each metric the date has, joined by ` · `. */
+export const watchDay = (page) =>
+  page
+    .getByRole('region', { name: 'Relógio', exact: true })
+    .locator('tbody tr')
+    .evaluateAll((rows) =>
+      rows
+        .map((tr) => [tr.querySelector('th').textContent, tr.querySelector('td .ov-value').textContent].map((t) => t.replace(/\s/g, ' ')))
+        .filter(([, value]) => value !== '—')
+        .map(([row, value]) => `${row} ${value}`)
+        .join(' · '),
+    )

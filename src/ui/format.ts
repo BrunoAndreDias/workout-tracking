@@ -1,6 +1,5 @@
 import { daysBetween, fromIsoDate } from '../domain/days.ts'
-import { healthMetric } from '../domain/health.ts'
-import type { HealthMetric, HealthSample } from '../domain/health.ts'
+import type { HealthMetric } from '../domain/health.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
 import { AFTER_EFFECT_DAYS, findDay } from '../domain/workouts.ts'
@@ -50,9 +49,6 @@ export const formatWatchWorkout = ({ start, minutes, kcal, km }: WatchWorkout) =
 
 /** A watch value as a number to show: sleep minutes as `7 h 32 min`, every other metric as a whole count. */
 export const formatWatchValue = (metric: HealthMetric, value: number) => (metric === 'sleepMinutes' ? formatDuration(value) : formatCount(value))
-
-/** "8 123 passos", "Sono 7 h 32 min" */
-export const formatWatch = ({ metric, value }: HealthSample) => healthMetric(metric).show(formatWatchValue(metric, value))
 
 export const formatPortionCount = (p: number) => one.format(Math.round(p * 10) / 10)
 

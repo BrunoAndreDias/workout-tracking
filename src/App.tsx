@@ -16,7 +16,6 @@ import { unitsReducer } from './domain/units.ts'
 import type { FoodUnit, UnitsAction } from './domain/units.ts'
 import { workoutReducer } from './domain/workouts.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
-import { CorpoView } from './ui/CorpoView.tsx'
 import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
 import { DayEditor } from './ui/DayEditor.tsx'
 import { DayLog } from './ui/DayLog.tsx'
@@ -37,7 +36,6 @@ const VIEWS = [
   { id: 'diario', label: 'Diário' },
   { id: 'treino', label: 'Treino' },
   { id: 'alimentacao', label: 'Alimentação' },
-  { id: 'corpo', label: 'Corpo' },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
@@ -51,7 +49,7 @@ const FOOD_TABS = [
 type FoodTab = (typeof FOOD_TABS)[number]['id']
 
 /**
- * `#diario/2026-10-06`, `#treino/2026-10-06` and `#corpo/2026-10-06` open that view on that date; a bare `#diario`, `#treino` or `#corpo`
+ * `#diario/2026-10-06` and `#treino/2026-10-06` open that view on that date; a bare `#diario` or `#treino`
  * opens on today and follows it past midnight.
  * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's,
  * `#alimentacao/historico` on the history. `#alimentacao` and any other argument open the plans. A malformed date reads as none.
@@ -251,15 +249,6 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
             {view === 'treino' && (
               <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} watch={watchWorkouts} />
-            )}
-            {view === 'corpo' && (
-              <CorpoView
-                // The watch has recorded nothing for a future date, so one opens today instead.
-                date={routeDate && routeDate <= today ? routeDate : today}
-                today={today}
-                onDate={(date) => (window.location.hash = `corpo/${date}`)}
-                health={health}
-              />
             )}
           </main>
           <BackupSection>

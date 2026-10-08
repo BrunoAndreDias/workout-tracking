@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { openFresh, readStored, reloadApp, synced } from './_driver.mjs'
+import { openFresh, readStored, reloadApp, synced, watchDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -11,7 +11,6 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await openFresh(page, URL)
-await page.goto(URL + '#corpo')
 
 const pad = (n) => String(n).padStart(2, '0')
 const now = new Date()
@@ -20,9 +19,8 @@ const today = iso(now)
 const yesterday = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12))
 const todayLabel = `${now.getDate()} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][now.getMonth()]}`
 const endpoint = new globalThis.URL('/api/health', URL).href
-const corpo = page.getByRole('region', { name: 'Corpo' })
+const relogio = page.getByRole('region', { name: 'Relógio', exact: true })
 const dialog = page.getByRole('dialog')
-const watchLine = () => corpo.locator('.body-samples').textContent().then((t) => t.replace(/\s/g, ' '))
 const serverHealth = async () => (await (await page.request.get(new globalThis.URL('/api/stores', URL).href)).json())['nutrition-tracking:health']
 const post = async (body) => {
   const res = await page.request.post(endpoint, { headers: { 'content-type': 'application/json' }, data: body })
@@ -30,7 +28,7 @@ const post = async (body) => {
 }
 const tabComesBack = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
 
-await corpo.waitFor()
+await relogio.waitFor()
 await page.getByRole('button', { name: 'Ligar Apple Watch' }).click()
 const urlField = dialog.getByRole('textbox', { name: 'Endereço do Atalho' })
 assert(await urlField.inputValue() === endpoint, `the panel shows the address the Shortcut calls (got ${await urlField.inputValue()})`)
@@ -63,11 +61,11 @@ const first = JSON.stringify({
 assert(JSON.stringify(await post(first)) === `{"status":200,"body":{"count":3,"from":"${yesterday}","to":"${today}"}}`, 'the server takes the Shortcut text')
 assert(JSON.stringify(await post(first)) === `{"status":200,"body":{"count":3,"from":"${yesterday}","to":"${today}"}}`, 'and takes it again')
 assert((await serverHealth()).rev === 1, 'posting the same text twice is one write')
-assert(await corpo.locator('.body-samples').count() === 0, 'the open tab has not looked yet')
+assert(await watchDay(page) === '', 'the open tab has not looked yet')
 
 await tabComesBack()
-await corpo.locator('.body-samples').waitFor()
-assert(await watchLine() === 'RelógioEm pé 9 h · 8 123 passos', `coming back to the tab shows the posted values (got ${await watchLine()})`)
+await page.waitForFunction(() => [...document.querySelectorAll('section:has(#ov-relogio) .ov-value')].some((v) => v.textContent !== '—'))
+assert(await watchDay(page) === 'Horas em pé (h) 9 · Passos 8 123', `coming back to the tab shows the posted values (got ${await watchDay(page)})`)
 await synced(page)
 assert((await serverHealth()).rev === 1, 'taking the server copy sends nothing back')
 assert(JSON.stringify((await readStored(page)).health) === (await serverHealth()).doc, 'the tab keeps the server copy')
@@ -88,9 +86,9 @@ assert(bad.status === 400 && bad.body.error === 'Valor n.º 2: a métrica "sitti
 assert((await serverHealth()).rev === 3, 'and changes nothing')
 
 await reloadApp(page)
-await corpo.waitFor()
-assert(await watchLine() === 'RelógioEm pé 9 h · 9 001 passos · 412 kcal ativas', `after a reload Corpo shows the newest values (got ${await watchLine()})`)
-await page.screenshot({ path: `${S}/watch-corpo.png`, fullPage: true })
+await relogio.waitFor()
+assert(await watchDay(page) === 'Horas em pé (h) 9 · Passos 9 001 · Energia ativa (kcal) 412', `after a reload the Diário shows the newest values (got ${await watchDay(page)})`)
+await relogio.screenshot({ path: `${S}/watch-relogio.png` })
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

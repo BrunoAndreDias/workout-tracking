@@ -15,6 +15,7 @@ export const STORE_KEY = {
   // Mood Notes took over the key of the Pain Entries they replaced, so the server's copy migrates where it is.
   moods: 'nutrition-tracking:pains',
   health: 'nutrition-tracking:health',
+  watchWorkouts: 'nutrition-tracking:watch-workouts',
 } as const
 
 export type StoreKey = (typeof STORE_KEY)[keyof typeof STORE_KEY]

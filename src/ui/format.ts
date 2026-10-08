@@ -2,6 +2,7 @@ import { fromIsoDate } from '../domain/days.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
 import { findDay } from '../domain/workouts.ts'
+import type { WatchWorkout } from '../domain/watchWorkouts.ts'
 import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
 
 const int = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0 })
@@ -32,14 +33,18 @@ export function formatAmount(v: number, unit: string): string {
   return two.format(v)
 }
 
-/** 452 -> "7 h 32 min"; a whole hour drops the minutes. */
-export function formatSleepDuration(minutes: number): string {
+/** 452 -> "7 h 32 min", 52.3 -> "52 min"; a whole hour drops the minutes. */
+export function formatDuration(minutes: number): string {
   const total = Math.round(minutes)
   const h = Math.floor(total / 60)
   const m = total % 60
   if (h === 0) return `${m} min`
   return m === 0 ? `${h} h` : `${h} h ${m} min`
 }
+
+/** "18:02 · 52 min · 311 kcal · 4,99 km", leaving out what the watch did not record. */
+export const formatWatchWorkout = ({ start, minutes, kcal, km }: WatchWorkout) =>
+  [start, formatDuration(minutes), kcal === undefined ? null : `${formatKcal(kcal)} kcal`, km === undefined ? null : `${two.format(km)} km`].filter(Boolean).join(' · ')
 
 export const formatPortionCount = (p: number) => one.format(Math.round(p * 10) / 10)
 

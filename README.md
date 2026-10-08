@@ -2,7 +2,7 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
-The app opens on the `Diário`: a calendar, and under it the selected date's day, week and month across food, training, sleep and mood, and the watch, each linking to the tab that logs it. The tabs are `Diário`, `Treino`, `Alimentação` and `Corpo`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. The `Corpo` tab logs, per date, the night's sleep (your wake-up rating plus the watch's duration), a Humor note for how you felt, and the day's Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)).
+The app opens on the `Diário`: a calendar, and under it the selected date's day, week and month across food, training, sleep and mood, and the watch, each linking to the tab that logs it. The tabs are `Diário`, `Treino`, `Alimentação` and `Corpo`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. The `Corpo` tab logs, per date, the night's sleep (your wake-up rating plus the watch's duration), a Humor note for how you felt, and the day's Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` and the `Diário` (see [Workouts from the Health export](#workouts-from-the-health-export)).
 
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
@@ -15,7 +15,7 @@ npm run dev            # http://localhost:5180
 
 ## Where the data lives
 
-Plans, day logs, custom foods, units, workouts, sleep, Humor notes and watch values live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`, and take the watch's values at `/api/health`.
+Plans, day logs, custom foods, units, workouts, sleep, Humor notes, watch values and watch workouts live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`, and take the watch's values at `/api/health`.
 
 The browser keeps a working copy in localStorage. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
@@ -125,6 +125,21 @@ It sends the last 14 days and today each time it runs. For each metric below it 
 It cannot send `sleepMinutes` or `standHours`. Their Health samples are categories (asleep or awake, stood or idle), and Shortcuts gives their value only as a word in the phone's language, so no filter in the Shortcut works on every phone. To send them, add your own blocks to the Shortcut: **Find Health Samples** of type `Sleep` or `Stand Hour` with the value filter your phone offers, then a sum of durations in minutes or a count, and a **Get Contents of URL** like the others.
 
 When the phone cannot reach the server yet, a hand-built Shortcut can end with **Copy to Clipboard**, then in the app tap `Ligar Apple Watch` → `Colar manualmente` → `Colar da área de transferência`, check the preview and tap `Importar`. A day with no rows at all is rejected as "Não há valores para importar."
+
+### Workouts from the Health export
+
+Shortcuts cannot read workouts: `Find Health Samples` has no workout type, and the only workout action logs one. The Health app's own export has them all, free and with no other app.
+
+1. On the iPhone, open Saúde, tap your profile picture, then `Exportar todos os dados de saúde`. It takes a while and gives `export.zip`.
+2. Save it to Ficheiros, or AirDrop it to the Mac.
+3. In the app, `Ligar Apple Watch` → `Treinos do relógio` → `Escolher ficheiro`, and pick `export.zip` (or the `export.xml` inside it).
+4. Check the preview (`132 treinos do relógio, de 3/1 a 6/10`) and tap `Importar treinos`.
+
+The file is read in the browser and never sent anywhere; only the workouts are kept, in the `watch-workouts` store, which syncs and goes into the Backup like the others. The app streams `export.xml` out of the zip (`src/zip.ts`, Zip64 too) and through a parser that keeps only the current element (`src/domain/watchWorkouts.ts`), so a multi-GB export never sits in memory. A Workout it cannot read is skipped, and the preview says how many. Importing the same export twice changes nothing.
+
+Each workout shows on `Treino` for its date, and as a line on the `Diário` and on `Alimentação` → `Hoje`, as `Relógio · Força tradicional · 18:02 · 52 min · 311 kcal` (and km when the watch has a distance). They do not count in the Diário's training numbers.
+
+**Untested on a device.** No real Health export was read here. The parser and the zip reader are tested on files built in the tests (`src/domain/watchWorkouts.test.ts`, `src/zip.test.ts`, `src/healthExport.test.ts`, `e2e/watch-workouts.mjs`).
 
 ## Data
 

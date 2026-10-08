@@ -447,6 +447,10 @@ small { font-size: 0.85em; color: var(--muted); }
 .health-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
 .health-steps strong { font-weight: 600; color: var(--ink); }
 .health-manual { border-top: 1px solid var(--rule); }
+.health-workouts { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.health-workouts > .secondary, .health-workouts > .primary { align-self: flex-start; }
+.health-workouts-title { margin: 0; font: 500 20px/1.3 var(--font-serif); }
+.watch-workouts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .health-manual summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; font-weight: 500; color: var(--ink); }
 .health-manual summary:hover { color: var(--accent); }
 .health-manual .health-import { padding: 0 0 16px; }

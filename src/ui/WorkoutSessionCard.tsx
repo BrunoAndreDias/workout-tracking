@@ -6,7 +6,9 @@ import type { Exercise, PlannedExercise, SessionExercise, WorkoutAction, Workout
 import { CountField } from './CountField.tsx'
 import { ExerciseAdder } from './ExerciseAdder.tsx'
 import { formatPlanned } from './format.ts'
+import { AfterEffects } from './AfterEffects.tsx'
 import { CloseIcon, PlusIcon } from './icons.tsx'
+import { RatingScale } from './RatingScale.tsx'
 import { TimedNoteField } from './TimedNoteField.tsx'
 
 interface Props {
@@ -51,6 +53,16 @@ export function WorkoutSessionCard({ session, day, title, exercises, dispatch }:
       <div className="session-foot">
         <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })} />
         <p className="hint muted">Sem kg é peso corporal.</p>
+        <div className="rating-row" role="group" aria-label="No fim do treino">
+          <span className="rating-label">No fim do treino</span>
+          <RatingScale label="No fim do treino" value={session.feel} onPick={(feel) => dispatch({ type: 'setSessionFeel', sessionId, feel })} />
+        </div>
+        {session.after && (
+          <div className="after" role="group" aria-label="Depois do treino">
+            <span className="rating-label">Depois do treino</span>
+            <AfterEffects session={session} effects={session.after} names={names} />
+          </div>
+        )}
         <TimedNoteField
           note={session.note}
           label="Notas do treino"

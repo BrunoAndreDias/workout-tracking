@@ -31,6 +31,11 @@ const SESSION = {
 }
 const PLAN = { id: 'p1', name: 'Força', days: [{ id: 'd1', name: 'Peito', exercises: [{ exerciseId: 'e1', sets: 4, reps: { min: 6, max: 6 } }] }] }
 
+const AFTER = [
+  { date: '2026-10-07', exerciseId: null, note: { text: 'Pernas pesadas', createdAt: '2026-10-07T08:10:00', updatedAt: '2026-10-07T08:10:00' } },
+  { date: '2026-10-08', exerciseId: 'e1', note: { text: 'Pulso ainda dói', createdAt: '2026-10-08T09:00:00', updatedAt: '2026-10-08T09:20:00' } },
+]
+
 describe('workout storage', () => {
   it('reads back what it saved', () => {
     const storage = memoryStorage()
@@ -39,6 +44,22 @@ describe('workout storage', () => {
     saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [SESSION] })!, storage)
     const { exercises, workoutPlans, workoutSessions } = loadAll(storage)
     expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], workoutPlans: { plans: [PLAN], activePlanId: 'p1' }, workoutSessions: [SESSION] })
+  })
+
+  it('reads back a session’s end feel and After-effects', () => {
+    const storage = memoryStorage()
+    saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [{ ...SESSION, feel: 4, after: AFTER }] })!, storage)
+    expect(loadStore(STORES.workoutSessions, storage)).toEqual([{ ...SESSION, feel: 4, after: AFTER }])
+  })
+
+  it('reads a session stored before end feel and After-effects with neither key', () => {
+    const [session] = parseWorkoutSessions({ version: 2, sessions: [SESSION] })!
+    expect(['feel' in session, 'after' in session]).toEqual([false, false])
+  })
+
+  it('reads an empty After-effects list as none', () => {
+    const [session] = parseWorkoutSessions({ version: 2, sessions: [{ ...SESSION, after: [] }] })!
+    expect(session).toEqual(SESSION)
   })
 
   it('starts empty when nothing was saved', () => {
@@ -63,6 +84,14 @@ describe('workout storage', () => {
     ['a blank note', { version: 2, sessions: [{ ...SESSION, note: { ...SESSION.note, text: '' } }] }],
     ['an exercise note with no times', { version: 2, sessions: [{ ...SESSION, exercises: [{ ...SESSION.exercises[0], note: { text: 'x' } }] }] }],
     ['a version 1 session without notes', { version: 1, sessions: [{ ...SESSION, note: undefined }] }],
+    ['an end feel of 0', { version: 2, sessions: [{ ...SESSION, feel: 0 }] }],
+    ['an end feel of null', { version: 2, sessions: [{ ...SESSION, feel: null }] }],
+    ['After-effects that are not a list', { version: 2, sessions: [{ ...SESSION, after: {} }] }],
+    ['an After-effect on the session’s own date', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], date: '2026-10-06' }] }] }],
+    ['an After-effect on an Exercise not in the session', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], exerciseId: 'e9' }] }] }],
+    ['an After-effect with no exerciseId key', { version: 2, sessions: [{ ...SESSION, after: [{ date: '2026-10-07', note: AFTER[0].note }] }] }],
+    ['an After-effect with a blank note', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], note: { ...AFTER[0].note, text: ' ' } }] }] }],
+    ['two After-effects on one date and Exercise', { version: 2, sessions: [{ ...SESSION, after: [AFTER[1], { ...AFTER[1], note: AFTER[0].note }] }] }],
   ])('rejects sessions with %s', (_, raw) => {
     expect(parseWorkoutSessions(raw)).toBe(null)
   })

@@ -2,7 +2,7 @@
 
 A private meal-planning web app. You keep day plans (for example "Dia de treino"), see calories and macros per meal and per day, and swap foods using the Portuguese APN equivalents table with a live preview of the effect on the meal and the day.
 
-The app opens on the `Diário`: a calendar, and under it the selected date's day, week and month across food, training, sleep and mood, and the watch, each linking to the tab that logs it. The tabs are `Diário`, `Treino`, `Alimentação` and `Corpo`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise. The `Corpo` tab logs, per date, the night's sleep (your wake-up rating plus the watch's duration), a Humor note for how you felt, and the day's Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` and the `Diário` (see [Workouts from the Health export](#workouts-from-the-health-export)).
+The app opens on the `Diário`: a calendar that marks trained days and how you felt, a `Como te sentes` card where you rate the night's sleep and the day's mood and write a mood note, and the selected date's day, week and month across food, training, how you felt, and the watch. The tabs are `Diário`, `Treino`, `Alimentação` and `Corpo`. `Alimentação` has three sub-tabs: `Planos` edits the meal plans, `Hoje` logs today's intake (or any date's), and `Histórico` reports on the logged days. A day on `Hoje` starts with the meals and goals of one of your plans, and each meal's `Importar` button picks a meal from any plan to add what you ate. A day repeated from an earlier one starts unchecked instead: each meal's unchecked food waits in a `Do plano` tray, where you use one food (`Usar <food>`) or the whole meal (`Usar o plano`). Only checked food counts. It is also a workout log. The `Treino` view holds your own workout plan (days, exercises, sets and rep ranges) and the sets you did each date, pre-filled from the last time you did each exercise, how each session felt at its end, and, on the following days, how it still feels, for the whole session or one exercise, so an injury that shows a day or two late can be followed. The `Corpo` tab shows, per date, the day's Apple Watch values, which an iOS Shortcut sends to the app each day (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` and the `Diário` (see [Workouts from the Health export](#workouts-from-the-health-export)).
 
 Personal use only. The food data comes from INSA's PortFIR table and the APN *Manual de Equivalentes Alimentares*, and both are "todos os direitos reservados". Do not deploy this publicly without written permission from both.
 
@@ -15,7 +15,7 @@ npm run dev            # http://localhost:5180
 
 ## Where the data lives
 
-Plans, day logs, custom foods, units, workouts, sleep, Humor notes, watch values and watch workouts live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`, and take the watch's values at `/api/health`.
+Plans, day logs, custom foods, units, workouts, sleep, mood ratings and notes, watch values and watch workouts live in a SQLite file on this machine, `~/.plano-alimentar/plano.sqlite`. Set `PLANO_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`, and take the watch's values at `/api/health`.
 
 The browser keeps a working copy in localStorage. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
@@ -94,7 +94,7 @@ A bare list of the same objects works too, and so does one object on its own, wh
 | `steps` | steps | 8 123 passos |
 | `activeEnergy` | kcal | 412 kcal ativas |
 | `exerciseMinutes` | min | Exercício 31 min |
-| `sleepMinutes` | min | Relógio: 7 h 11 min, beside the sleep rating |
+| `sleepMinutes` | min | Relógio: 7 h 11 min, beside the sleep rating on the Diário, and Sono 7 h 11 min on Corpo |
 | `restingHeartRate` | bpm | FC em repouso 54 bpm |
 
 A date and metric already stored is overwritten, so sending the same values twice changes nothing. Any bad row (unknown metric, bad date, negative or non-number value, or a date and metric repeated in the paste) rejects the whole request or paste with a message naming the row, and nothing is stored. `sleepMinutes` belongs to the date you woke up, like a Sleep Entry.
@@ -156,7 +156,7 @@ node scripts/unmapped-candidates.ts   # PortFIR candidates for APN labels mapped
 
 ## Dictation
 
-Every note has a mic button: plan, meal, Humor, exercise and workout notes. Speech is transcribed on the device with OpenAI's Whisper small model through Transformers.js, in a Web Worker. The first use downloads about 250 MB of model files (and the wasm runtime from jsdelivr), which the browser then caches. No audio leaves the device. `npm run e2e` caches the model under `e2e/.cache/` (gitignored) so only the first run downloads it.
+Every note has a mic button: plan, meal, mood, exercise, workout and after-workout notes. Speech is transcribed on the device with OpenAI's Whisper small model through Transformers.js, in a Web Worker. The first use downloads about 250 MB of model files (and the wasm runtime from jsdelivr), which the browser then caches. No audio leaves the device. `npm run e2e` caches the model under `e2e/.cache/` (gitignored) so only the first run downloads it.
 
 ## Checks
 

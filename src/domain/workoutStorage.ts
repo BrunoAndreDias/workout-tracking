@@ -1,14 +1,18 @@
+import { isRating } from './body.ts'
 import { parseIsoDate } from './days.ts'
-import { atTime, parseOptionalNote } from './notes.ts'
+import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './workouts.ts'
-import type { Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
+import type { AfterEffect, Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
 export const WORKOUT_PLANS_SCHEMA_VERSION = 1
-/** 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. */
+/**
+ * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. A session's
+ * optional `feel` and `after` came later without a new version: absent, they are none.
+ */
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 2
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
@@ -87,16 +91,35 @@ function legacyNote(notes: string, date: IsoDate): TimedNote | undefined {
   return { text: notes, createdAt: at, updatedAt: at }
 }
 
+function parseAfterEffect(raw: unknown, session: { date: IsoDate; exercises: readonly SessionExercise[] }): AfterEffect | null {
+  if (!isRecord(raw) || typeof raw.date !== 'string') return null
+  const date = parseIsoDate(raw.date)
+  const note = parseTimedNote(raw.note)
+  const exerciseId = raw.exerciseId as ExerciseId | null
+  if (!date || date <= session.date || !note || (exerciseId !== null && !session.exercises.some((e) => e.exerciseId === exerciseId))) return null
+  return { date, exerciseId, note }
+}
+
 function parseSession(raw: unknown, legacy: boolean): WorkoutSession | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string') return null
   const date = parseIsoDate(raw.date)
   if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
   if (legacy && typeof raw.notes !== 'string') return null
+  if (raw.feel !== undefined && !isRating(raw.feel)) return null
   const note = legacy ? legacyNote(raw.notes as string, date) : parseOptionalNote(raw.note)
   const exercises = parseList(raw.exercises, parseSessionExercise, (e) => e.exerciseId)
   if (!exercises || note === false) return null
-  const session = { id: raw.id as WorkoutSessionId, date, workoutDayId: raw.workoutDayId as WorkoutDayId | null, exercises }
-  return note ? { ...session, note } : session
+  const after = raw.after === undefined ? [] : parseList(raw.after, (r) => parseAfterEffect(r, { date, exercises }), (a) => `${a.date} ${a.exerciseId}`)
+  if (!after) return null
+  return {
+    id: raw.id as WorkoutSessionId,
+    date,
+    workoutDayId: raw.workoutDayId as WorkoutDayId | null,
+    exercises,
+    ...(note && { note }),
+    ...(raw.feel !== undefined && { feel: raw.feel }),
+    ...(after.length > 0 && { after }),
+  }
 }
 
 /** Versions 1 and 2; null for anything else, including one bad session or two with the same id. */

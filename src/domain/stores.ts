@@ -1,5 +1,5 @@
-import type { MoodLog } from './body.ts'
-import { MOODS_SCHEMA_VERSION, parseMoods, parseSleep, SLEEP_SCHEMA_VERSION } from './bodyStorage.ts'
+import type { FeelLog, MoodLog, Rating } from './body.ts'
+import { FEEL_SCHEMA_VERSION, MOODS_SCHEMA_VERSION, parseFeel, parseMoods, parseSleep, SLEEP_SCHEMA_VERSION } from './bodyStorage.ts'
 import type { SleepLog } from './bodyStorage.ts'
 import { FOODS_SCHEMA_VERSION, parseCustomFoods } from './customFoodsStorage.ts'
 import type { DayState } from './days.ts'
@@ -80,6 +80,14 @@ export const STORES = {
     fresh: () => [],
   }),
   sleep: store<SleepLog>({ key: STORE_KEY.sleep, label: 'sono', version: SLEEP_SCHEMA_VERSION, parse: parseSleep, toDoc: (sleep) => ({ entries: Object.values(sleep).sort(byDate) }), fresh: () => ({}) }),
+  feel: store<FeelLog>({
+    key: STORE_KEY.feel,
+    label: 'avaliação do humor',
+    version: FEEL_SCHEMA_VERSION,
+    parse: parseFeel,
+    toDoc: (feel) => ({ feel: (Object.entries(feel) as [IsoDate, Rating][]).map(([date, rating]) => ({ date, rating })).sort(byDate) }),
+    fresh: () => ({}),
+  }),
   moods: store<MoodLog>({
     key: STORE_KEY.moods,
     label: 'humor',

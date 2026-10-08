@@ -100,7 +100,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, stored.foods)
   const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, stored.units)
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, { exercises: stored.exercises, ...stored.workoutPlans, sessions: stored.workoutSessions })
-  const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, moods: stored.moods })
+  const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, feel: stored.feel, moods: stored.moods })
   const [health, setHealth] = useState(stored.health)
   const [watchWorkouts, setWatchWorkouts] = useState(stored.watchWorkouts)
   const [{ view, date: routeDate, foodTab }, setRoute] = useState(routeFromHash)
@@ -115,6 +115,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   useEffect(() => void saveStore(STORES.workoutPlans, { plans: workoutPlans, activePlanId }), [workoutPlans, activePlanId])
   useEffect(() => void saveStore(STORES.workoutSessions, workouts.sessions), [workouts.sessions])
   useEffect(() => void saveStore(STORES.sleep, body.sleep), [body.sleep])
+  useEffect(() => void saveStore(STORES.feel, body.feel), [body.feel])
   useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
   useEffect(() => void saveStore(STORES.health, health), [health])
   useEffect(() => void saveStore(STORES.watchWorkouts, watchWorkouts), [watchWorkouts])
@@ -235,6 +236,7 @@ export default function App({ sync }: { sync: Sync | null }) {
                 foods={foodsById}
                 workouts={workouts}
                 body={body}
+                dispatchBody={dispatchBody}
                 health={health}
                 watch={watchWorkouts}
               />
@@ -244,12 +246,10 @@ export default function App({ sync }: { sync: Sync | null }) {
             )}
             {view === 'corpo' && (
               <CorpoView
-                // Sleep and mood are logged on waking or after the fact, so a future date opens today instead.
+                // The watch has recorded nothing for a future date, so one opens today instead.
                 date={routeDate && routeDate <= today ? routeDate : today}
                 today={today}
                 onDate={(date) => (window.location.hash = `corpo/${date}`)}
-                body={body}
-                dispatchBody={dispatchBody}
                 health={health}
               />
             )}

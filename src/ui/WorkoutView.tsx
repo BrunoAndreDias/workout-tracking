@@ -7,6 +7,7 @@ import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
 import { findDay, sessionsOn } from '../domain/workouts.ts'
 import type { WorkoutAction, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import { DateStepper } from './DateStepper.tsx'
+import { RecentSessions } from './RecentSessions.tsx'
 import { sessionTitle } from './format.ts'
 import { WatchWorkoutLine } from './WorkoutLines.tsx'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
@@ -59,6 +60,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
       ) : (
         <>
           <DateStepper date={date} today={today} onDate={goTo} label="Data do treino" />
+          {date <= today && <RecentSessions state={state} date={date} dispatch={dispatch} />}
 
           {watched.length > 0 && (
             <ul className="watch-workouts" aria-label="Treinos do relógio">

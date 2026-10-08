@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync } from 'node:fs'
-import { createServer } from 'node:http'
+import { createServer, request } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 import { afterEach, describe, expect, it } from 'vitest'
 import { dbPath, openStores, storeHandler } from './storeApi.ts'
 import type { Stores } from './storeApi.ts'
@@ -64,6 +65,29 @@ describe('store API', () => {
     const one = async (key: string) => (await fetch(`${api.base}/${encodeURIComponent(key)}`)).json()
     expect(await one(PLANS)).toEqual({ doc: '{"version":3}', rev: 1 })
     expect(await one(SLEEP)).toEqual({ doc: null, rev: 0 })
+  })
+
+  it('sends a large answer compressed only to a request that accepts it, as the same JSON', async () => {
+    const api = await start()
+    const doc = JSON.stringify({ version: 1, entries: Array.from({ length: 200 }, (_, i) => ({ date: `2026-01-${i}`, quality: 3 })) })
+    await api.put(SLEEP, doc, null)
+    const raw = (acceptEncoding: string) =>
+      new Promise<{ encoding: string | undefined; body: Buffer }>((resolve, reject) => {
+        request(api.base, { headers: { 'accept-encoding': acceptEncoding } }, (res) => {
+          const chunks: Buffer[] = []
+          res.on('data', (c: Buffer) => chunks.push(c))
+          res.on('end', () => resolve({ encoding: res.headers['content-encoding'], body: Buffer.concat(chunks) }))
+        }).on('error', reject).end()
+      })
+    const gzip = await raw('gzip, deflate')
+    expect(gzip.encoding).toBe('gzip')
+    expect(JSON.parse(gunzipSync(gzip.body).toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
+    const br = await raw('gzip, deflate, br')
+    expect(br.encoding).toBe('br')
+    expect(JSON.parse(brotliDecompressSync(br.body).toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
+    const plain = await raw('identity')
+    expect(plain.encoding).toBeUndefined()
+    expect(JSON.parse(plain.body.toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
   })
 
   it('answers a stale rev with 409 and the current doc, and changes nothing', async () => {

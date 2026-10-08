@@ -3,7 +3,7 @@ import type { TimedNote } from './notes.ts'
 import { DEFAULT_GOALS } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
 import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, Meal, MealId, NutrientValues, OptionId, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { saveStore, STORES } from './stores.ts'
+import { loadStore, saveStore, STORES } from './stores.ts'
 
 function written(save: (storage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void }) => boolean): Record<string, string> {
   const data: Record<string, string> = {}
@@ -125,5 +125,37 @@ describe('the text each store writes', () => {
         "nutrition-tracking:health": "{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":58},{"date":"2026-10-05","metric":"standHours","value":10},{"date":"2026-10-05","metric":"steps","value":8000}]}",
       }
     `)
+  })
+})
+
+describe('saving a store as the app starts', () => {
+  const storageWith = (data: Record<string, string>) => {
+    const writes: string[] = []
+    return { writes, data, storage: { getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (writes.push(k), (data[k] = v)), removeItem: (k: string) => void delete data[k] } }
+  }
+  const SLEEP_TEXT = '{"version":1,"entries":[{"date":"2026-10-05","quality":4,"hours":7}]}'
+
+  it('leaves a store read at the current version as it was read, until it changes', () => {
+    const { writes, data, storage } = storageWith({ [STORES.sleep.key]: SLEEP_TEXT })
+    const sleep = loadStore(STORES.sleep, storage)
+    expect(saveStore(STORES.sleep, sleep, storage)).toBe(true)
+    expect(writes).toEqual([])
+    expect(data[STORES.sleep.key]).toBe(SLEEP_TEXT)
+    saveStore(STORES.sleep, { ...sleep, ['2026-10-06' as IsoDate]: { date: '2026-10-06' as IsoDate, quality: 2 } }, storage)
+    expect(data[STORES.sleep.key]).toBe('{"version":1,"entries":[{"date":"2026-10-05","quality":4},{"date":"2026-10-06","quality":2}]}')
+  })
+
+  it('writes the read value again once the stored text is another', () => {
+    const { data, storage } = storageWith({ [STORES.sleep.key]: SLEEP_TEXT })
+    const sleep = loadStore(STORES.sleep, storage)
+    data[STORES.sleep.key] = '{"version":1,"entries":[]}'
+    saveStore(STORES.sleep, sleep, storage)
+    expect(data[STORES.sleep.key]).toBe('{"version":1,"entries":[{"date":"2026-10-05","quality":4}]}')
+  })
+
+  it('writes a store read at an older version in the current one', () => {
+    const { data, storage } = storageWith({ [STORES.moods.key]: JSON.stringify({ version: 1, pains: [{ id: 'p1', date: '2026-10-06', region: 'lowerBack', intensity: 6, time: '07:30', note: '' }] }) })
+    saveStore(STORES.moods, loadStore(STORES.moods, storage), storage)
+    expect(JSON.parse(data[STORES.moods.key]).version).toBe(2)
   })
 })

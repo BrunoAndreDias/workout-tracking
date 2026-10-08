@@ -167,7 +167,10 @@ npm run lint
 npm run e2e              # every e2e/*.mjs against its own dev server (a free port per run, or `E2E_PORT`); screenshots in e2e/shots/
 npm run e2e -- units     # one script
 npm run check            # all of the above plus vite build: run before every commit
+npm run perf             # times opening the Diário and its daily taps on a year of data, at 4x CPU slowdown
 ```
+
+`npm run perf -- <baseline checkout> .` alternates runs between a baseline checkout and this one; `--net 40` adds a 40 Mbit/s link, as the phone has to the Mac, and `--profile <dir>` writes a CPU profile per scenario instead. Raw results go to `perf-results/`, which git ignores.
 
 `git config core.hooksPath .githooks` makes every `git push` run `npm run check` first. There is no CI, so private GitHub Actions minutes stay unused.
 

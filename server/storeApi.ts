@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { importSpan, parseHealthImport, upsertSamples } from '../src/domain/health.ts'
+import { endCompressed } from './compress.ts'
 import { signedShortcut } from './healthShortcut.ts'
 import { isStoreKey, STORE_KEY, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
@@ -114,8 +115,7 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
 const MAX_BODY_BYTES = 64 * 1024 * 1024
 
 function send(res: ServerResponse, status: number, body: unknown) {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
-  res.end(JSON.stringify(body))
+  endCompressed(res.req, res, status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, JSON.stringify(body))
 }
 
 async function readBody(req: IncomingMessage): Promise<string | null> {

@@ -138,10 +138,14 @@ An APN food group anchored on one nutrient amount per Portion, for example cerea
 The quantity of a Food equal to one Equivalent of its group. A Food Entry's portion count is its grams divided by that Food's Equivalent grams.
 _Avoid_: Serving, dose
 
+**Derived Equivalent**:
+An approximate Portion of a Food the APN table does not list, worked out at build time from the Food's fat, carbohydrate or protein per 100 g and its PortFIR category, and kept only when it lands near the grams APN gives that group. It only starts a Replacement Suggestion: a Food with a Derived Equivalent is never suggested for another, and a Food with an Equivalent never has one.
+_Avoid_: Estimated equivalent
+
 **Replacement Suggestion**:
-A Food from the same Equivalence Group as a Food Entry's Food, with grams converted so the Portion count is preserved. Suggestions from the same subgroup rank first.
+A Food from the same Equivalence Group as a Food Entry's Food, with grams converted so the Portion count is preserved. Suggestions from the same subgroup rank first. A Food outside the APN table starts from its Derived Equivalent, so its suggestions are approximate and all come from APN foods.
 _Avoid_: Automatic swap
 
 **Replacement Preview**:
-A comparison shown before replacing one Food Entry with another. It starts from the suggested grams (or equal calories for a Food outside the APN table), allows the grams to be edited or set to the replaced entry's own grams (for plans that prescribe grams), and shows the live effect on the Meal and Meal Plan totals.
+A comparison shown before replacing one Food Entry with another. It starts from the suggested grams (or equal calories for a Food with neither an Equivalent nor a Derived Equivalent), allows the grams to be edited or set to the replaced entry's own grams (for plans that prescribe grams), and shows the live effect on the Meal and Meal Plan totals.
 _Avoid_: Automatic swap, equivalent food

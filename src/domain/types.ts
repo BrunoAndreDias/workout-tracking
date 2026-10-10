@@ -121,9 +121,17 @@ export interface Equivalent {
   readonly portionGrams: number
 }
 
+/** A portion of a food the APN table does not list, worked out from its nutrients. It is the origin of swaps, never a candidate. */
+export interface DerivedEquivalent {
+  readonly groupId: string
+  readonly foodId: FoodId
+  readonly portionGrams: number
+}
+
 export interface EquivalenceTable {
   readonly groups: readonly EquivalenceGroup[]
   readonly equivalents: readonly Equivalent[]
+  readonly derived: readonly DerivedEquivalent[]
 }
 
 export interface FoodEntry {

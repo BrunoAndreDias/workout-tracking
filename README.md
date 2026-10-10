@@ -147,7 +147,7 @@ The source files live in `data/raw/` and are gitignored. They are `tca.xlsx` (th
 
 ```sh
 npm run import:portfir       # data/raw/tca.xlsx -> src/data/foods.json
-npm run build:equivalents    # data/apn-table.ts + data/apn-portfir-map.ts -> src/data/equivalents.json
+npm run build:equivalents    # data/apn-table.ts + data/apn-portfir-map.ts + PortFIR nutrients -> src/data/equivalents.json (APN rows plus derived portions)
 npm run check:equivalents    # outlier report: each portion vs its group's anchor nutrient
 node scripts/unmapped-candidates.ts   # PortFIR candidates for APN labels mapped to []
 ```

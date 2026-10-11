@@ -71,7 +71,6 @@ export const formatMonthName = (date: IsoDate) => monthName.format(fromIsoDate(d
 /** "outubro de 2026" */
 export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))
 
-/** "8–12", or "6" when the range is a single target, as for reps or RIR. */
 export const formatRange = ({ min, max }: { min: number; max: number }) => (min === max ? `${min}` : `${min}–${max}`)
 
 /** "3 × 8–12", or "4 × 6" when the range is a single target. */

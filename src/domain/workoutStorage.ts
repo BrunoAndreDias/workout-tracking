@@ -8,7 +8,6 @@ import { exerciseKey, isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, SessionExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
-/** 1 had the days on the plan; 2 has them in Training Blocks, and the cycle's start. */
 export const WORKOUT_PLANS_SCHEMA_VERSION = 2
 /**
  * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. A session's
@@ -87,8 +86,7 @@ function parsePlan(raw: unknown): WorkoutPlan | null {
   return start === false ? null : { id: raw.id as WorkoutPlanId, name: raw.name, blocks, start }
 }
 
-/** A version 1 plan's days become its one block, of the default length, and its cycle has not started. */
-function parseLegacyPlan(raw: unknown): WorkoutPlan | null {
+function parsePlanV1(raw: unknown): WorkoutPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
   const days = parseList(raw.days, parseDay)
   if (!days) return null
@@ -98,10 +96,9 @@ function parseLegacyPlan(raw: unknown): WorkoutPlan | null {
 
 const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
 
-/** Versions 1 and 2. Block ids are unique across the document and day ids within a plan, as version 1 required; the active plan must be one of the plans, and is null only when there are none. */
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
   if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
-  const plans = parseList(raw.plans, raw.version === 1 ? parseLegacyPlan : parsePlan, (p) => p.id)
+  const plans = parseList(raw.plans, raw.version === 1 ? parsePlanV1 : parsePlan, (p) => p.id)
   if (!plans) return null
   if (!isUnique(plans.flatMap((p) => p.blocks.map((b) => b.id)))) return null
   if (!plans.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null

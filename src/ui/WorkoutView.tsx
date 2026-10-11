@@ -22,7 +22,6 @@ interface Props {
   watch: WatchWorkoutLog
 }
 
-/** "Bloco A · semana 2 de 6 · RIR 5–6", or the block's name alone before the cycle starts. */
 function blockLine(block: WorkoutBlock, position: BlockPosition | null): string {
   if (!position) return block.name
   return [block.name, `semana ${position.week} de ${block.weeks}`, ...(position.rir ? [`RIR ${formatRange(position.rir)}`] : [])].join(' · ')
@@ -102,7 +101,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
             </button>
           ) : (
             <section className="card day-empty" aria-labelledby="comecar-treino">
-              {date <= today && position?.previous && <BlockNotice block={position.block} previous={position.previous} exercises={state.exercises} />}
+              {date <= today && position?.movedFrom && <BlockNotice block={position.block} previous={position.movedFrom} exercises={state.exercises} />}
               {date <= today && block && <p className="block-line">{blockLine(block, position)}</p>}
               <h2 id="comecar-treino" className="session-title">
                 {sessions.length > 0 ? 'Outro treino' : watched.length > 0 ? 'Registar as séries' : 'Sem treino registado'}

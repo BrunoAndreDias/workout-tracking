@@ -10,7 +10,6 @@ import { formatRange, plural } from './format.ts'
 import { CloseIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
 
-/** A range typed as "8-12" or "8"; `optional` lets an emptied box clear it. Shows "8–12" once it loses focus. */
 function RangeField<T extends RepRange | RirTarget>({ value, label, parse, onCommit, optional = false }: { value: T | null; label: string; parse: (text: string) => T | null; onCommit: (value: T | null) => void; optional?: boolean }) {
   const [text, setText] = useState<string | null>(null)
   return (

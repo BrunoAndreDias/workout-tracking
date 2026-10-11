@@ -27,13 +27,11 @@ export interface WorkoutDay {
   readonly exercises: readonly PlannedExercise[]
 }
 
-/** Reps in reserve aimed at for one week of a block; min === max is a single target. 0 to 10. */
 export interface RirTarget {
   readonly min: number
   readonly max: number
 }
 
-/** A Training Block: `weeks` training weeks (1 to 52) of its own Workout Days. `rir` has one entry per week, null for no target. */
 export interface WorkoutBlock {
   readonly id: WorkoutBlockId
   readonly name: string
@@ -42,13 +40,11 @@ export interface WorkoutBlock {
   readonly days: readonly WorkoutDay[]
 }
 
-/** Where the cycle was (re)started: `blockId`'s week 1 counts from the calendar week holding `since`. */
 export interface CycleStart {
   readonly blockId: WorkoutBlockId
   readonly since: IsoDate
 }
 
-/** `blocks` is never empty; `start` null is a cycle not started yet. Day ids are unique across its blocks. */
 export interface WorkoutPlan {
   readonly id: WorkoutPlanId
   readonly name: string
@@ -125,7 +121,6 @@ function parseRange(text: string): { min: number; max: number } | null {
   return { min, max: m[2] === undefined ? min : Number(m[2]) }
 }
 
-/** "8-12", "8–12", "8 a 12" or "8" as typed: null unless the minimum is at least 1 and not above the maximum. */
 export function parseRepRange(text: string): RepRange | null {
   const r = parseRange(text)
   return r && r.min >= 1 && r.max >= r.min ? r : null
@@ -135,7 +130,6 @@ export const MAX_RIR = 10
 
 export const isRirTarget = (r: RirTarget): boolean => Number.isInteger(r.min) && Number.isInteger(r.max) && r.min >= 0 && r.max >= r.min && r.max <= MAX_RIR
 
-/** "3", "5-6", "5–6" or "5 a 6" as typed: null unless both are 0 to 10 and the minimum is not above the maximum. */
 export function parseRir(text: string): RirTarget | null {
   const r = parseRange(text)
   return r && isRirTarget(r) ? r : null
@@ -199,28 +193,27 @@ export function findDay(plans: readonly WorkoutPlan[], dayId: WorkoutDayId): Wor
 
 export interface BlockPosition {
   readonly block: WorkoutBlock
-  /** 1-based within the block. */
   readonly week: number
   readonly rir: RirTarget | null
-  /** The block before it in the cycle, on week 1 of a block the cycle moved into; else null. */
-  readonly previous: WorkoutBlock | null
+  readonly movedFrom: WorkoutBlock | null
 }
 
-/**
- * Where the cycle is on `date`: null before it starts. Only training weeks count, calendar weeks (Monday to Sunday)
- * holding a session with a filled set, so a week without one pauses the block. The week of `date` is the one after
- * the training weeks before it, whether or not it holds a session yet. After the last block the cycle wraps to the first.
- */
+/** A week with no session that has a filled set does not count, so it pauses the block instead of using one of its weeks. */
+function trainedWeeks(sessions: readonly WorkoutSession[], from: IsoDate, until: IsoDate): Set<IsoDate> {
+  const weeks = new Set<IsoDate>()
+  for (const s of sessions) {
+    const week = mondayOf(s.date)
+    if (week >= from && week < until && s.exercises.some((e) => e.sets.some(isFilled))) weeks.add(week)
+  }
+  return weeks
+}
+
 export function blockPosition(plan: WorkoutPlan, sessions: readonly WorkoutSession[], date: IsoDate): BlockPosition | null {
   if (!plan.start) return null
   const from = mondayOf(plan.start.since)
   const current = mondayOf(date)
   if (current < from) return null
-  const trained = new Set<IsoDate>()
-  for (const s of sessions) {
-    const week = mondayOf(s.date)
-    if (week >= from && week < current && s.exercises.some((e) => e.sets.some(isFilled))) trained.add(week)
-  }
+  const trained = trainedWeeks(sessions, from, current)
   const blocks = plan.blocks
   let index = Math.max(0, blocks.findIndex((b) => b.id === plan.start?.blockId))
   let week = trained.size + 1
@@ -230,21 +223,18 @@ export function blockPosition(plan: WorkoutPlan, sessions: readonly WorkoutSessi
   }
   const block = blocks[index]
   const moved = week === 1 && trained.size > 0 && blocks.length > 1
-  return { block, week, rir: block.rir[week - 1] ?? null, previous: moved ? blocks[(index + blocks.length - 1) % blocks.length] : null }
+  return { block, week, rir: block.rir[week - 1] ?? null, movedFrom: moved ? blocks[(index + blocks.length - 1) % blocks.length] : null }
 }
 
-/** The block whose days a session starts from on `date`: where the cycle is, or the first block before it starts. */
 export function currentBlock(plan: WorkoutPlan, sessions: readonly WorkoutSession[], date: IsoDate): { block: WorkoutBlock; position: BlockPosition | null } {
   const position = blockPosition(plan, sessions, date)
   return { block: position?.block ?? plan.blocks[0], position }
 }
 
-/** The Exercises of `block`'s days, in order, each once. */
 export function blockExercises(block: WorkoutBlock): ExerciseId[] {
   return [...new Set(block.days.flatMap((d) => d.exercises.map((p) => p.exerciseId)))]
 }
 
-/** What changes from `previous` to `block`: the Exercises that come in and those that go. */
 export function blockChanges(previous: WorkoutBlock, block: WorkoutBlock): { entering: ExerciseId[]; leaving: ExerciseId[] } {
   const before = blockExercises(previous)
   const after = blockExercises(block)
@@ -308,7 +298,6 @@ export const MAX_BLOCK_WEEKS = 52
 
 export const newBlock = (id: WorkoutBlockId, name: string): WorkoutBlock => ({ id, name, weeks: DEFAULT_BLOCK_WEEKS, rir: Array(DEFAULT_BLOCK_WEEKS).fill(null), days: [] })
 
-/** "Bloco B" for a plan with one block, and so on, skipping names the plan already uses. */
 function nextBlockName(blocks: readonly WorkoutBlock[]): string {
   const taken = new Set(blocks.map((b) => b.name))
   for (let i = blocks.length; ; i++) {
@@ -317,11 +306,13 @@ function nextBlockName(blocks: readonly WorkoutBlock[]): string {
   }
 }
 
-/** A copy's days take ids from the new block's, which is unique, so they stay unique too. */
+/** Unique because the new block's id is. */
+const copiedDayId = (blockId: WorkoutBlockId, index: number) => `${blockId}-d${index + 1}` as WorkoutDayId
+
 function addBlock(plan: WorkoutPlan, blockId: WorkoutBlockId, copyOf: WorkoutBlockId | null): WorkoutPlan {
   const source = plan.blocks.find((b) => b.id === copyOf)
   const name = nextBlockName(plan.blocks)
-  const block = source ? { ...source, id: blockId, name, days: source.days.map((d, i) => ({ ...d, id: `${blockId}-d${i + 1}` as WorkoutDayId })) } : newBlock(blockId, name)
+  const block = source ? { ...source, id: blockId, name, days: source.days.map((d, i) => ({ ...d, id: copiedDayId(blockId, i) })) } : newBlock(blockId, name)
   return { ...plan, blocks: [...plan.blocks, block] }
 }
 

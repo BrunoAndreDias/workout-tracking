@@ -29,7 +29,12 @@ const SESSION = {
   ],
   note: { text: 'Ombro ok', createdAt: '2026-10-06T19:30:00', updatedAt: '2026-10-06T19:41:00' },
 }
-const PLAN = { id: 'p1', name: 'Força', days: [{ id: 'd1', name: 'Peito', exercises: [{ exerciseId: 'e1', sets: 4, reps: { min: 6, max: 6 } }] }] }
+const DAY = { id: 'd1', name: 'Peito', exercises: [{ exerciseId: 'e1', sets: 4, reps: { min: 6, max: 6 } }] }
+const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days: [DAY] }
+const PLAN = { id: 'p1', name: 'Força', blocks: [BLOCK], start: { blockId: 'b1', since: '2026-10-05' } }
+const LEGACY_PLAN = { id: 'p1', name: 'Força', days: [DAY] }
+const plans = (...list: unknown[]) => ({ version: 2, plans: list, activePlanId: 'p1' })
+const withBlock = (block: object) => plans({ ...PLAN, blocks: [{ ...BLOCK, ...block }] })
 
 const AFTER = [
   { date: '2026-10-07', exerciseId: null, note: { text: 'Pernas pesadas', createdAt: '2026-10-07T08:10:00', updatedAt: '2026-10-07T08:10:00' } },
@@ -40,7 +45,7 @@ describe('workout storage', () => {
   it('reads back what it saved', () => {
     const storage = memoryStorage()
     saveStore(STORES.exercises, [{ id: 'e1' as ExerciseId, name: 'Supino' }], storage)
-    saveStore(STORES.workoutPlans, parseWorkoutPlans({ version: 1, plans: [PLAN], activePlanId: 'p1' })!, storage)
+    saveStore(STORES.workoutPlans, parseWorkoutPlans(plans(PLAN))!, storage)
     saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [SESSION] })!, storage)
     const { exercises, workoutPlans, workoutSessions } = loadAll(storage)
     expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], workoutPlans: { plans: [PLAN], activePlanId: 'p1' }, workoutSessions: [SESSION] })
@@ -96,11 +101,32 @@ describe('workout storage', () => {
     expect(parseWorkoutSessions(raw)).toBe(null)
   })
 
+  it('reads a version 1 plan’s days as its one Bloco A of 6 weeks, not started', () => {
+    expect(parseWorkoutPlans({ version: 1, plans: [LEGACY_PLAN], activePlanId: 'p1' })).toEqual({
+      plans: [{ id: 'p1', name: 'Força', blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [DAY] }], start: null }],
+      activePlanId: 'p1',
+    })
+  })
+
   it.each([
-    ['a rep range upside down', { version: 1, plans: [{ ...PLAN, days: [{ ...PLAN.days[0], exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 12, max: 8 } }] }] }], activePlanId: 'p1' }],
-    ['zero sets', { version: 1, plans: [{ ...PLAN, days: [{ ...PLAN.days[0], exercises: [{ exerciseId: 'e1', sets: 0, reps: { min: 8, max: 8 } }] }] }], activePlanId: 'p1' }],
-    ['no active plan while there are plans', { version: 1, plans: [PLAN], activePlanId: null }],
-    ['an active plan while there are none', { version: 1, plans: [], activePlanId: 'p1' }],
+    ['a rep range upside down', withBlock({ days: [{ ...DAY, exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 12, max: 8 } }] }] })],
+    ['zero sets', withBlock({ days: [{ ...DAY, exercises: [{ exerciseId: 'e1', sets: 0, reps: { min: 8, max: 8 } }] }] })],
+    ['no active plan while there are plans', { ...plans(PLAN), activePlanId: null }],
+    ['an active plan while there are none', plans()],
+    ['no blocks', plans({ ...PLAN, blocks: [], start: null })],
+    ['two blocks with one id', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, days: [] }] })],
+    ['one day id in two blocks', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, id: 'b2' }] })],
+    ['one day id in two plans', plans(PLAN, { ...PLAN, id: 'p2', blocks: [{ ...BLOCK, id: 'b2' }], start: null })],
+    ['0 weeks', withBlock({ weeks: 0, rir: [] })],
+    ['53 weeks', withBlock({ weeks: 53, rir: Array(53).fill(null) })],
+    ['fewer RIR targets than weeks', withBlock({ rir: [null] })],
+    ['a RIR above 10', withBlock({ rir: [{ min: 5, max: 11 }, null] })],
+    ['a RIR upside down', withBlock({ rir: [{ min: 6, max: 5 }, null] })],
+    ['a start on a block not in the plan', plans({ ...PLAN, start: { blockId: 'b9', since: '2026-10-05' } })],
+    ['a start on a bad date', plans({ ...PLAN, start: { blockId: 'b1', since: '2026-02-30' } })],
+    ['no start key', plans({ id: 'p1', name: 'Força', blocks: [BLOCK] })],
+    ['a version 1 plan in a version 2 document', plans(LEGACY_PLAN)],
+    ['a version 1 plan with a bad day', { version: 1, plans: [{ ...LEGACY_PLAN, days: [{ ...DAY, exercises: 'x' }] }], activePlanId: 'p1' }],
   ])('rejects plans with %s', (_, raw) => {
     expect(parseWorkoutPlans(raw)).toBe(null)
   })

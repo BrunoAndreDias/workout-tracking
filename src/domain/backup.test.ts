@@ -6,7 +6,7 @@ import type { TimedNote } from './notes.ts'
 import { initialState, planReducer } from './plans.ts'
 import type { PlanAction } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
-import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, MealId, NutrientValues, PlanId, WatchWorkoutId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, MealId, NutrientValues, PlanId, WatchWorkoutId, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import type { WatchWorkout } from './watchWorkouts.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { loadAll, saveStore, STORES } from './stores.ts'
@@ -48,10 +48,12 @@ const day = (date: string, planId: PlanId | null): DayLog => {
 }
 
 const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }
+const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] }
 const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,
   name: 'Força',
-  days: [{ id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] }],
+  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, rir: [{ min: 5, max: 6 }], days: [PEITO_DAY] }],
+  start: { blockId: 'wb-1' as WorkoutBlockId, since: '2026-05-04' as IsoDate },
 }
 const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   id: id as WorkoutSessionId,
@@ -153,7 +155,7 @@ describe('backup', () => {
     ],
     [
       'an active plan that is not there',
-      { app: 'plano-alimentar', version: 1, stores: { workoutPlans: { version: 1, plans: [PEITO], activePlanId: 'gone' } } },
+      { app: 'plano-alimentar', version: 1, stores: { workoutPlans: { version: 2, plans: [PEITO], activePlanId: 'gone' } } },
       'A cópia de segurança está danificada: os dados de planos de treino não são válidos. Não foi alterado nada.',
     ],
   ])('rejects %s', (_, raw, error) => {
@@ -205,7 +207,8 @@ describe('backup', () => {
   it('merges workouts by id, and an incoming exercise named like one the user has becomes that one', () => {
     const remo = { id: 'ex-remo' as ExerciseId, name: 'Remo' }
     const theirSupino = { id: 'ex-their-supino' as ExerciseId, name: 'SUPINO' }
-    const theirPlan: WorkoutPlan = { ...PEITO, id: 'wp-2' as WorkoutPlanId, name: 'Deles', days: [{ ...PEITO.days[0], exercises: [{ ...PEITO.days[0].exercises[0], exerciseId: theirSupino.id }] }] }
+    const theirDay = { ...PEITO_DAY, id: 'wd-2' as WorkoutDayId, exercises: [{ ...PEITO_DAY.exercises[0], exerciseId: theirSupino.id }] }
+    const theirPlan: WorkoutPlan = { id: 'wp-2' as WorkoutPlanId, name: 'Deles', blocks: [{ ...PEITO.blocks[0], id: 'wb-2' as WorkoutBlockId, days: [theirDay] }], start: null }
     const incoming: BackupData = {
       ...NO_PLANS,
       exercises: [{ ...SUPINO, name: 'Supino renomeado' }, theirSupino, remo],
@@ -214,9 +217,9 @@ describe('backup', () => {
     }
     const { data } = mergeBackup(loadAll(filled()), incoming)
     expect(data.exercises).toEqual([SUPINO, remo])
-    expect(data.workoutPlans.plans.map((p) => [p.id, p.name, p.days[0].exercises[0].exerciseId])).toEqual([
-      ['wp-1', 'Força', 'ex-supino'],
-      ['wp-2', 'Deles', 'ex-supino'],
+    expect(data.workoutPlans.plans.map((p) => [p.id, p.name, p.blocks[0].days[0].exercises[0].exerciseId, p.start])).toEqual([
+      ['wp-1', 'Força', 'ex-supino', { blockId: 'wb-1', since: '2026-05-04' }],
+      ['wp-2', 'Deles', 'ex-supino', null],
     ])
     expect(data.workoutPlans.activePlanId).toBe('wp-1')
     expect(data.workoutSessions.map((s) => [s.id, s.exercises[0].exerciseId, s.note?.text])).toEqual([
@@ -224,6 +227,15 @@ describe('backup', () => {
       ['ws-2', 'ex-supino', undefined],
       ['ws-3', 'ex-remo', undefined],
     ])
+  })
+
+  it('imports workout plans saved before Training Blocks as one Bloco A each', () => {
+    const v1 = { version: 1, plans: [{ id: 'wp-1', name: 'Força', days: [PEITO_DAY] }], activePlanId: 'wp-1' }
+    const r = parseBackup({ app: 'plano-alimentar', version: 1, stores: { workoutPlans: v1 } })
+    expect(r.ok && r.data.workoutPlans).toEqual({
+      plans: [{ id: 'wp-1', name: 'Força', blocks: [{ id: 'wp-1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [PEITO_DAY] }], start: null }],
+      activePlanId: 'wp-1',
+    })
   })
 
   it('a session brings its end feel and After-effects, which follow an Exercise merged by name', () => {

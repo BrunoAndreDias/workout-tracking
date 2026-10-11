@@ -91,12 +91,12 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
               ) : (
                 <>
                   <p className="muted">
-                    {activePlan && activePlan.days.length > 0
+                    {activePlan && activePlan.blocks[0].days.length > 0
                       ? `Começa por um dia de ${activePlan.name}: as séries vêm preenchidas com o que fizeste da última vez.`
                       : 'Ainda não tens dias de treino. Escreve-os em Plano de treino, ou regista um treino livre.'}
                   </p>
                   <div className="day-start">
-                    {activePlan?.days.map((d, i) => (
+                    {activePlan?.blocks[0].days.map((d, i) => (
                       <button key={d.id} type="button" className={i === 0 ? 'primary' : 'secondary'} onClick={() => start(d)}>
                         {d.name}
                       </button>

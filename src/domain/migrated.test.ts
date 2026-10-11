@@ -28,6 +28,11 @@ const SESSIONS_V1 = JSON.stringify({
   version: 1,
   sessions: [{ id: 's1', date: '2026-10-05', workoutDayId: null, exercises: [], notes: 'Bom treino' }],
 })
+const WORKOUT_PLANS_V1 = JSON.stringify({
+  version: 1,
+  plans: [{ id: 'wp1', name: 'Força', days: [{ id: 'wd1', name: 'Peito', exercises: [{ exerciseId: 'x1', sets: 3, reps: { min: 8, max: 12 } }] }] }],
+  activePlanId: 'wp1',
+})
 const PLANS_V2 = JSON.stringify({
   version: 2,
   state: { plans: [{ id: 'p1', name: 'Plano', meals: [{ id: 'm1', name: 'Almoço', entries: [{ id: 'e1', foodId: '430', grams: 60 }] }] }], selectedId: 'p1' },
@@ -59,6 +64,15 @@ describe('a stored document of an older version', () => {
     const saved = JSON.parse(storage.data[STORES.plans.key])
     expect(saved.version).toBe(3)
     expect(saved.state.plans[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
+  })
+
+  it('keeps the version 1 workout plans aside before the plans with blocks are saved over them', () => {
+    const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V1 })
+    saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
+    expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V1])
+    const saved = JSON.parse(storage.data[STORES.workoutPlans.key])
+    expect(saved.version).toBe(2)
+    expect(saved.plans[0].blocks.map((b: { id: string; name: string; days: { id: string }[] }) => [b.id, b.name, b.days[0].id])).toEqual([['wp1-b1', 'Bloco A', 'wd1']])
   })
 
   it('keeps the version 1 days aside before the converted days are saved over them', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { TimedNote } from './notes.ts'
 import { DEFAULT_GOALS } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
-import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, Meal, MealId, NutrientValues, OptionId, PlanId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, Meal, MealId, NutrientValues, OptionId, PlanId, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
 
 function written(save: (storage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void }) => boolean): Record<string, string> {
@@ -75,10 +75,12 @@ describe('the text each store writes', () => {
   })
 
   it('workout plans', () => {
-    const plans = [{ id: 'wp1' as WorkoutPlanId, name: 'Força', days: [{ id: 'wd1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: 'x1' as ExerciseId, sets: 3, reps: { min: 8, max: 12 } }] }] }]
+    const days = [{ id: 'wd1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: 'x1' as ExerciseId, sets: 3, reps: { min: 8, max: 12 } }] }]
+    const blocks = [{ id: 'wb1' as WorkoutBlockId, name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days }]
+    const plans = [{ id: 'wp1' as WorkoutPlanId, name: 'Força', blocks, start: { blockId: 'wb1' as WorkoutBlockId, since: '2026-10-05' as IsoDate } }]
     expect(written((s) => saveStore(STORES.workoutPlans, { plans, activePlanId: 'wp1' as WorkoutPlanId }, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:workout-plans": "{"version":1,"plans":[{"id":"wp1","name":"Força","days":[{"id":"wd1","name":"Peito","exercises":[{"exerciseId":"x1","sets":3,"reps":{"min":8,"max":12}}]}]}],"activePlanId":"wp1"}",
+        "nutrition-tracking:workout-plans": "{"version":2,"plans":[{"id":"wp1","name":"Força","blocks":[{"id":"wb1","name":"Bloco A","weeks":2,"rir":[{"min":5,"max":6},null],"days":[{"id":"wd1","name":"Peito","exercises":[{"exerciseId":"x1","sets":3,"reps":{"min":8,"max":12}}]}]}],"start":{"blockId":"wb1","since":"2026-10-05"}}],"activePlanId":"wp1"}",
       }
     `)
   })

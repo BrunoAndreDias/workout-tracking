@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { longDate, openFresh, readStored, reloadApp } from './_driver.mjs'
+import { addExercise, addWorkoutDay, longDate, openFresh, readStored, reloadApp } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -19,23 +19,12 @@ const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole
 const region = (name) => page.getByRole('region', { name, exact: true })
 const noScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 const values = (lift, field) => lift.getByLabel(new RegExp(`^${field} da série`)).evaluateAll((els) => els.map((e) => e.value))
-const addExercise = async (scope, name) => {
-  await scope.getByLabel('Exercício a adicionar').fill(name)
-  await scope.getByLabel('Exercício a adicionar').press('Enter')
-}
 
 await view('Treino').click()
 assert(page.url().endsWith('#treino'), 'Treino view is in the URL hash')
 await tab('Plano de treino').click()
 await page.getByRole('button', { name: 'Criar plano de treino' }).click()
-await page.getByRole('button', { name: 'Adicionar dia' }).click()
-await page.getByRole('button', { name: /^Nome do dia de treino: Dia 1/ }).click()
-await page.getByLabel('Nome do dia de treino').fill('Peito')
-await page.getByLabel('Nome do dia de treino').press('Enter')
-const peitoDay = region('Peito')
-await addExercise(peitoDay, 'Supino')
-await addExercise(peitoDay, 'Elevações')
-await addExercise(peitoDay, 'supino ')
+const peitoDay = await addWorkoutDay(page, 'Peito', ['Supino', 'Elevações', 'supino '])
 assert((await peitoDay.locator('.planned-name').allTextContents()).join('|') === 'Supino|Elevações', 'typing an existing name ignoring case adds nothing new')
 await peitoDay.getByLabel('Séries de Supino').fill('4')
 await peitoDay.getByLabel('Repetições de Supino').fill('6-8')

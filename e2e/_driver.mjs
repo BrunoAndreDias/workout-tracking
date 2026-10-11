@@ -253,3 +253,21 @@ export const watchDay = (page) =>
         .map(([row, value]) => `${row} ${value}`)
         .join(' · '),
     )
+
+/** Types an Exercise into `scope`'s `Exercício a adicionar` field (a Workout Day or a Workout Session) and presses Enter. */
+export async function addExercise(scope, name) {
+  await scope.getByLabel('Exercício a adicionar').fill(name)
+  await scope.getByLabel('Exercício a adicionar').press('Enter')
+}
+
+/** On Treino → Plano de treino, adds a Workout Day to the selected Training Block, renames it `name` and adds `exercises`. Returns its region. */
+export async function addWorkoutDay(page, name, exercises = []) {
+  const n = await page.locator('.workout-day').count()
+  await page.getByRole('button', { name: 'Adicionar dia' }).click()
+  await page.getByRole('button', { name: `Nome do dia de treino: Dia ${n + 1}. Clique para renomear` }).click()
+  await page.getByLabel('Nome do dia de treino').fill(name)
+  await page.getByLabel('Nome do dia de treino').press('Enter')
+  const day = page.getByRole('region', { name, exact: true })
+  for (const exercise of exercises) await addExercise(day, exercise)
+  return day
+}

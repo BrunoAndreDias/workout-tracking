@@ -70,18 +70,22 @@ Speaking a note instead of typing it. The mic button on a note field records unt
 _Avoid_: Voice note (that would be a stored recording; none is kept), voice input
 
 **Workout Plan** (Plano de treino):
-A named training program made of Workout Days, written by the user from their own plan. The user may keep several and one is active: its days are the ones a Workout Session can start from. The app never generates, rates or adjusts a plan.
+A named training program made of Training Blocks, written by the user from their own plan. The user may keep several and one is active: the days of its current block are the ones a Workout Session can start from. The app never generates, rates or adjusts a plan; it only works out which block and week the user is in.
 _Avoid_: Program, routine, split; "Plano" alone, which is a Meal Plan
 
+**Training Block** (Bloco):
+One stage of a Workout Plan's cycle, such as "Bloco A", with its own Workout Days, a length in training weeks (1 to 52, 6 by default) and an optional reps-in-reserve target (RIR) for each week, such as 5–6 in week 1. A training week is a calendar week, Monday to Sunday, holding a Workout Session with a filled Logged Set, of any plan or none, so a week without training pauses the block instead of skipping it. The user starts the cycle on a block with "Começar aqui", which counts from the week it is tapped; until then the plan has no current week and sessions start from its first block. Each training week since that week moves the cycle on one week, into the next block once a block's weeks are done, and back to the first after the last block. The week of a date is the training week after those before it, whether or not it holds a session yet. On a block's first week the app switches to its days by itself and says which Exercises come in and which go, compared with the block before. A new block starts as a copy of the selected one; a deload is just a short block the user writes. Removing a block keeps the sessions logged from its days, which then read "Dia de treino eliminado".
+_Avoid_: Mesocycle, phase, cycle (that is the order of the blocks), program
+
 **Workout Day** (Dia de treino):
-One named day of a Workout Plan, such as "Peito e tríceps", holding its Planned Exercises in order. An Exercise appears at most once in a day.
+One named day of a Training Block, such as "Peito e tríceps", holding its Planned Exercises in order. An Exercise appears at most once in a day. Each day's id is unique across every block of every plan, so a session always finds the day it started from.
 _Avoid_: Workout template
 
 **Planned Exercise**:
 An Exercise in a Workout Day with its number of sets and a rep range, such as 3 × 8–12. A single target is a range whose minimum and maximum are equal.
 
 **Workout Session** (Treino):
-What was trained on one calendar date, in the same date form as the Day Log. It starts from a Workout Day or blank, and then keeps its own copy, so editing the plan later never changes it. Starting from a day gives one row per Planned Exercise with the planned number of sets. Each set is filled in from the latest earlier session that logged that Exercise, repeating its last set when the plan asks for more sets, and is left empty when the Exercise was never logged. An Exercise appears at most once in a session. A session also has free-text notes: one Timed Note about the workout as a whole, and an Exercise Note for each of its Exercises. At its end the user may rate how it felt ("No fim do treino") on the same five words as a Sleep Entry, and on the following days write its After-effects. A date may hold more than one session, and the Diário and Alimentação → Hoje show a line for each. The Diário calendar marks each date with a session that has a filled set.
+What was trained on one calendar date, in the same date form as the Day Log. It starts from a Workout Day of the active plan's current Training Block or blank, and then keeps its own copy, so editing the plan later never changes it. Starting from a day gives one row per Planned Exercise with the planned number of sets. Each set is filled in from the latest earlier session that logged that Exercise, repeating its last set when the plan asks for more sets, and is left empty when the Exercise was never logged. An Exercise appears at most once in a session. A session also has free-text notes: one Timed Note about the workout as a whole, and an Exercise Note for each of its Exercises. At its end the user may rate how it felt ("No fim do treino") on the same five words as a Sleep Entry, and on the following days write its After-effects. A date may hold more than one session, and the Diário and Alimentação → Hoje show a line for each. The Diário calendar marks each date with a session that has a filled set.
 _Avoid_: Workout (as a type name), training log
 
 **Logged Set**:

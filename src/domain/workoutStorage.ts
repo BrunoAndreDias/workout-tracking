@@ -4,7 +4,7 @@ import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { DEFAULT_BLOCK_WEEKS, exerciseKey, isRirTarget, MAX_BLOCK_WEEKS } from './workouts.ts'
+import { exerciseKey, isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, SessionExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
@@ -92,19 +92,19 @@ function parseLegacyPlan(raw: unknown): WorkoutPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
   const days = parseList(raw.days, parseDay)
   if (!days) return null
-  const block = { id: `${raw.id}-b1` as WorkoutBlockId, name: 'Bloco A', weeks: DEFAULT_BLOCK_WEEKS, rir: Array(DEFAULT_BLOCK_WEEKS).fill(null), days }
+  const block = { ...newBlock(`${raw.id}-b1` as WorkoutBlockId, 'Bloco A'), days }
   return { id: raw.id as WorkoutPlanId, name: raw.name, blocks: [block], start: null }
 }
 
 const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
 
-/** Versions 1 and 2. Block ids and day ids are unique across the document; the active plan must be one of the plans, and is null only when there are none. */
+/** Versions 1 and 2. Block ids are unique across the document and day ids within a plan, as version 1 required; the active plan must be one of the plans, and is null only when there are none. */
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
   if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
   const plans = parseList(raw.plans, raw.version === 1 ? parseLegacyPlan : parsePlan, (p) => p.id)
   if (!plans) return null
-  const blocks = plans.flatMap((p) => p.blocks)
-  if (!isUnique(blocks.map((b) => b.id)) || !isUnique(blocks.flatMap((b) => b.days.map((d) => d.id)))) return null
+  if (!isUnique(plans.flatMap((p) => p.blocks.map((b) => b.id)))) return null
+  if (!plans.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null
   const active = plans.find((p) => p.id === raw.activePlanId)
   if (plans.length > 0 ? !active : raw.activePlanId !== null) return null
   return { plans, activePlanId: active?.id ?? null }

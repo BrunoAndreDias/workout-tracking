@@ -161,18 +161,18 @@ describe('workoutReducer', () => {
       [
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
         { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 5, max: 6 } },
-        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B, dayIds: ['d2' as WorkoutDayId] },
+        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B },
         { type: 'renameBlock', planId: P, blockId: 'b2' as WorkoutBlockId, name: 'Bloco C' },
-        { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: null, dayIds: [] },
+        { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: null },
       ],
       planned,
     )
     expect(s.plans[0].blocks).toEqual([
       { id: 'b1', name: 'Bloco A', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
-      { id: 'b2', name: 'Bloco C', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'd2', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
+      { id: 'b2', name: 'Bloco C', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'b2-d1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
       { id: 'b3', name: 'Bloco D', weeks: 6, rir: NO_RIR, days: [] },
     ])
-    expect(findDay(s.plans, 'd2' as WorkoutDayId)?.name).toBe('Pernas')
+    expect(findDay(s.plans, 'b2-d1' as WorkoutDayId)?.name).toBe('Pernas')
   })
 
   it('more weeks pad the RIR targets with none, fewer drop the last ones, and a week out of range is not set', () => {
@@ -195,7 +195,7 @@ describe('workoutReducer', () => {
     const since = date('2026-10-05')
     const two = run(
       [
-        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: null, dayIds: [] },
+        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: null },
         { type: 'setCycleStart', planId: P, blockId: B, since },
         { type: 'removeBlock', planId: P, blockId: B },
       ],

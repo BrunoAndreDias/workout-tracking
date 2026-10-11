@@ -4,7 +4,7 @@ import { newId } from '../domain/plans.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { blockChanges, blockPosition, findDay, sessionsOn } from '../domain/workouts.ts'
+import { blockChanges, currentBlock, findDay, sessionsOn } from '../domain/workouts.ts'
 import type { BlockPosition, Exercise, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import { DateStepper } from './DateStepper.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
@@ -51,8 +51,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
   const sessions = sessionsOn(state.sessions, date)
   const watched = watchWorkoutsOn(watch, date)
   const activePlan = state.plans.find((p) => p.id === state.activePlanId)
-  const position = activePlan ? blockPosition(activePlan, state.sessions, date) : null
-  const block = position?.block ?? activePlan?.blocks[0]
+  const { block, position } = activePlan ? currentBlock(activePlan, state.sessions, date) : { block: undefined, position: null }
   const goTo = (next: IsoDate) => {
     setAdding(false)
     onDate(next)

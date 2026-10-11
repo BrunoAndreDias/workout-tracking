@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Dispatch } from 'react'
 import { newId } from '../domain/plans.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
-import { blockExercises, blockPosition, parseRepRange, parseRir } from '../domain/workouts.ts'
+import { blockExercises, currentBlock, parseRepRange, parseRir } from '../domain/workouts.ts'
 import type { RepRange, RirTarget, WorkoutAction, WorkoutBlock, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
 import { ExerciseAdder } from './ExerciseAdder.tsx'
@@ -57,11 +57,11 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
   }
 
   const planId = plan.id
-  const position = blockPosition(plan, state.sessions, today)
-  const block = plan.blocks.find((b) => b.id === selectedId) ?? position?.block ?? plan.blocks[0]
+  const { block: current, position } = currentBlock(plan, state.sessions, today)
+  const block = plan.blocks.find((b) => b.id === selectedId) ?? current
   const addBlock = () => {
     const blockId = newId<WorkoutBlockId>()
-    dispatch({ type: 'addBlock', planId, blockId, copyOf: block.id, dayIds: block.days.map(() => newId<WorkoutDayId>()) })
+    dispatch({ type: 'addBlock', planId, blockId, copyOf: block.id })
     setSelectedId(blockId)
   }
 

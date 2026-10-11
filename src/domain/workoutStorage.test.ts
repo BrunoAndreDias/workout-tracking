@@ -101,6 +101,10 @@ describe('workout storage', () => {
     expect(parseWorkoutSessions(raw)).toBe(null)
   })
 
+  it('reads one day id in two plans, as version 1 did', () => {
+    expect(parseWorkoutPlans(plans(PLAN, { ...PLAN, id: 'p2', blocks: [{ ...BLOCK, id: 'b2' }], start: null }))?.plans.map((p) => p.id)).toEqual(['p1', 'p2'])
+  })
+
   it('reads a version 1 plan’s days as its one Bloco A of 6 weeks, not started', () => {
     expect(parseWorkoutPlans({ version: 1, plans: [LEGACY_PLAN], activePlanId: 'p1' })).toEqual({
       plans: [{ id: 'p1', name: 'Força', blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [DAY] }], start: null }],
@@ -116,7 +120,6 @@ describe('workout storage', () => {
     ['no blocks', plans({ ...PLAN, blocks: [], start: null })],
     ['two blocks with one id', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, days: [] }] })],
     ['one day id in two blocks', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, id: 'b2' }] })],
-    ['one day id in two plans', plans(PLAN, { ...PLAN, id: 'p2', blocks: [{ ...BLOCK, id: 'b2' }], start: null })],
     ['0 weeks', withBlock({ weeks: 0, rir: [] })],
     ['53 weeks', withBlock({ weeks: 53, rir: Array(53).fill(null) })],
     ['fewer RIR targets than weeks', withBlock({ rir: [null] })],

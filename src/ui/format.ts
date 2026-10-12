@@ -71,9 +71,10 @@ export const formatMonthName = (date: IsoDate) => monthName.format(fromIsoDate(d
 /** "outubro de 2026" */
 export const formatMonth = (year: number, month: number) => monthYear.format(new Date(year, month - 1, 1))
 
+export const formatRange = ({ min, max }: { min: number; max: number }) => (min === max ? `${min}` : `${min}–${max}`)
+
 /** "3 × 8–12", or "4 × 6" when the range is a single target. */
-export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) =>
-  `${sets} × ${reps.min === reps.max ? reps.min : `${reps.min}–${reps.max}`}`
+export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) => `${sets} × ${formatRange(reps)}`
 
 /** "1 noite", "3 noites" */
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`

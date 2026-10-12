@@ -253,3 +253,19 @@ export const watchDay = (page) =>
         .map(([row, value]) => `${row} ${value}`)
         .join(' · '),
     )
+
+export async function addExercise(scope, name) {
+  await scope.getByLabel('Exercício a adicionar').fill(name)
+  await scope.getByLabel('Exercício a adicionar').press('Enter')
+}
+
+export async function addWorkoutDay(page, name, exercises = []) {
+  const n = await page.locator('.workout-day').count()
+  await page.getByRole('button', { name: 'Adicionar dia' }).click()
+  await page.getByRole('button', { name: `Nome do dia de treino: Dia ${n + 1}. Clique para renomear` }).click()
+  await page.getByLabel('Nome do dia de treino').fill(name)
+  await page.getByLabel('Nome do dia de treino').press('Enter')
+  const day = page.getByRole('region', { name, exact: true })
+  for (const exercise of exercises) await addExercise(day, exercise)
+  return day
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { ExerciseId, IsoDate, LocalDateTime, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { emptyWorkouts, loggedCounts, parseRepRange, prefillSets, recentSessions, startSession, workoutReducer } from './workouts.ts'
-import type { WorkoutAction, WorkoutDay, WorkoutSession, WorkoutState } from './workouts.ts'
+import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import { blockChanges, blockPosition, emptyWorkouts, findDay, loggedCounts, parseRepRange, parseRir, prefillSets, recentSessions, startSession, workoutReducer } from './workouts.ts'
+import type { WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 const SUPINO = 'ex-supino' as ExerciseId
 const REMO = 'ex-remo' as ExerciseId
@@ -92,24 +92,33 @@ describe('pre-fill', () => {
 describe('workoutReducer', () => {
   const P = 'p1' as WorkoutPlanId
   const D = 'd1' as WorkoutDayId
+  const B = 'b1' as WorkoutBlockId
   const planned = run([
-    { type: 'createPlan', planId: P, name: 'Força' },
-    { type: 'addDay', planId: P, dayId: D, name: 'Pernas' },
-    { type: 'addPlannedExercise', planId: P, dayId: D, name: ' Agachamento ', newExerciseId: 'e1' as ExerciseId },
-    { type: 'addPlannedExercise', planId: P, dayId: D, name: 'agachamento', newExerciseId: 'e2' as ExerciseId },
-    { type: 'addPlannedExercise', planId: P, dayId: D, name: '   ', newExerciseId: 'e3' as ExerciseId },
+    { type: 'createPlan', planId: P, blockId: B, name: 'Força' },
+    { type: 'addDay', planId: P, blockId: B, dayId: D, name: 'Pernas' },
+    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: ' Agachamento ', newExerciseId: 'e1' as ExerciseId },
+    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: 'agachamento', newExerciseId: 'e2' as ExerciseId },
+    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: '   ', newExerciseId: 'e3' as ExerciseId },
   ])
+  const NO_RIR = [null, null, null, null, null, null]
 
   it('creates an exercise from a typed name and reuses it when the name matches ignoring case', () => {
     expect(planned.exercises).toEqual([{ id: 'e1', name: 'Agachamento' }])
-    expect(planned.plans).toEqual([{ id: 'p1', name: 'Força', days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] }])
+    expect(planned.plans).toEqual([
+      {
+        id: 'p1',
+        name: 'Força',
+        blocks: [{ id: 'b1', name: 'Bloco A', weeks: 6, rir: NO_RIR, days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] }],
+        start: null,
+      },
+    ])
     expect(planned.activePlanId).toBe('p1')
   })
 
   it('a session exercise typed by name reuses the plan exercise and copies its last logged sets', () => {
     const s = run(
       [
-        { type: 'startSession', sessionId: 's1' as WorkoutSessionId, date: date('2026-10-01'), day: planned.plans[0].days[0] },
+        { type: 'startSession', sessionId: 's1' as WorkoutSessionId, date: date('2026-10-01'), day: planned.plans[0].blocks[0].days[0] },
         { type: 'setSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId, index: 0, set: { reps: 5, kg: 100 } },
         { type: 'removeSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId, index: 2 },
         { type: 'addSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId },
@@ -140,11 +149,152 @@ describe('workoutReducer', () => {
   })
 
   it('deleting the active plan activates the next one, and the last leaves none', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, name: 'Outro' }], planned)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro' }], planned)
     expect(two.activePlanId).toBe('p2')
     const one = run([{ type: 'deletePlan', planId: 'p2' as WorkoutPlanId }], two)
     expect(one.activePlanId).toBe('p1')
     expect(run([{ type: 'deletePlan', planId: P }], one).activePlanId).toBe(null)
+  })
+
+  it('a new block copies the selected one, its days under new ids, and takes the next free letter', () => {
+    const s = run(
+      [
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
+        { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 5, max: 6 } },
+        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B },
+        { type: 'renameBlock', planId: P, blockId: 'b2' as WorkoutBlockId, name: 'Bloco C' },
+        { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: null },
+      ],
+      planned,
+    )
+    expect(s.plans[0].blocks).toEqual([
+      { id: 'b1', name: 'Bloco A', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
+      { id: 'b2', name: 'Bloco C', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'b2-d1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
+      { id: 'b3', name: 'Bloco D', weeks: 6, rir: NO_RIR, days: [] },
+    ])
+    expect(findDay(s.plans, 'b2-d1' as WorkoutDayId)?.name).toBe('Pernas')
+  })
+
+  it('more weeks pad the RIR targets with none, fewer drop the last ones, and a week out of range is not set', () => {
+    const s = run(
+      [
+        { type: 'setBlockRir', planId: P, blockId: B, week: 6, rir: { min: 0, max: 1 } },
+        { type: 'setBlockRir', planId: P, blockId: B, week: 2, rir: { min: 4, max: 4 } },
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 4 },
+        { type: 'setBlockRir', planId: P, blockId: B, week: 5, rir: { min: 1, max: 1 } },
+        { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 3, max: 11 } },
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 0 },
+      ],
+      planned,
+    )
+    expect(s.plans[0].blocks[0].rir).toEqual([null, { min: 4, max: 4 }, null, null])
+  })
+
+  it('removing the block the cycle started on moves the start to the first block left, keeping its date, and the last block stays', () => {
+    const since = date('2026-10-05')
+    const two = run(
+      [
+        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: null },
+        { type: 'setCycleStart', planId: P, blockId: B, since },
+        { type: 'removeBlock', planId: P, blockId: B },
+      ],
+      planned,
+    )
+    expect(two.plans[0].blocks.map((b) => b.id)).toEqual(['b2'])
+    expect(two.plans[0].start).toEqual({ blockId: 'b2', since })
+    expect(run([{ type: 'removeBlock', planId: P, blockId: 'b2' as WorkoutBlockId }], two).plans[0].blocks.map((b) => b.id)).toEqual(['b2'])
+  })
+})
+
+const SQUAT = 'ex-agachamento' as ExerciseId
+const day = (id: string, exercises: ExerciseId[]): WorkoutDay => ({
+  id: id as WorkoutDayId,
+  name: id,
+  exercises: exercises.map((exerciseId) => ({ exerciseId, sets: 3, reps: { min: 8, max: 12 } })),
+})
+const block = (id: string, weeks: number, days: WorkoutDay[]): WorkoutBlock => ({
+  id: id as WorkoutBlockId,
+  name: `Bloco ${id}`,
+  weeks,
+  rir: Array.from({ length: weeks }, (_, i) => ({ min: weeks - 1 - i, max: weeks - i })),
+  days,
+})
+const BLOCK_A = block('A', 2, [day('a1', [SQUAT, SUPINO])])
+const BLOCK_B = block('B', 1, [day('b1', [SQUAT, REMO])])
+const cycle = (startOn: string | null, blocks = [BLOCK_A, BLOCK_B], blockId = 'A'): WorkoutPlan => ({
+  id: 'p' as WorkoutPlanId,
+  name: 'Força',
+  blocks,
+  start: startOn === null ? null : { blockId: blockId as WorkoutBlockId, since: date(startOn) },
+})
+const trained = (on: string) => session(`s-${on}`, on, [{ exerciseId: SQUAT, sets: [{ reps: 5, kg: 100 }] }])
+const where = (plan: WorkoutPlan, sessions: WorkoutSession[], on: string) => {
+  const p = blockPosition(plan, sessions, date(on))
+  return p && { block: p.block.name, week: p.week, rir: p.rir, movedFrom: p.movedFrom?.name ?? null }
+}
+
+const MONDAY = '2026-10-05'
+
+describe('blockPosition', () => {
+  it('is nowhere before the cycle starts or before the week it started', () => {
+    expect(where(cycle(null), [], '2026-10-07')).toBe(null)
+    expect(where(cycle('2026-10-07'), [], '2026-10-04')).toBe(null)
+  })
+
+  it('counts the week the cycle started from its Monday, with that week’s RIR and nothing before it', () => {
+    expect(where(cycle('2026-10-07'), [], MONDAY)).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+  })
+
+  it('a week without a filled set pauses the block, and two sessions in one week count once', () => {
+    const sessions = [trained('2026-10-06'), trained('2026-10-08'), session('empty', '2026-10-13', [{ exerciseId: SQUAT, sets: [{ reps: null, kg: 80 }] }])]
+    expect(where(cycle(MONDAY), sessions, '2026-10-21')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
+  })
+
+  it('ignores sessions before the start and the sessions of the week asked about', () => {
+    const sessions = [trained('2026-09-29'), trained('2026-10-12')]
+    expect(where(cycle(MONDAY), sessions, '2026-10-12')?.week).toBe(1)
+  })
+
+  it('moves into the next block after the block’s training weeks, naming the one before on its week 1', () => {
+    const sessions = [trained(MONDAY), trained('2026-10-12')]
+    expect(where(cycle(MONDAY), sessions, '2026-10-19')).toEqual({ block: 'Bloco B', week: 1, rir: { min: 0, max: 1 }, movedFrom: 'Bloco A' })
+  })
+
+  it('wraps to the first block after the last', () => {
+    const sessions = [MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map(trained)
+    expect(where(cycle(MONDAY), sessions, '2026-11-02')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
+    expect(where(cycle(MONDAY), sessions.slice(0, 3), '2026-10-26')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: 'Bloco B' })
+  })
+
+  it('starts from the block named in the start, and from the first when that block is gone', () => {
+    expect(where(cycle(MONDAY, [BLOCK_A, BLOCK_B], 'B'), [trained(MONDAY)], '2026-10-12')?.block).toBe('Bloco A')
+    expect(where(cycle(MONDAY, [BLOCK_A, BLOCK_B], 'gone'), [], '2026-10-12')?.block).toBe('Bloco A')
+  })
+
+  it('a plan with one block has no block before it', () => {
+    expect(where(cycle(MONDAY, [BLOCK_A]), [MONDAY, '2026-10-12'].map(trained), '2026-10-19')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+  })
+})
+
+describe('blockChanges', () => {
+  it('lists the Exercises that come in and those that go', () => {
+    expect(blockChanges(BLOCK_A, BLOCK_B)).toEqual({ entering: [REMO], leaving: [SUPINO] })
+  })
+})
+
+describe('parseRir', () => {
+  it.each([
+    ['3', { min: 3, max: 3 }],
+    ['5-6', { min: 5, max: 6 }],
+    ['5–6', { min: 5, max: 6 }],
+    ['5 a 6', { min: 5, max: 6 }],
+    ['0', { min: 0, max: 0 }],
+    ['6-5', null],
+    ['11', null],
+    ['', null],
+  ])('%s', (text, rir) => {
+    expect(parseRir(text)).toEqual(rir)
   })
 })
 

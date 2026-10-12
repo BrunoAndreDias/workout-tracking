@@ -110,7 +110,9 @@ function mergeWorkouts(current: AppData, incoming: BackupData): Pick<AppData, 'e
     )
 
   const planIds = new Set(current.workoutPlans.plans.map((p) => p.id))
-  const addedPlans = incoming.workoutPlans.plans.filter((p) => !planIds.has(p.id)).map((p) => ({ ...p, days: p.days.map((d) => ({ ...d, exercises: map(d.exercises) })) }))
+  const addedPlans = incoming.workoutPlans.plans
+    .filter((p) => !planIds.has(p.id))
+    .map((p) => ({ ...p, blocks: p.blocks.map((b) => ({ ...b, days: b.days.map((d) => ({ ...d, exercises: map(d.exercises) })) })) }))
   const plans = [...current.workoutPlans.plans, ...addedPlans]
   const sessionIds = new Set(current.workoutSessions.map((s) => s.id))
   const addedSessions = incoming.workoutSessions

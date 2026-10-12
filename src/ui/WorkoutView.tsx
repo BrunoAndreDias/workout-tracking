@@ -4,11 +4,11 @@ import { newId } from '../domain/plans.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { findDay, sessionsOn } from '../domain/workouts.ts'
-import type { WorkoutAction, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
+import { blockChanges, currentBlock, findDay, sessionsOn } from '../domain/workouts.ts'
+import type { BlockPosition, Exercise, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import { DateStepper } from './DateStepper.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
-import { sessionTitle } from './format.ts'
+import { formatRange, sessionTitle } from './format.ts'
 import { WatchWorkoutLine } from './WorkoutLines.tsx'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
 import { WorkoutSessionCard } from './WorkoutSessionCard.tsx'
@@ -22,6 +22,23 @@ interface Props {
   watch: WatchWorkoutLog
 }
 
+function blockLine(block: WorkoutBlock, position: BlockPosition | null): string {
+  if (!position) return block.name
+  return [block.name, `semana ${position.week} de ${block.weeks}`, ...(position.rir ? [`RIR ${formatRange(position.rir)}`] : [])].join(' · ')
+}
+
+function BlockNotice({ block, previous, exercises }: { block: WorkoutBlock; previous: WorkoutBlock; exercises: readonly Exercise[] }) {
+  const { entering, leaving } = blockChanges(previous, block)
+  const names = (ids: readonly string[]) => ids.map((id) => exercises.find((e) => e.id === id)?.name ?? 'Exercício desconhecido').join(', ')
+  return (
+    <section className="block-notice" aria-label="Novo bloco">
+      <p className="block-notice-title">Começa o {block.name} esta semana.</p>
+      {entering.length > 0 && <p>Entram: {names(entering)}</p>}
+      {leaving.length > 0 && <p>Saem: {names(leaving)}</p>}
+    </section>
+  )
+}
+
 const TABS = [
   { id: 'registo', label: 'Registo' },
   { id: 'plano', label: 'Plano de treino' },
@@ -33,6 +50,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
   const sessions = sessionsOn(state.sessions, date)
   const watched = watchWorkoutsOn(watch, date)
   const activePlan = state.plans.find((p) => p.id === state.activePlanId)
+  const { block, position } = activePlan ? currentBlock(activePlan, state.sessions, date) : { block: undefined, position: null }
   const goTo = (next: IsoDate) => {
     setAdding(false)
     onDate(next)
@@ -56,7 +74,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
       </div>
 
       {tab === 'plano' ? (
-        <WorkoutPlanEditor state={state} dispatch={dispatch} />
+        <WorkoutPlanEditor state={state} dispatch={dispatch} today={today} />
       ) : (
         <>
           <DateStepper date={date} today={today} onDate={goTo} label="Data do treino" />
@@ -83,6 +101,8 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
             </button>
           ) : (
             <section className="card day-empty" aria-labelledby="comecar-treino">
+              {date <= today && position?.movedFrom && <BlockNotice block={position.block} previous={position.movedFrom} exercises={state.exercises} />}
+              {date <= today && block && <p className="block-line">{blockLine(block, position)}</p>}
               <h2 id="comecar-treino" className="session-title">
                 {sessions.length > 0 ? 'Outro treino' : watched.length > 0 ? 'Registar as séries' : 'Sem treino registado'}
               </h2>
@@ -91,12 +111,12 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
               ) : (
                 <>
                   <p className="muted">
-                    {activePlan && activePlan.days.length > 0
+                    {activePlan && block && block.days.length > 0
                       ? `Começa por um dia de ${activePlan.name}: as séries vêm preenchidas com o que fizeste da última vez.`
                       : 'Ainda não tens dias de treino. Escreve-os em Plano de treino, ou regista um treino livre.'}
                   </p>
                   <div className="day-start">
-                    {activePlan?.days.map((d, i) => (
+                    {block?.days.map((d, i) => (
                       <button key={d.id} type="button" className={i === 0 ? 'primary' : 'secondary'} onClick={() => start(d)}>
                         {d.name}
                       </button>

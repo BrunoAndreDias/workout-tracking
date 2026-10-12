@@ -3,12 +3,12 @@ import { parseIsoDate } from './days.ts'
 import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
-import type { ExerciseId, IsoDate, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { exerciseKey } from './workouts.ts'
-import type { AfterEffect, Exercise, LoggedSet, PlannedExercise, SessionExercise, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import { exerciseKey, isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.ts'
+import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, SessionExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
-export const WORKOUT_PLANS_SCHEMA_VERSION = 1
+export const WORKOUT_PLANS_SCHEMA_VERSION = 2
 /**
  * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. A session's
  * optional `feel` and `after` came later without a new version: absent, they are none.
@@ -55,17 +55,53 @@ function parseDay(raw: unknown): WorkoutDay | null {
   return exercises && { id: raw.id as WorkoutDayId, name: raw.name, exercises }
 }
 
-function parsePlan(raw: unknown): WorkoutPlan | null {
-  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
-  const days = parseList(raw.days, parseDay, (d) => d.id)
-  return days && { id: raw.id as WorkoutPlanId, name: raw.name, days }
+function parseRirTarget(raw: unknown): RirTarget | null | false {
+  if (raw === null) return null
+  if (!isRecord(raw) || typeof raw.min !== 'number' || typeof raw.max !== 'number') return false
+  const rir = { min: raw.min, max: raw.max }
+  return isRirTarget(rir) && rir
 }
 
-/** The current version only; the active plan must be one of the plans, and is null only when there are none. */
+function parseBlock(raw: unknown): WorkoutBlock | null {
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
+  if (!Array.isArray(raw.rir) || raw.rir.length !== raw.weeks) return null
+  const rir = raw.rir.map(parseRirTarget)
+  if (rir.includes(false)) return null
+  const days = parseList(raw.days, parseDay)
+  return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, rir: rir as (RirTarget | null)[], days }
+}
+
+function parseStart(raw: unknown, blocks: readonly WorkoutBlock[]): CycleStart | null | false {
+  if (raw === null) return null
+  if (!isRecord(raw) || typeof raw.since !== 'string' || !blocks.some((b) => b.id === raw.blockId)) return false
+  const since = parseIsoDate(raw.since)
+  return since !== null && { blockId: raw.blockId as WorkoutBlockId, since }
+}
+
+function parsePlan(raw: unknown): WorkoutPlan | null {
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
+  const blocks = parseList(raw.blocks, parseBlock)
+  if (!blocks || blocks.length === 0) return null
+  const start = parseStart(raw.start, blocks)
+  return start === false ? null : { id: raw.id as WorkoutPlanId, name: raw.name, blocks, start }
+}
+
+function parsePlanV1(raw: unknown): WorkoutPlan | null {
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
+  const days = parseList(raw.days, parseDay)
+  if (!days) return null
+  const block = { ...newBlock(`${raw.id}-b1` as WorkoutBlockId, 'Bloco A'), days }
+  return { id: raw.id as WorkoutPlanId, name: raw.name, blocks: [block], start: null }
+}
+
+const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
+
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
-  if (!isRecord(raw) || raw.version !== WORKOUT_PLANS_SCHEMA_VERSION) return null
-  const plans = parseList(raw.plans, parsePlan, (p) => p.id)
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
+  const plans = parseList(raw.plans, raw.version === 1 ? parsePlanV1 : parsePlan, (p) => p.id)
   if (!plans) return null
+  if (!isUnique(plans.flatMap((p) => p.blocks.map((b) => b.id)))) return null
+  if (!plans.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null
   const active = plans.find((p) => p.id === raw.activePlanId)
   if (plans.length > 0 ? !active : raw.activePlanId !== null) return null
   return { plans, activePlanId: active?.id ?? null }

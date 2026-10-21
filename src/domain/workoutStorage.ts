@@ -4,26 +4,35 @@ import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { exerciseKey, isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.ts'
-import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, SessionExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
+import { exerciseKey } from './exerciseCatalog.ts'
+import { ROLES, splitForDayCount, SPLITS } from './splits.ts'
+import { isRirTarget, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
-export const WORKOUT_PLANS_SCHEMA_VERSION = 2
 /**
- * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises. A session's
- * optional `feel` and `after` came later without a new version: absent, they are none.
+ * 1 had a plan's days with no blocks; 2 had Training Blocks of any number of days; 3 has a Training Split, every block
+ * with its days, and a role on each Planned Exercise. Plans of 1 and 2 whose blocks all have 3 or 4 days become that
+ * split; the others cannot, and are dropped: loading keeps their text under `:migrated:`.
  */
-export const WORKOUT_SESSIONS_SCHEMA_VERSION = 2
+export const WORKOUT_PLANS_SCHEMA_VERSION = 3
+/**
+ * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises; 3 marks each
+ * set done or not, with an optional RIR, and keeps the target the session suggested. A session's optional `feel` and
+ * `after` came later than 2 without a new version: absent, they are none.
+ */
+export const WORKOUT_SESSIONS_SCHEMA_VERSION = 3
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
 const isKg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
+const isRir = (v: unknown): v is number => isCount(v) && v <= MAX_RIR
 
 /** Every item parsed, or null when one fails or, given `key`, two share a key. */
-function parseList<T>(raw: unknown, parse: (raw: unknown) => T | null, key?: (item: T) => string): T[] | null {
+function parseList<T>(raw: unknown, parse: (raw: unknown, index: number) => T | null, key?: (item: T) => string): T[] | null {
   if (!Array.isArray(raw)) return null
   const items = []
-  for (const r of raw) {
-    const item = parse(r)
+  for (const [i, r] of raw.entries()) {
+    const item = parse(r, i)
     if (!item) return null
     items.push(item)
   }
@@ -42,16 +51,24 @@ export function parseExercises(raw: unknown): Exercise[] | null {
   return exercises && new Set(exercises.map((e) => exerciseKey(e.name))).size === exercises.length ? exercises : null
 }
 
-function parsePlanned(raw: unknown): PlannedExercise | null {
+const isRole = (v: unknown): v is Role => ROLES.includes(v as Role)
+const isSplit = (v: unknown): v is Split => typeof v === 'string' && Object.hasOwn(SPLITS, v)
+
+/**
+ * Before version 3 a Planned Exercise had no role. A store cannot see the Exercises' names, so the role is guessed
+ * from the place in the day: the first is the main lift and the rest are isolation work, which the user can change.
+ */
+function parsePlanned(raw: unknown, legacyIndex: number | null): PlannedExercise | null {
   if (!isRecord(raw) || !isId(raw.exerciseId) || !isCount(raw.sets) || raw.sets < 1 || !isRecord(raw.reps)) return null
   const { min, max } = raw.reps
   if (!isCount(min) || !isCount(max) || min < 1 || max < min) return null
-  return { exerciseId: raw.exerciseId as ExerciseId, sets: raw.sets, reps: { min, max } }
+  const role = legacyIndex === null ? raw.role : legacyIndex === 0 ? 'main' : 'isolation'
+  return isRole(role) ? { exerciseId: raw.exerciseId as ExerciseId, role, sets: raw.sets, reps: { min, max } } : null
 }
 
-function parseDay(raw: unknown): WorkoutDay | null {
+function parseDay(raw: unknown, legacy: boolean): WorkoutDay | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
-  const exercises = parseList(raw.exercises, parsePlanned, (p) => p.exerciseId)
+  const exercises = parseList(raw.exercises, (r, i) => parsePlanned(r, legacy ? i : null), (p) => p.exerciseId)
   return exercises && { id: raw.id as WorkoutDayId, name: raw.name, exercises }
 }
 
@@ -62,62 +79,104 @@ function parseRirTarget(raw: unknown): RirTarget | null | false {
   return isRirTarget(rir) && rir
 }
 
-function parseBlock(raw: unknown): WorkoutBlock | null {
+/** A block or plan as read, before its days are checked against a split. */
+interface ReadBlock {
+  readonly id: WorkoutBlockId
+  readonly name: string
+  readonly weeks: number
+  readonly rir: readonly (RirTarget | null)[]
+  readonly days: readonly WorkoutDay[]
+}
+
+interface ReadPlan {
+  readonly id: WorkoutPlanId
+  readonly name: string
+  readonly split: Split | null
+  readonly blocks: readonly ReadBlock[]
+  readonly start: CycleStart | null
+}
+
+function parseBlock(raw: unknown, legacy: boolean): ReadBlock | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
   if (!Array.isArray(raw.rir) || raw.rir.length !== raw.weeks) return null
   const rir = raw.rir.map(parseRirTarget)
   if (rir.includes(false)) return null
-  const days = parseList(raw.days, parseDay)
+  const days = parseList(raw.days, (r) => parseDay(r, legacy))
   return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, rir: rir as (RirTarget | null)[], days }
 }
 
-function parseStart(raw: unknown, blocks: readonly WorkoutBlock[]): CycleStart | null | false {
+function parseStart(raw: unknown, blocks: readonly ReadBlock[]): CycleStart | null | false {
   if (raw === null) return null
   if (!isRecord(raw) || typeof raw.since !== 'string' || !blocks.some((b) => b.id === raw.blockId)) return false
   const since = parseIsoDate(raw.since)
   return since !== null && { blockId: raw.blockId as WorkoutBlockId, since }
 }
 
-function parsePlan(raw: unknown): WorkoutPlan | null {
+/** Version 2 had no split, and 3 must have one. */
+function parsePlan(raw: unknown, legacy: boolean): ReadPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
-  const blocks = parseList(raw.blocks, parseBlock)
+  if (!legacy && !isSplit(raw.split)) return null
+  const blocks = parseList(raw.blocks, (r) => parseBlock(r, legacy))
   if (!blocks || blocks.length === 0) return null
   const start = parseStart(raw.start, blocks)
-  return start === false ? null : { id: raw.id as WorkoutPlanId, name: raw.name, blocks, start }
+  return start === false ? null : { id: raw.id as WorkoutPlanId, name: raw.name, split: legacy ? null : (raw.split as Split), blocks, start }
 }
 
-function parsePlanV1(raw: unknown): WorkoutPlan | null {
+function parsePlanV1(raw: unknown): ReadPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
-  const days = parseList(raw.days, parseDay)
+  const days = parseList(raw.days, (r) => parseDay(r, true))
   if (!days) return null
-  const block = { ...newBlock(`${raw.id}-b1` as WorkoutBlockId, 'Bloco A'), days }
-  return { id: raw.id as WorkoutPlanId, name: raw.name, blocks: [block], start: null }
+  const block = { id: `${raw.id}-b1` as WorkoutBlockId, name: 'Bloco A', weeks: 6, rir: Array(6).fill(null), days }
+  return { id: raw.id as WorkoutPlanId, name: raw.name, split: null, blocks: [block], start: null }
+}
+
+/** The plan as its split, given or found from the first block's day count; null when a block has another count. */
+function asSplit(plan: ReadPlan): WorkoutPlan | null {
+  const split = plan.split ?? splitForDayCount(plan.blocks[0].days.length)
+  if (!split || plan.blocks.some((b) => b.days.length !== SPLITS[split].days.length)) return null
+  // Every block's day count was just checked against the split's.
+  return { ...plan, split } as WorkoutPlan
 }
 
 const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
 
+/** Versions 1 to 3. A version 3 plan that does not fit its split fails the document; an older one is dropped. */
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
-  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
-  const plans = parseList(raw.plans, raw.version === 1 ? parsePlanV1 : parsePlan, (p) => p.id)
-  if (!plans) return null
-  if (!isUnique(plans.flatMap((p) => p.blocks.map((b) => b.id)))) return null
-  if (!plans.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null
-  const active = plans.find((p) => p.id === raw.activePlanId)
-  if (plans.length > 0 ? !active : raw.activePlanId !== null) return null
+  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== 2 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
+  const legacy = raw.version !== WORKOUT_PLANS_SCHEMA_VERSION
+  const read = parseList(raw.plans, raw.version === 1 ? parsePlanV1 : (r) => parsePlan(r, legacy), (p) => p.id)
+  if (!read) return null
+  if (!isUnique(read.flatMap((p) => p.blocks.map((b) => b.id)))) return null
+  if (!read.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null
+  if (read.length > 0 ? !read.some((p) => p.id === raw.activePlanId) : raw.activePlanId !== null) return null
+  const fitting = read.map(asSplit)
+  if (!legacy && fitting.includes(null)) return null
+  const plans = fitting.filter((p) => p !== null)
+  const active = plans.find((p) => p.id === raw.activePlanId) ?? plans[0]
   return { plans, activePlanId: active?.id ?? null }
 }
 
-function parseSet(raw: unknown): LoggedSet | null {
+/** Before version 3 a set with reps counted as logged, so it reads as done. */
+function parseSet(raw: unknown, legacy: boolean): LoggedSet | null {
   if (!isRecord(raw) || (raw.reps !== null && !isCount(raw.reps)) || (raw.kg !== null && !isKg(raw.kg))) return null
-  return { reps: raw.reps, kg: raw.kg }
+  if (legacy) return raw.reps === null ? { done: false, kg: raw.kg, reps: null, rir: null } : { done: true, kg: raw.kg, reps: raw.reps, rir: null }
+  if (raw.rir !== null && !isRir(raw.rir)) return null
+  if (raw.done === true && raw.reps !== null) return { done: true, kg: raw.kg, reps: raw.reps, rir: raw.rir }
+  return raw.done === false ? { done: false, kg: raw.kg, reps: raw.reps, rir: raw.rir } : null
 }
 
-function parseSessionExercise(raw: unknown): SessionExercise | null {
+function parseTarget(raw: unknown): SetTarget | null {
+  if (!isRecord(raw) || (raw.kg !== null && !isKg(raw.kg)) || !isCount(raw.reps) || !isRir(raw.rir)) return null
+  return { kg: raw.kg, reps: raw.reps, rir: raw.rir }
+}
+
+function parseSessionExercise(raw: unknown, legacy: boolean): SessionExercise | null {
   if (!isRecord(raw) || !isId(raw.exerciseId)) return null
-  const sets = parseList(raw.sets, parseSet)
+  const sets = parseList(raw.sets, (r) => parseSet(r, legacy))
   const note = parseOptionalNote(raw.note)
-  if (!sets || note === false) return null
-  return note ? { exerciseId: raw.exerciseId as ExerciseId, sets, note } : { exerciseId: raw.exerciseId as ExerciseId, sets }
+  const target = raw.target === undefined || legacy ? undefined : parseTarget(raw.target)
+  if (!sets || note === false || target === null) return null
+  return { exerciseId: raw.exerciseId as ExerciseId, sets, ...(target && { target }), ...(note && { note }) }
 }
 
 /** A version 1 note was plain text with no time: it counts as written at midday of the session's date. */
@@ -136,14 +195,14 @@ function parseAfterEffect(raw: unknown, session: { date: IsoDate; exercises: rea
   return { date, exerciseId, note }
 }
 
-function parseSession(raw: unknown, legacy: boolean): WorkoutSession | null {
+function parseSession(raw: unknown, version: 1 | 2 | 3): WorkoutSession | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string') return null
   const date = parseIsoDate(raw.date)
   if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
-  if (legacy && typeof raw.notes !== 'string') return null
+  if (version === 1 && typeof raw.notes !== 'string') return null
   if (raw.feel !== undefined && !isRating(raw.feel)) return null
-  const note = legacy ? legacyNote(raw.notes as string, date) : parseOptionalNote(raw.note)
-  const exercises = parseList(raw.exercises, parseSessionExercise, (e) => e.exerciseId)
+  const note = version === 1 ? legacyNote(raw.notes as string, date) : parseOptionalNote(raw.note)
+  const exercises = parseList(raw.exercises, (r) => parseSessionExercise(r, version < 3), (e) => e.exerciseId)
   if (!exercises || note === false) return null
   const after = raw.after === undefined ? [] : parseList(raw.after, (r) => parseAfterEffect(r, { date, exercises }), (a) => `${a.date} ${a.exerciseId}`)
   if (!after) return null
@@ -158,9 +217,10 @@ function parseSession(raw: unknown, legacy: boolean): WorkoutSession | null {
   }
 }
 
-/** Versions 1 and 2; null for anything else, including one bad session or two with the same id. */
+/** Versions 1 to 3; null for anything else, including one bad session or two with the same id. */
 export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
-  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== WORKOUT_SESSIONS_SCHEMA_VERSION)) return null
-  const legacy = raw.version === 1
-  return parseList(raw.sessions, (r) => parseSession(r, legacy), (s) => s.id)
+  if (!isRecord(raw)) return null
+  const version = raw.version
+  if (version !== 1 && version !== 2 && version !== WORKOUT_SESSIONS_SCHEMA_VERSION) return null
+  return parseList(raw.sessions, (r) => parseSession(r, version), (s) => s.id)
 }

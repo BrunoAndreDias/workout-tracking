@@ -1,155 +1,151 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { blockChanges, blockPosition, emptyWorkouts, findDay, loggedCounts, parseRepRange, parseRir, prefillSets, recentSessions, startSession, workoutReducer } from './workouts.ts'
-import type { WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
+import {
+  blockChanges,
+  blockPosition,
+  emptyWorkouts,
+  findDay,
+  lastDoneSets,
+  loggedCounts,
+  nextDay,
+  parseRepRange,
+  parseRir,
+  recentSessions,
+  sessionsBefore,
+  startSession,
+  targetRir,
+  workoutReducer,
+} from './workouts.ts'
+import type { BlockOf, LoggedSet, PlanOf, PlannedExercise, WorkoutAction, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 const SUPINO = 'ex-supino' as ExerciseId
 const REMO = 'ex-remo' as ExerciseId
+const SQUAT = 'ex-agachamento' as ExerciseId
 const date = (s: string) => s as IsoDate
+const done = (reps: number, kg: number | null, rir: number | null = null): LoggedSet => ({ done: true, reps, kg, rir })
+const pending = (reps: number | null, kg: number | null, rir: number | null = null): LoggedSet => ({ done: false, reps, kg, rir })
 
-const session = (id: string, on: string, exercises: WorkoutSession['exercises']): WorkoutSession => ({
+const session = (id: string, on: string, exercises: WorkoutSession['exercises'], workoutDayId: string | null = null): WorkoutSession => ({
   id: id as WorkoutSessionId,
   date: date(on),
-  workoutDayId: null,
+  workoutDayId: workoutDayId as WorkoutDayId | null,
   exercises,
 })
 
-const PEITO: WorkoutDay = {
-  id: 'd-peito' as WorkoutDayId,
-  name: 'Peito',
-  exercises: [
-    { exerciseId: SUPINO, sets: 4, reps: { min: 6, max: 8 } },
-    { exerciseId: REMO, sets: 2, reps: { min: 10, max: 10 } },
-  ],
-}
+const planned = (exerciseId: ExerciseId, role: PlannedExercise['role'], sets = 3, reps = { min: 6, max: 8 }): PlannedExercise => ({ exerciseId, role, sets, reps })
+
+const PEITO: WorkoutDay = { id: 'd-peito' as WorkoutDayId, name: 'Peito', exercises: [planned(SUPINO, 'main', 4), planned(REMO, 'isolation', 2, { min: 10, max: 15 })] }
 
 const HISTORY = [
-  session('s1', '2026-10-01', [{ exerciseId: SUPINO, sets: [{ reps: 8, kg: 60 }, { reps: 7, kg: 60 }] }]),
-  session('s2', '2026-10-03', [{ exerciseId: SUPINO, sets: [{ reps: 8, kg: 62.5 }, { reps: 6, kg: 62.5 }, { reps: null, kg: null }] }]),
-  session('s3', '2026-10-05', [{ exerciseId: SUPINO, sets: [{ reps: null, kg: 65 }] }]),
-  session('s4', '2026-10-09', [{ exerciseId: SUPINO, sets: [{ reps: 10, kg: 70 }] }]),
+  session('s1', '2026-10-01', [{ exerciseId: SUPINO, sets: [done(8, 60), done(7, 60)] }]),
+  session('s2', '2026-10-03', [{ exerciseId: SUPINO, sets: [done(7, 62.5, 2), done(7, 62.5, 2), pending(7, 62.5)], target: { kg: 62.5, reps: 7, rir: 2 } }]),
+  session('s3', '2026-10-05', [{ exerciseId: SUPINO, sets: [pending(9, 65)] }]),
+  session('s4', '2026-10-09', [{ exerciseId: SUPINO, sets: [done(10, 70)] }]),
 ]
 
 const run = (actions: WorkoutAction[], from: WorkoutState = emptyWorkouts()) => actions.reduce(workoutReducer, from)
 
-describe('pre-fill', () => {
-  it('copies the latest earlier session that logged the exercise, repeating its last set for extra planned sets', () => {
-    expect(prefillSets(HISTORY, SUPINO, date('2026-10-06'), 4)).toEqual([
-      { reps: 8, kg: 62.5 },
-      { reps: 6, kg: 62.5 },
-      { reps: 6, kg: 62.5 },
-      { reps: 6, kg: 62.5 },
-    ])
-  })
-
-  it('takes only as many sets as planned', () => {
-    expect(prefillSets(HISTORY, SUPINO, date('2026-10-02'), 1)).toEqual([{ reps: 8, kg: 60 }])
-  })
-
-  it('leaves the sets empty when the exercise was never logged before that date', () => {
-    expect(prefillSets(HISTORY, SUPINO, date('2026-09-30'), 2)).toEqual([
-      { reps: null, kg: null },
-      { reps: null, kg: null },
-    ])
+describe('the suggested target', () => {
+  it('reads the done sets of the latest earlier session that has any, and the RIR it aimed at', () => {
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-06'))).toEqual({ sets: [done(7, 62.5, 2), done(7, 62.5, 2)], targetRir: 2 })
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-02'))).toEqual({ sets: [done(8, 60), done(7, 60)], targetRir: null })
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-09-30'))).toBe(null)
   })
 
   it('on the same date, the session logged last wins', () => {
-    const sameDay = [...HISTORY, session('s5', '2026-10-03', [{ exerciseId: SUPINO, sets: [{ reps: 12, kg: null }] }])]
-    expect(prefillSets(sameDay, SUPINO, date('2026-10-04'), 1)).toEqual([{ reps: 12, kg: null }])
+    const sameDay = [...HISTORY, session('s5', '2026-10-03', [{ exerciseId: SUPINO, sets: [done(12, null)] }])]
+    expect(lastDoneSets(sameDay, SUPINO, date('2026-10-04'))?.sets).toEqual([done(12, null)])
   })
 
-  it('starting from a Workout Day gives one row per planned exercise with its planned set count', () => {
-    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, HISTORY)).toEqual({
+  it('the sessions before one are the earlier dates and those logged before it on its date', () => {
+    const sameDay = [...HISTORY, session('s5', '2026-10-03', [])]
+    expect(sessionsBefore(sameDay, sameDay[4]).map((s) => s.id)).toEqual(['s1', 's2'])
+    expect(sessionsBefore(sameDay, sameDay[1]).map((s) => s.id)).toEqual(['s1'])
+  })
+
+  it('aims at the week’s lowest RIR, never under 1 for compounds, and 2 when the week has no target', () => {
+    expect(targetRir('main', { min: 0, max: 1 })).toBe(1)
+    expect(targetRir('secondary', { min: 3, max: 4 })).toBe(3)
+    expect(targetRir('isolation', { min: 0, max: 1 })).toBe(0)
+    expect(targetRir('abs', null)).toBe(2)
+  })
+
+  it('a session from a Workout Day fills each planned set, pending, with the suggestion, and keeps it as the target', () => {
+    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, { min: 2, max: 3 }, HISTORY)).toEqual({
       id: 'new',
       date: '2026-10-06',
       workoutDayId: 'd-peito',
       exercises: [
-        {
-          exerciseId: 'ex-supino',
-          sets: [
-            { reps: 8, kg: 62.5 },
-            { reps: 6, kg: 62.5 },
-            { reps: 6, kg: 62.5 },
-            { reps: 6, kg: 62.5 },
-          ],
-        },
-        {
-          exerciseId: 'ex-remo',
-          sets: [
-            { reps: null, kg: null },
-            { reps: null, kg: null },
-          ],
-        },
+        { exerciseId: SUPINO, sets: Array(4).fill(pending(8, 62.5)), target: { kg: 62.5, reps: 8, rir: 2 } },
+        { exerciseId: REMO, sets: [pending(null, null), pending(null, null)] },
       ],
     })
   })
 
   it('a blank session starts with no exercises', () => {
-    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
+    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
+  })
+
+  it('counts only done sets', () => {
+    expect(loggedCounts(HISTORY[1])).toEqual({ exercises: 1, sets: 2 })
+    expect(loggedCounts(HISTORY[2])).toEqual({ exercises: 0, sets: 0 })
   })
 })
 
-describe('workoutReducer', () => {
-  const P = 'p1' as WorkoutPlanId
-  const D = 'd1' as WorkoutDayId
-  const B = 'b1' as WorkoutBlockId
-  const planned = run([
-    { type: 'createPlan', planId: P, blockId: B, name: 'Força' },
-    { type: 'addDay', planId: P, blockId: B, dayId: D, name: 'Pernas' },
-    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: ' Agachamento ', newExerciseId: 'e1' as ExerciseId },
-    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: 'agachamento', newExerciseId: 'e2' as ExerciseId },
-    { type: 'addPlannedExercise', planId: P, blockId: B, dayId: D, name: '   ', newExerciseId: 'e3' as ExerciseId },
-  ])
-  const NO_RIR = [null, null, null, null, null, null]
+const P = 'p1' as WorkoutPlanId
+const B = 'b1' as WorkoutBlockId
+const S1 = 's1' as WorkoutSessionId
+const created = run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf' }])
+const PUSH = created.plans[0].blocks[0].days[0]
+const BENCH = PUSH.exercises[0].exerciseId
+const day = (state: WorkoutState, i = 0) => state.plans[0].blocks[0].days[i]
 
-  it('creates an exercise from a typed name and reuses it when the name matches ignoring case', () => {
-    expect(planned.exercises).toEqual([{ id: 'e1', name: 'Agachamento' }])
-    expect(planned.plans).toEqual([
-      {
-        id: 'p1',
-        name: 'Força',
-        blocks: [{ id: 'b1', name: 'Bloco A', weeks: 6, rir: NO_RIR, days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] }],
-        start: null,
-      },
+describe('Workout Plans', () => {
+  it('a new plan is its split’s template in one Bloco A, and becomes the active plan', () => {
+    const plan = created.plans[0]
+    expect(plan).toMatchObject({ id: 'p1', name: 'Força', split: 'ppf', start: null })
+    expect(plan.blocks.map((b) => [b.id, b.name, b.weeks])).toEqual([['b1', 'Bloco A', 6]])
+    expect(plan.blocks[0].days.map((d) => [d.id, d.name])).toEqual([
+      ['b1-d1', 'Push'],
+      ['b1-d2', 'Pull'],
+      ['b1-d3', 'Full body'],
     ])
-    expect(planned.activePlanId).toBe('p1')
+    expect(created.exercises.find((e) => e.id === BENCH)?.name).toBe('Flat Barbell Bench Press')
+    expect(created.activePlanId).toBe('p1')
   })
 
-  it('a session exercise typed by name reuses the plan exercise and copies its last logged sets', () => {
+  it('a second plan reuses the Exercises the first one created', () => {
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
+    expect(two.plans[1].blocks[0].days.map((d) => d.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B'])
+    expect(two.plans[1].blocks[0].days[0].exercises[0].exerciseId).toBe(BENCH)
+    expect(new Set(two.exercises.map((e) => e.name)).size).toBe(two.exercises.length)
+  })
+
+  it('adds an Exercise with a role and its rep range, reusing one named the same ignoring case', () => {
     const s = run(
       [
-        { type: 'startSession', sessionId: 's1' as WorkoutSessionId, date: date('2026-10-01'), day: planned.plans[0].blocks[0].days[0] },
-        { type: 'setSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId, index: 0, set: { reps: 5, kg: 100 } },
-        { type: 'removeSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId, index: 2 },
-        { type: 'addSet', sessionId: 's1' as WorkoutSessionId, exerciseId: 'e1' as ExerciseId },
-        { type: 'startSession', sessionId: 's2' as WorkoutSessionId, date: date('2026-10-02'), day: null },
-        { type: 'addSessionExercise', sessionId: 's2' as WorkoutSessionId, name: 'AGACHAMENTO', newExerciseId: 'e9' as ExerciseId },
-        { type: 'addSessionExercise', sessionId: 's2' as WorkoutSessionId, name: 'Prancha', newExerciseId: 'e10' as ExerciseId },
-        { type: 'setSessionNote', sessionId: 's2' as WorkoutSessionId, text: 'Joelho bem', now: '2026-10-02T19:30:00' as LocalDateTime },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: ' Supino ', role: 'secondary', newExerciseId: 'e1' as ExerciseId },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: 'supino', role: 'isolation', newExerciseId: 'e2' as ExerciseId },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: '  ', role: 'isolation', newExerciseId: 'e3' as ExerciseId },
       ],
-      planned,
+      created,
     )
-    expect(s.sessions[0].exercises[0].sets).toEqual([
-      { reps: 5, kg: 100 },
-      { reps: null, kg: null },
-      { reps: null, kg: null },
-    ])
-    expect(s.exercises.map((e) => e.name)).toEqual(['Agachamento', 'Prancha'])
-    expect(s.sessions[1]).toEqual({
-      id: 's2',
-      date: '2026-10-02',
-      workoutDayId: null,
-      note: { text: 'Joelho bem', createdAt: '2026-10-02T19:30:00', updatedAt: '2026-10-02T19:30:00' },
-      exercises: [
-        { exerciseId: 'e1', sets: [{ reps: 5, kg: 100 }] },
-        { exerciseId: 'e10', sets: [{ reps: null, kg: null }] },
-      ],
-    })
-    expect(loggedCounts(s.sessions[0])).toEqual({ exercises: 1, sets: 1 })
+    expect(day(s).exercises.slice(PUSH.exercises.length)).toEqual([{ exerciseId: 'e1', role: 'secondary', sets: 3, reps: { min: 8, max: 10 } }])
+    expect(s.exercises.at(-1)).toEqual({ id: 'e1', name: 'Supino' })
+  })
+
+  it('swapping keeps the role, sets, reps and place, and does nothing when the new Exercise is already in the day', () => {
+    const edited = run([{ type: 'setPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, planned: { ...PUSH.exercises[0], sets: 5 } }], created)
+    const swapped = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: 'Flat Dumbbell Bench Press', newExerciseId: 'db' as ExerciseId }], edited)
+    expect(day(swapped).exercises[0]).toEqual({ exerciseId: 'db', role: 'main', sets: 5, reps: { min: 6, max: 8 } })
+    expect(day(swapped).exercises.slice(1)).toEqual(PUSH.exercises.slice(1))
+    const into = PUSH.exercises[1].exerciseId
+    const same = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: created.exercises.find((e) => e.id === into)!.name, newExerciseId: 'x' as ExerciseId }], created)
+    expect(day(same)).toEqual(PUSH)
   })
 
   it('deleting the active plan activates the next one, and the last leaves none', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro' }], planned)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
     expect(two.activePlanId).toBe('p2')
     const one = run([{ type: 'deletePlan', planId: 'p2' as WorkoutPlanId }], two)
     expect(one.activePlanId).toBe('p1')
@@ -163,43 +159,44 @@ describe('workoutReducer', () => {
         { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 5, max: 6 } },
         { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B },
         { type: 'renameBlock', planId: P, blockId: 'b2' as WorkoutBlockId, name: 'Bloco C' },
-        { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: null },
+        { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: 'gone' as WorkoutBlockId },
       ],
-      planned,
+      created,
     )
-    expect(s.plans[0].blocks).toEqual([
-      { id: 'b1', name: 'Bloco A', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'd1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
-      { id: 'b2', name: 'Bloco C', weeks: 3, rir: [{ min: 5, max: 6 }, null, null], days: [{ id: 'b2-d1', name: 'Pernas', exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 8, max: 12 } }] }] },
-      { id: 'b3', name: 'Bloco D', weeks: 6, rir: NO_RIR, days: [] },
+    const [a, c] = s.plans[0].blocks
+    expect(s.plans[0].blocks.map((b) => [b.id, b.name, b.weeks])).toEqual([
+      ['b1', 'Bloco A', 3],
+      ['b2', 'Bloco C', 3],
     ])
-    expect(findDay(s.plans, 'b2-d1' as WorkoutDayId)?.name).toBe('Pernas')
+    expect(c.rir).toEqual([{ min: 5, max: 6 }, { min: 3, max: 3 }, { min: 2, max: 3 }])
+    expect(c.days.map((d) => d.id)).toEqual(['b2-d1', 'b2-d2', 'b2-d3'])
+    expect(c.days.map((d) => d.exercises)).toEqual(a.days.map((d) => d.exercises))
+    expect(findDay(s.plans, 'b2-d1' as WorkoutDayId)?.name).toBe('Push')
   })
 
   it('more weeks pad the RIR targets with none, fewer drop the last ones, and a week out of range is not set', () => {
     const s = run(
       [
-        { type: 'setBlockRir', planId: P, blockId: B, week: 6, rir: { min: 0, max: 1 } },
-        { type: 'setBlockRir', planId: P, blockId: B, week: 2, rir: { min: 4, max: 4 } },
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 2 },
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
-        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 4 },
-        { type: 'setBlockRir', planId: P, blockId: B, week: 5, rir: { min: 1, max: 1 } },
+        { type: 'setBlockRir', planId: P, blockId: B, week: 4, rir: { min: 1, max: 1 } },
         { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 3, max: 11 } },
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 0 },
       ],
-      planned,
+      created,
     )
-    expect(s.plans[0].blocks[0].rir).toEqual([null, { min: 4, max: 4 }, null, null])
+    expect(s.plans[0].blocks[0].rir).toEqual([{ min: 4, max: 5 }, { min: 3, max: 3 }, null])
   })
 
   it('removing the block the cycle started on moves the start to the first block left, keeping its date, and the last block stays', () => {
     const since = date('2026-10-05')
     const two = run(
       [
-        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: null },
+        { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B },
         { type: 'setCycleStart', planId: P, blockId: B, since },
         { type: 'removeBlock', planId: P, blockId: B },
       ],
-      planned,
+      created,
     )
     expect(two.plans[0].blocks.map((b) => b.id)).toEqual(['b2'])
     expect(two.plans[0].start).toEqual({ blockId: 'b2', since })
@@ -207,28 +204,75 @@ describe('workoutReducer', () => {
   })
 })
 
-const SQUAT = 'ex-agachamento' as ExerciseId
-const day = (id: string, exercises: ExerciseId[]): WorkoutDay => ({
-  id: id as WorkoutDayId,
-  name: id,
-  exercises: exercises.map((exerciseId) => ({ exerciseId, sets: 3, reps: { min: 8, max: 12 } })),
+describe('logging sets', () => {
+  const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [pending(8, 60), pending(8, 60), pending(8, 60)] }])] }
+  const sets = (s: WorkoutState) => s.sessions[0].exercises[0].sets
+  const tick = (index: number, isDone = true): WorkoutAction => ({ type: 'setSetDone', sessionId: S1, exerciseId: SUPINO, index, done: isDone })
+  const type = (index: number, set: { kg: number | null; reps: number | null; rir: number | null }): WorkoutAction => ({ type: 'setSet', sessionId: S1, exerciseId: SUPINO, index, set })
+
+  it('one tap marks a set done as shown, again is the same, and un-marking keeps its values', () => {
+    expect(sets(run([tick(0), tick(0)], start))).toEqual([done(8, 60), pending(8, 60), pending(8, 60)])
+    expect(sets(run([tick(0), tick(0, false)], start))).toEqual(sets(start))
+  })
+
+  it('a set with no reps cannot be done', () => {
+    const empty = run([type(1, { kg: 60, reps: null, rir: null }), tick(1)], start)
+    expect(sets(empty)[1]).toEqual(pending(null, 60))
+  })
+
+  it('editing kg or reps never marks a set done, and keeps a done one done while it has reps', () => {
+    const s = run([type(0, { kg: 62.5, reps: 7, rir: null }), tick(1), type(1, { kg: 60, reps: 9, rir: null })], start)
+    expect(sets(s).slice(0, 2)).toEqual([pending(7, 62.5), done(9, 60)])
+    expect(sets(run([type(1, { kg: 60, reps: null, rir: null })], s))[1]).toEqual(pending(null, 60))
+  })
+
+  it('a new RIR fills the next pending set that has none', () => {
+    const s = run([tick(0), type(0, { kg: 60, reps: 8, rir: 2 }), type(1, { kg: 60, reps: 8, rir: 1 })], start)
+    expect(sets(s)).toEqual([done(8, 60, 2), pending(8, 60, 1), pending(8, 60, 1)])
+  })
+
+  it('a new set copies the last one, pending', () => {
+    expect(sets(run([tick(2), { type: 'addSet', sessionId: S1, exerciseId: SUPINO }], start)).at(-1)).toEqual(pending(8, 60))
+  })
+
+  it('an Exercise added to a session copies its last done sets, pending', () => {
+    const s = run([{ type: 'addSessionExercise', sessionId: S1, name: 'Remo', newExerciseId: REMO }], {
+      ...start,
+      exercises: [{ id: REMO, name: 'Remo' }],
+      sessions: [session('s0', '2026-10-01', [{ exerciseId: REMO, sets: [done(10, 40, 1), pending(10, 40)] }]), ...start.sessions],
+    })
+    expect(s.sessions[1].exercises[1]).toEqual({ exerciseId: REMO, sets: [pending(10, 40)] })
+  })
+
+  it('starting a session suggests from the history in the state, at the week’s RIR', () => {
+    const history = { ...created, sessions: [session('s0', '2026-10-01', [{ exerciseId: BENCH, sets: [done(7, 60, 2)] }])] }
+    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, week: { min: 2, max: 3 } }], history)
+    expect(s.sessions[1].exercises[0]).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(8, 60)), target: { kg: 60, reps: 8, rir: 2 } })
+  })
 })
-const block = (id: string, weeks: number, days: WorkoutDay[]): WorkoutBlock => ({
+
+const day3 = (prefix: string, exercises: ExerciseId[]): BlockOf<'ppf'>['days'] => [
+  { id: `${prefix}1` as WorkoutDayId, name: `${prefix}1`, exercises: exercises.map((e) => planned(e, 'main')) },
+  { id: `${prefix}2` as WorkoutDayId, name: `${prefix}2`, exercises: [] },
+  { id: `${prefix}3` as WorkoutDayId, name: `${prefix}3`, exercises: [] },
+]
+const block = (id: string, weeks: number, days: BlockOf<'ppf'>['days']): BlockOf<'ppf'> => ({
   id: id as WorkoutBlockId,
   name: `Bloco ${id}`,
   weeks,
   rir: Array.from({ length: weeks }, (_, i) => ({ min: weeks - 1 - i, max: weeks - i })),
   days,
 })
-const BLOCK_A = block('A', 2, [day('a1', [SQUAT, SUPINO])])
-const BLOCK_B = block('B', 1, [day('b1', [SQUAT, REMO])])
-const cycle = (startOn: string | null, blocks = [BLOCK_A, BLOCK_B], blockId = 'A'): WorkoutPlan => ({
+const BLOCK_A = block('A', 2, day3('a', [SQUAT, SUPINO]))
+const BLOCK_B = block('B', 1, day3('b', [SQUAT, REMO]))
+const cycle = (startOn: string | null, blocks: PlanOf<'ppf'>['blocks'] = [BLOCK_A, BLOCK_B], blockId = 'A'): WorkoutPlan => ({
   id: 'p' as WorkoutPlanId,
   name: 'Força',
+  split: 'ppf',
   blocks,
   start: startOn === null ? null : { blockId: blockId as WorkoutBlockId, since: date(startOn) },
 })
-const trained = (on: string) => session(`s-${on}`, on, [{ exerciseId: SQUAT, sets: [{ reps: 5, kg: 100 }] }])
+const trained = (on: string, dayId: string | null = null) => session(`s-${on}`, on, [{ exerciseId: SQUAT, sets: [done(5, 100)] }], dayId)
 const where = (plan: WorkoutPlan, sessions: WorkoutSession[], on: string) => {
   const p = blockPosition(plan, sessions, date(on))
   return p && { block: p.block.name, week: p.week, rir: p.rir, movedFrom: p.movedFrom?.name ?? null }
@@ -246,8 +290,8 @@ describe('blockPosition', () => {
     expect(where(cycle('2026-10-07'), [], MONDAY)).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
   })
 
-  it('a week without a filled set pauses the block, and two sessions in one week count once', () => {
-    const sessions = [trained('2026-10-06'), trained('2026-10-08'), session('empty', '2026-10-13', [{ exerciseId: SQUAT, sets: [{ reps: null, kg: 80 }] }])]
+  it('a week without a done set pauses the block, and two sessions in one week count once', () => {
+    const sessions = [trained('2026-10-06'), trained('2026-10-08'), session('empty', '2026-10-13', [{ exerciseId: SQUAT, sets: [pending(5, 80)] }])]
     expect(where(cycle(MONDAY), sessions, '2026-10-21')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
   })
 
@@ -262,7 +306,7 @@ describe('blockPosition', () => {
   })
 
   it('wraps to the first block after the last', () => {
-    const sessions = [MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map(trained)
+    const sessions = [MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map((d) => trained(d))
     expect(where(cycle(MONDAY), sessions, '2026-11-02')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
     expect(where(cycle(MONDAY), sessions.slice(0, 3), '2026-10-26')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: 'Bloco B' })
   })
@@ -273,7 +317,24 @@ describe('blockPosition', () => {
   })
 
   it('a plan with one block has no block before it', () => {
-    expect(where(cycle(MONDAY, [BLOCK_A]), [MONDAY, '2026-10-12'].map(trained), '2026-10-19')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+    expect(where(cycle(MONDAY, [BLOCK_A]), [MONDAY, '2026-10-12'].map((d) => trained(d)), '2026-10-19')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+  })
+})
+
+describe('nextDay', () => {
+  it('is the first day before any session of the plan', () => {
+    expect(nextDay(cycle(null), [trained('2026-10-01')], date('2026-10-06')).id).toBe('a1')
+  })
+
+  it('is the day after the latest session’s day, wrapping after the last', () => {
+    expect(nextDay(cycle(null), [trained('2026-10-01', 'a2'), trained('2026-10-03', 'a1')], date('2026-10-06')).id).toBe('a2')
+    expect(nextDay(cycle(null), [trained('2026-10-03', 'a3')], date('2026-10-06')).id).toBe('a1')
+  })
+
+  it('ignores sessions after the date, and carries the rotation into a new block by the day’s place', () => {
+    expect(nextDay(cycle(null), [trained('2026-10-01', 'a1'), trained('2026-10-09', 'a2')], date('2026-10-06')).id).toBe('a2')
+    const sessions = [trained(MONDAY, 'a1'), trained('2026-10-13', 'a2')]
+    expect(nextDay(cycle(MONDAY), sessions, date('2026-10-19')).id).toBe('b3')
   })
 })
 
@@ -314,7 +375,6 @@ describe('parseRepRange', () => {
 })
 
 describe('exercise notes', () => {
-  const S1 = 's1' as WorkoutSessionId
   const at = (s: string) => s as LocalDateTime
   const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
 
@@ -345,7 +405,6 @@ describe('exercise notes', () => {
 })
 
 describe('end feel and After-effects', () => {
-  const S1 = 's1' as WorkoutSessionId
   const at = (s: string) => s as LocalDateTime
   const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
   const after = (on: string, exerciseId: ExerciseId | null, text: string, now: string): WorkoutAction => ({ type: 'setAfterEffect', sessionId: S1, date: date(on), exerciseId, text, now: at(now) })

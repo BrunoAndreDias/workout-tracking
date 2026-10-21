@@ -48,18 +48,20 @@ const day = (date: string, planId: PlanId | null): DayLog => {
 }
 
 const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }
-const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] }
+const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, role: 'main' as const, sets: 3, reps: { min: 8, max: 12 } }] }
+const restDay = (id: string) => ({ id: id as WorkoutDayId, name: id, exercises: [] })
 const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,
   name: 'Força',
-  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, rir: [{ min: 5, max: 6 }], days: [PEITO_DAY] }],
+  split: 'ppf',
+  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, rir: [{ min: 5, max: 6 }], days: [PEITO_DAY, restDay('wd-1b'), restDay('wd-1c')] }],
   start: { blockId: 'wb-1' as WorkoutBlockId, since: '2026-05-04' as IsoDate },
 }
 const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   id: id as WorkoutSessionId,
   date: '2026-05-01' as IsoDate,
   workoutDayId: null,
-  exercises: [{ exerciseId, sets: [{ reps: 8, kg: 60 }] }],
+  exercises: [{ exerciseId, sets: [{ done: true, reps: 8, kg: 60, rir: null }] }],
 })
 const NO_WORKOUTS = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] }
 const NO_BODY = { sleep: {}, feel: {}, moods: {}, health: {}, watchWorkouts: {} }
@@ -155,7 +157,7 @@ describe('backup', () => {
     ],
     [
       'an active plan that is not there',
-      { app: 'plano-alimentar', version: 1, stores: { workoutPlans: { version: 2, plans: [PEITO], activePlanId: 'gone' } } },
+      { app: 'plano-alimentar', version: 1, stores: { workoutPlans: { version: 3, plans: [PEITO], activePlanId: 'gone' } } },
       'A cópia de segurança está danificada: os dados de planos de treino não são válidos. Não foi alterado nada.',
     ],
   ])('rejects %s', (_, raw, error) => {
@@ -208,7 +210,7 @@ describe('backup', () => {
     const remo = { id: 'ex-remo' as ExerciseId, name: 'Remo' }
     const theirSupino = { id: 'ex-their-supino' as ExerciseId, name: 'SUPINO' }
     const theirDay = { ...PEITO_DAY, id: 'wd-2' as WorkoutDayId, exercises: [{ ...PEITO_DAY.exercises[0], exerciseId: theirSupino.id }] }
-    const theirPlan: WorkoutPlan = { id: 'wp-2' as WorkoutPlanId, name: 'Deles', blocks: [{ ...PEITO.blocks[0], id: 'wb-2' as WorkoutBlockId, days: [theirDay] }], start: null }
+    const theirPlan: WorkoutPlan = { ...PEITO, id: 'wp-2' as WorkoutPlanId, name: 'Deles', blocks: [{ ...PEITO.blocks[0], id: 'wb-2' as WorkoutBlockId, days: [theirDay, restDay('wd-2b'), restDay('wd-2c')] }], start: null }
     const incoming: BackupData = {
       ...NO_PLANS,
       exercises: [{ ...SUPINO, name: 'Supino renomeado' }, theirSupino, remo],
@@ -229,13 +231,13 @@ describe('backup', () => {
     ])
   })
 
-  it('imports workout plans saved before Training Blocks as one Bloco A each', () => {
-    const v1 = { version: 1, plans: [{ id: 'wp-1', name: 'Força', days: [PEITO_DAY] }], activePlanId: 'wp-1' }
-    const r = parseBackup({ app: 'plano-alimentar', version: 1, stores: { workoutPlans: v1 } })
-    expect(r.ok && r.data.workoutPlans).toEqual({
-      plans: [{ id: 'wp-1', name: 'Força', blocks: [{ id: 'wp-1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [PEITO_DAY] }], start: null }],
-      activePlanId: 'wp-1',
-    })
+  it('imports workout plans saved before Training Splits as their split, and drops a plan that fits none instead of rejecting the file', () => {
+    const v2Day = (id: string) => ({ id, name: id, exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] })
+    const v2Plan = (id: string, n: number) => ({ id, name: id, blocks: [{ id: `${id}-b`, name: 'Bloco A', weeks: 1, rir: [null], days: Array.from({ length: n }, (_, i) => v2Day(`${id}-${i}`)) }], start: null })
+    const v2 = { version: 2, plans: [v2Plan('cinco', 5), v2Plan('quatro', 4)], activePlanId: 'cinco' }
+    const r = parseBackup({ app: 'plano-alimentar', version: 1, stores: { workoutPlans: v2 } })
+    expect(r.ok && r.data.workoutPlans.plans.map((p) => [p.id, p.split, p.blocks[0].days[0].exercises[0].role])).toEqual([['quatro', 'ul', 'main']])
+    expect(r.ok && r.data.workoutPlans.activePlanId).toBe('quatro')
   })
 
   it('a session brings its end feel and After-effects, which follow an Exercise merged by name', () => {
@@ -366,7 +368,7 @@ describe('backup', () => {
       const storage = quotaStorage(before(), 99)
       expect(replaceWithBackup(incoming(), storage)).toEqual({ ok: true })
       expect([STORES.units.key, STORES.days.key, STORES.foods.key].map((k) => k in storage.data)).toEqual([true, true, true])
-      expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 2, sessions: [] })
+      expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 3, sessions: [] })
     })
 
     it('a failed last write puts back the workout sessions too', () => {

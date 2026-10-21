@@ -30,7 +30,12 @@ const SESSIONS_V1 = JSON.stringify({
 })
 const WORKOUT_PLANS_V1 = JSON.stringify({
   version: 1,
-  plans: [{ id: 'wp1', name: 'Força', days: [{ id: 'wd1', name: 'Peito', exercises: [{ exerciseId: 'x1', sets: 3, reps: { min: 8, max: 12 } }] }] }],
+  plans: [{ id: 'wp1', name: 'Força', days: ['wd1', 'wd2', 'wd3'].map((id) => ({ id, name: id, exercises: [{ exerciseId: 'x1', sets: 3, reps: { min: 8, max: 12 } }] })) }],
+  activePlanId: 'wp1',
+})
+const WORKOUT_PLANS_V2 = JSON.stringify({
+  version: 2,
+  plans: [{ id: 'wp1', name: 'Cinco dias', blocks: [{ id: 'b1', name: 'Bloco A', weeks: 1, rir: [null], days: ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, name: id, exercises: [] })) }], start: null }],
   activePlanId: 'wp1',
 })
 const PLANS_V2 = JSON.stringify({
@@ -66,13 +71,21 @@ describe('a stored document of an older version', () => {
     expect(saved.state.plans[0].meals[0].options[0].entries).toEqual([{ id: 'e1', foodId: '430', grams: 60 }])
   })
 
-  it('keeps the version 1 workout plans aside before the plans with blocks are saved over them', () => {
+  it('keeps the version 1 workout plans aside before the plans with a split are saved over them', () => {
     const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V1 })
     saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
     expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V1])
     const saved = JSON.parse(storage.data[STORES.workoutPlans.key])
-    expect(saved.version).toBe(2)
+    expect(saved.version).toBe(3)
+    expect(saved.plans[0].split).toBe('ppf')
     expect(saved.plans[0].blocks.map((b: { id: string; name: string; days: { id: string }[] }) => [b.id, b.name, b.days[0].id])).toEqual([['wp1-b1', 'Bloco A', 'wd1']])
+  })
+
+  it('keeps a version 2 plan that fits no split aside before the plans without it are saved over them', () => {
+    const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V2 })
+    saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
+    expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V2])
+    expect(JSON.parse(storage.data[STORES.workoutPlans.key])).toEqual({ version: 3, plans: [], activePlanId: null })
   })
 
   it('keeps the version 1 days aside before the converted days are saved over them', () => {
@@ -105,7 +118,7 @@ describe('a stored document of an older version', () => {
     const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     expect(copies(storage.data, STORES.workoutSessions.key)).toEqual([SESSIONS_V1])
-    expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(2)
+    expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(3)
   })
 
   it('keeps one copy when this build starts again after converting', () => {

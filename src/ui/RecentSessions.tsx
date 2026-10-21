@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { Dispatch } from 'react'
 import { ratingWord } from '../domain/body.ts'
 import type { ExerciseId, IsoDate, LocalDateTime } from '../domain/types.ts'
-import { filledSets, recentSessions } from '../domain/workouts.ts'
+import { doneSets, recentSessions } from '../domain/workouts.ts'
 import type { AfterEffect, WorkoutAction, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import { AfterEffects } from './AfterEffects.tsx'
 import { formatDaysAgo, plural, sessionTitle } from './format.ts'
@@ -55,7 +55,7 @@ function Recent({ session, title, date, names, dispatch }: RecentProps) {
       <span className="rating-label" aria-hidden="true">Como está o corpo</span>
       <TimedNoteField note={today.get(null)?.note} label="Como está o corpo" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
       {session.exercises.map((e) => (
-        <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={filledSets(e)} effect={today.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
+        <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={doneSets(e)} effect={today.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
       ))}
       {earlier.length > 0 && (
         <>

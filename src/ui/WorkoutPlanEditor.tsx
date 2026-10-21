@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { Dispatch } from 'react'
 import { newId } from '../domain/plans.ts'
-import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutPlanId } from '../domain/types.ts'
 import { blockExercises, currentBlock, parseRepRange, parseRir } from '../domain/workouts.ts'
-import type { RepRange, RirTarget, WorkoutAction, WorkoutBlock, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
+import type { RepRange, RirTarget, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
 import { ExerciseAdder } from './ExerciseAdder.tsx'
 import { formatRange, plural } from './format.ts'
@@ -39,7 +39,7 @@ interface Props {
 export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
   const [selectedId, setSelectedId] = useState<WorkoutBlockId | null>(null)
   const plan = state.plans.find((p) => p.id === state.activePlanId)
-  const createPlan = () => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: `Plano de treino ${state.plans.length + 1}` })
+  const createPlan = () => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: `Plano de treino ${state.plans.length + 1}`, split: 'ppf' })
 
   if (!plan) {
     return (
@@ -148,8 +148,9 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
   const planId = plan.id
   const blockId = block.id
   const names = new Map(exercises.map((e) => [e.id, e.name]))
-  const index = plan.blocks.indexOf(block)
-  const before = index > 0 ? new Set(blockExercises(plan.blocks[index - 1])) : null
+  const blocks: readonly WorkoutBlock[] = plan.blocks
+  const index = blocks.indexOf(block)
+  const before = index > 0 ? new Set(blockExercises(blocks[index - 1])) : null
   const startHere = () => {
     if (plan.start && !window.confirm(`Recomeçar o ciclo no ${block.name} esta semana?`)) return
     dispatch({ type: 'setCycleStart', planId, blockId, since: today })
@@ -201,23 +202,12 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
         </fieldset>
       </section>
 
-      {block.days.map((day) => {
+      {(block.days as readonly WorkoutDay[]).map((day) => {
         const dayId = day.id
         return (
           <section key={dayId} className="card workout-day" aria-label={day.name}>
             <header className="session-head">
-              <h3 className="session-title">
-                <InlineName name={day.name} label="Nome do dia de treino" onRename={(name) => dispatch({ type: 'renameDay', planId, blockId, dayId, name })} />
-              </h3>
-              <button
-                type="button"
-                className="link-btn danger"
-                onClick={() => {
-                  if (window.confirm(`Remover o dia "${day.name}"?`)) dispatch({ type: 'removeDay', planId, blockId, dayId })
-                }}
-              >
-                Remover dia
-              </button>
+              <h3 className="session-title">{day.name}</h3>
             </header>
             {day.exercises.length === 0 && <p className="muted workout-empty">Sem exercícios. Escreve o nome de um abaixo.</p>}
             <ul className="planned-list">
@@ -244,14 +234,11 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
                 )
               })}
             </ul>
-            <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, newExerciseId: newId<ExerciseId>() })} />
+            <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: 'isolation', newExerciseId: newId<ExerciseId>() })} />
           </section>
         )
       })}
 
-      <button type="button" className="add-meal" onClick={() => dispatch({ type: 'addDay', planId, blockId, dayId: newId<WorkoutDayId>(), name: `Dia ${block.days.length + 1}` })}>
-        + Adicionar dia
-      </button>
     </>
   )
 }

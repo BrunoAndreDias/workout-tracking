@@ -56,7 +56,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
     onDate(next)
   }
   const start = (day: WorkoutDay | null) => {
-    dispatch({ type: 'startSession', sessionId: newId<WorkoutSessionId>(), date, day })
+    dispatch({ type: 'startSession', sessionId: newId<WorkoutSessionId>(), date, day, week: position?.rir ?? null })
     setAdding(false)
   }
 

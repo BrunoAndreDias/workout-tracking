@@ -1,3 +1,6 @@
+import type { ExerciseId } from './types.ts'
+import type { Exercise } from './workouts.ts'
+
 export type Muscle = 'abs' | 'back' | 'biceps' | 'calves' | 'chest' | 'forearms' | 'glutes' | 'hamstrings' | 'quadriceps' | 'shoulders' | 'triceps'
 
 export type Pattern =
@@ -24,6 +27,17 @@ export interface CatalogEntry {
 
 /** Two Exercise names with the same key are the same Exercise. */
 export const exerciseKey = (name: string) => name.trim().toLocaleLowerCase('pt')
+
+export const findExercise = (exercises: readonly Exercise[], name: string): Exercise | undefined =>
+  exercises.find((e) => exerciseKey(e.name) === exerciseKey(name))
+
+/** The Exercise with this name, ignoring case, or a new one under `newId`. Null for a blank name. */
+export function resolveExercise(exercises: readonly Exercise[], name: string, newId: ExerciseId): { exercises: readonly Exercise[]; id: ExerciseId } | null {
+  const trimmed = name.trim()
+  if (trimmed === '') return null
+  const found = findExercise(exercises, trimmed)
+  return found ? { exercises, id: found.id } : { exercises: [...exercises, { id: newId, name: trimmed }], id: newId }
+}
 
 /** The order the muscle-group filters show in. */
 export const MUSCLE_LABEL: Readonly<Record<Muscle, string>> = {

@@ -16,6 +16,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
   }
 }
 
+const SET = { done: true, kg: 62.5, reps: 8, rir: 2 }
 const SESSION = {
   id: 's1',
   date: '2026-10-06',
@@ -23,17 +24,22 @@ const SESSION = {
   exercises: [
     {
       exerciseId: 'e1',
-      sets: [{ reps: 8, kg: 62.5 }, { reps: 10, kg: null }, { reps: null, kg: null }],
+      sets: [SET, { done: true, kg: null, reps: 10, rir: null }, { done: false, kg: 60, reps: 8, rir: null }],
+      target: { kg: 62.5, reps: 8, rir: 2 },
       note: { text: 'Pulso dir. a doer na última', createdAt: '2026-10-06T19:12:00', updatedAt: '2026-10-06T19:12:00' },
     },
   ],
   note: { text: 'Ombro ok', createdAt: '2026-10-06T19:30:00', updatedAt: '2026-10-06T19:41:00' },
 }
-const DAY = { id: 'd1', name: 'Peito', exercises: [{ exerciseId: 'e1', sets: 4, reps: { min: 6, max: 6 } }] }
-const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days: [DAY] }
-const PLAN = { id: 'p1', name: 'Força', blocks: [BLOCK], start: { blockId: 'b1', since: '2026-10-05' } }
-const LEGACY_PLAN = { id: 'p1', name: 'Força', days: [DAY] }
-const plans = (...list: unknown[]) => ({ version: 2, plans: list, activePlanId: 'p1' })
+const sessions = (...list: unknown[]) => ({ version: 3, sessions: list })
+const withSets = (sets: unknown[]) => sessions({ ...SESSION, exercises: [{ exerciseId: 'e1', sets }] })
+
+const ROW = { exerciseId: 'e1', role: 'main', sets: 4, reps: { min: 6, max: 6 } }
+const day = (id: string, exercises: object[] = []) => ({ id, name: id, exercises })
+const DAYS = [day('d1', [ROW]), day('d2'), day('d3')]
+const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days: DAYS }
+const PLAN = { id: 'p1', name: 'Força', split: 'ppf', blocks: [BLOCK], start: { blockId: 'b1', since: '2026-10-05' } }
+const plans = (...list: unknown[]) => ({ version: 3, plans: list, activePlanId: 'p1' })
 const withBlock = (block: object) => plans({ ...PLAN, blocks: [{ ...BLOCK, ...block }] })
 
 const AFTER = [
@@ -46,24 +52,24 @@ describe('workout storage', () => {
     const storage = memoryStorage()
     saveStore(STORES.exercises, [{ id: 'e1' as ExerciseId, name: 'Supino' }], storage)
     saveStore(STORES.workoutPlans, parseWorkoutPlans(plans(PLAN))!, storage)
-    saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [SESSION] })!, storage)
+    saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(SESSION))!, storage)
     const { exercises, workoutPlans, workoutSessions } = loadAll(storage)
     expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], workoutPlans: { plans: [PLAN], activePlanId: 'p1' }, workoutSessions: [SESSION] })
   })
 
   it('reads back a session’s end feel and After-effects', () => {
     const storage = memoryStorage()
-    saveStore(STORES.workoutSessions, parseWorkoutSessions({ version: 2, sessions: [{ ...SESSION, feel: 4, after: AFTER }] })!, storage)
+    saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions({ ...SESSION, feel: 4, after: AFTER }))!, storage)
     expect(loadStore(STORES.workoutSessions, storage)).toEqual([{ ...SESSION, feel: 4, after: AFTER }])
   })
 
   it('reads a session stored before end feel and After-effects with neither key', () => {
-    const [session] = parseWorkoutSessions({ version: 2, sessions: [SESSION] })!
+    const [session] = parseWorkoutSessions(sessions(SESSION))!
     expect(['feel' in session, 'after' in session]).toEqual([false, false])
   })
 
   it('reads an empty After-effects list as none', () => {
-    const [session] = parseWorkoutSessions({ version: 2, sessions: [{ ...SESSION, after: [] }] })!
+    const [session] = parseWorkoutSessions(sessions({ ...SESSION, after: [] }))!
     expect(session).toEqual(SESSION)
   })
 
@@ -72,31 +78,49 @@ describe('workout storage', () => {
     expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [] })
   })
 
+  it('reads a version 2 set with reps as done and an empty one as pending, with no RIR and no target', () => {
+    const v2 = { ...SESSION, exercises: [{ exerciseId: 'e1', sets: [{ reps: 8, kg: 62.5 }, { reps: null, kg: 60 }], target: { kg: 1, reps: 1, rir: 1 } }] }
+    expect(parseWorkoutSessions({ version: 2, sessions: [v2] })?.[0].exercises).toEqual([
+      {
+        exerciseId: 'e1',
+        sets: [
+          { done: true, kg: 62.5, reps: 8, rir: null },
+          { done: false, kg: 60, reps: null, rir: null },
+        ],
+      },
+    ])
+  })
+
   it('reads a version 1 plain-text note as written at midday of the session, and an empty one as no note', () => {
     const { note: _, ...bare } = SESSION
-    expect(parseWorkoutSessions({ version: 1, sessions: [{ ...bare, notes: 'Ombro ok' }, { ...bare, id: 's2', notes: '' }] })).toEqual([
-      { ...bare, note: { text: 'Ombro ok', createdAt: '2026-10-06T12:00:00', updatedAt: '2026-10-06T12:00:00' } },
-      { ...bare, id: 's2' },
+    const v1 = { ...bare, exercises: [{ exerciseId: 'e1', sets: [] }] }
+    expect(parseWorkoutSessions({ version: 1, sessions: [{ ...v1, notes: 'Ombro ok' }, { ...v1, id: 's2', notes: '' }] })).toEqual([
+      { ...v1, note: { text: 'Ombro ok', createdAt: '2026-10-06T12:00:00', updatedAt: '2026-10-06T12:00:00' } },
+      { ...v1, id: 's2' },
     ])
   })
 
   it.each([
-    ['an unknown version', { version: 3, sessions: [] }],
-    ['a bad date', { version: 2, sessions: [{ ...SESSION, date: '2026-02-30' }] }],
-    ['negative kg', { version: 2, sessions: [{ ...SESSION, exercises: [{ exerciseId: 'e1', sets: [{ reps: 5, kg: -1 }] }] }] }],
-    ['an exercise twice', { version: 2, sessions: [{ ...SESSION, exercises: [SESSION.exercises[0], SESSION.exercises[0]] }] }],
-    ['a repeated session id', { version: 2, sessions: [SESSION, SESSION] }],
-    ['a blank note', { version: 2, sessions: [{ ...SESSION, note: { ...SESSION.note, text: '' } }] }],
-    ['an exercise note with no times', { version: 2, sessions: [{ ...SESSION, exercises: [{ ...SESSION.exercises[0], note: { text: 'x' } }] }] }],
+    ['an unknown version', { version: 4, sessions: [] }],
+    ['a bad date', sessions({ ...SESSION, date: '2026-02-30' })],
+    ['negative kg', withSets([{ ...SET, kg: -1 }])],
+    ['a done set with no reps', withSets([{ ...SET, reps: null }])],
+    ['a set with no done key', withSets([{ kg: 60, reps: 8, rir: null }])],
+    ['a RIR of 11', withSets([{ ...SET, rir: 11 }])],
+    ['a target with no RIR', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8 } }] })],
+    ['an exercise twice', sessions({ ...SESSION, exercises: [SESSION.exercises[0], SESSION.exercises[0]] })],
+    ['a repeated session id', sessions(SESSION, SESSION)],
+    ['a blank note', sessions({ ...SESSION, note: { ...SESSION.note, text: '' } })],
+    ['an exercise note with no times', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], note: { text: 'x' } }] })],
     ['a version 1 session without notes', { version: 1, sessions: [{ ...SESSION, note: undefined }] }],
-    ['an end feel of 0', { version: 2, sessions: [{ ...SESSION, feel: 0 }] }],
-    ['an end feel of null', { version: 2, sessions: [{ ...SESSION, feel: null }] }],
-    ['After-effects that are not a list', { version: 2, sessions: [{ ...SESSION, after: {} }] }],
-    ['an After-effect on the session’s own date', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], date: '2026-10-06' }] }] }],
-    ['an After-effect on an Exercise not in the session', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], exerciseId: 'e9' }] }] }],
-    ['an After-effect with no exerciseId key', { version: 2, sessions: [{ ...SESSION, after: [{ date: '2026-10-07', note: AFTER[0].note }] }] }],
-    ['an After-effect with a blank note', { version: 2, sessions: [{ ...SESSION, after: [{ ...AFTER[0], note: { ...AFTER[0].note, text: ' ' } }] }] }],
-    ['two After-effects on one date and Exercise', { version: 2, sessions: [{ ...SESSION, after: [AFTER[1], { ...AFTER[1], note: AFTER[0].note }] }] }],
+    ['an end feel of 0', sessions({ ...SESSION, feel: 0 })],
+    ['an end feel of null', sessions({ ...SESSION, feel: null })],
+    ['After-effects that are not a list', sessions({ ...SESSION, after: {} })],
+    ['an After-effect on the session’s own date', sessions({ ...SESSION, after: [{ ...AFTER[0], date: '2026-10-06' }] })],
+    ['an After-effect on an Exercise not in the session', sessions({ ...SESSION, after: [{ ...AFTER[0], exerciseId: 'e9' }] })],
+    ['an After-effect with no exerciseId key', sessions({ ...SESSION, after: [{ date: '2026-10-07', note: AFTER[0].note }] })],
+    ['an After-effect with a blank note', sessions({ ...SESSION, after: [{ ...AFTER[0], note: { ...AFTER[0].note, text: ' ' } }] })],
+    ['two After-effects on one date and Exercise', sessions({ ...SESSION, after: [AFTER[1], { ...AFTER[1], note: AFTER[0].note }] })],
   ])('rejects sessions with %s', (_, raw) => {
     expect(parseWorkoutSessions(raw)).toBe(null)
   })
@@ -105,20 +129,17 @@ describe('workout storage', () => {
     expect(parseWorkoutPlans(plans(PLAN, { ...PLAN, id: 'p2', blocks: [{ ...BLOCK, id: 'b2' }], start: null }))?.plans.map((p) => p.id)).toEqual(['p1', 'p2'])
   })
 
-  it('reads a version 1 plan’s days as its one Bloco A of 6 weeks, not started', () => {
-    expect(parseWorkoutPlans({ version: 1, plans: [LEGACY_PLAN], activePlanId: 'p1' })).toEqual({
-      plans: [{ id: 'p1', name: 'Força', blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [DAY] }], start: null }],
-      activePlanId: 'p1',
-    })
-  })
-
   it.each([
-    ['a rep range upside down', withBlock({ days: [{ ...DAY, exercises: [{ exerciseId: 'e1', sets: 3, reps: { min: 12, max: 8 } }] }] })],
-    ['zero sets', withBlock({ days: [{ ...DAY, exercises: [{ exerciseId: 'e1', sets: 0, reps: { min: 8, max: 8 } }] }] })],
+    ['a rep range upside down', withBlock({ days: [day('d1', [{ ...ROW, reps: { min: 12, max: 8 } }]), DAYS[1], DAYS[2]] })],
+    ['zero sets', withBlock({ days: [day('d1', [{ ...ROW, sets: 0 }]), DAYS[1], DAYS[2]] })],
+    ['no role', withBlock({ days: [day('d1', [{ ...ROW, role: undefined }]), DAYS[1], DAYS[2]] })],
+    ['an unknown role', withBlock({ days: [day('d1', [{ ...ROW, role: 'warmup' }]), DAYS[1], DAYS[2]] })],
+    ['an unknown split', plans({ ...PLAN, split: 'ppl' })],
+    ['four days in a 3-day split', withBlock({ days: [...DAYS, day('d4')] })],
     ['no active plan while there are plans', { ...plans(PLAN), activePlanId: null }],
     ['an active plan while there are none', plans()],
     ['no blocks', plans({ ...PLAN, blocks: [], start: null })],
-    ['two blocks with one id', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, days: [] }] })],
+    ['two blocks with one id', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, days: [day('x1'), day('x2'), day('x3')] }] })],
     ['one day id in two blocks', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, id: 'b2' }] })],
     ['0 weeks', withBlock({ weeks: 0, rir: [] })],
     ['53 weeks', withBlock({ weeks: 53, rir: Array(53).fill(null) })],
@@ -127,9 +148,9 @@ describe('workout storage', () => {
     ['a RIR upside down', withBlock({ rir: [{ min: 6, max: 5 }, null] })],
     ['a start on a block not in the plan', plans({ ...PLAN, start: { blockId: 'b9', since: '2026-10-05' } })],
     ['a start on a bad date', plans({ ...PLAN, start: { blockId: 'b1', since: '2026-02-30' } })],
-    ['no start key', plans({ id: 'p1', name: 'Força', blocks: [BLOCK] })],
-    ['a version 1 plan in a version 2 document', plans(LEGACY_PLAN)],
-    ['a version 1 plan with a bad day', { version: 1, plans: [{ ...LEGACY_PLAN, days: [{ ...DAY, exercises: 'x' }] }], activePlanId: 'p1' }],
+    ['no start key', plans({ id: 'p1', name: 'Força', split: 'ppf', blocks: [BLOCK] })],
+    ['a version 1 plan in a version 3 document', plans({ id: 'p1', name: 'Força', days: DAYS })],
+    ['a version 1 plan with a bad day', { version: 1, plans: [{ id: 'p1', name: 'Força', days: [{ ...DAYS[0], exercises: 'x' }] }], activePlanId: 'p1' }],
   ])('rejects plans with %s', (_, raw) => {
     expect(parseWorkoutPlans(raw)).toBe(null)
   })
@@ -139,6 +160,74 @@ describe('workout storage', () => {
     const storage = memoryStorage({ [STORES.workoutSessions.key]: text })
     expect(loadStore(STORES.workoutSessions, storage)).toEqual([])
     const copies = Object.entries(storage.data).filter(([k]) => k.startsWith(`${STORES.workoutSessions.key}:unreadable:`))
+    expect(copies.map(([, v]) => v)).toEqual([text])
+  })
+})
+
+describe('migrating Workout Plans to Training Splits', () => {
+  const v2Row = (exerciseId: string) => ({ exerciseId, sets: 3, reps: { min: 8, max: 12 } })
+  const v2Day = (id: string, rows: string[] = []) => ({ id, name: `Dia ${id}`, exercises: rows.map(v2Row) })
+  const v2Block = (id: string, n: number) => ({ id, name: `Bloco ${id}`, weeks: 1, rir: [{ min: 2, max: 3 }], days: Array.from({ length: n }, (_, i) => v2Day(`${id}-${i}`, i === 0 ? ['e1', 'e2', 'e3'] : [])) })
+  const v2Plan = (id: string, ...counts: number[]) => ({ id, name: `Plano ${id}`, blocks: counts.map((n, i) => v2Block(`${id}b${i}`, n)), start: { blockId: `${id}b0`, since: '2026-10-05' } })
+  const v2 = (activePlanId: string, ...list: object[]) => ({ version: 2, plans: list, activePlanId })
+
+  it('keeps a plan of 3-day blocks as Push · Pull · Full body, with its names, ids, sets, reps, RIR and start', () => {
+    const plan = parseWorkoutPlans(v2('a', v2Plan('a', 3, 3)))!.plans[0]
+    expect(plan.split).toBe('ppf')
+    expect(plan.start).toEqual({ blockId: 'ab0', since: '2026-10-05' })
+    expect(plan.blocks.map((b) => [b.id, b.name, b.weeks, b.rir])).toEqual([
+      ['ab0', 'Bloco ab0', 1, [{ min: 2, max: 3 }]],
+      ['ab1', 'Bloco ab1', 1, [{ min: 2, max: 3 }]],
+    ])
+    expect(plan.blocks[0].days.map((d) => [d.id, d.name])).toEqual([
+      ['ab0-0', 'Dia ab0-0'],
+      ['ab0-1', 'Dia ab0-1'],
+      ['ab0-2', 'Dia ab0-2'],
+    ])
+  })
+
+  it('guesses each role from its place: the first Exercise of a day is the main lift, the rest isolation', () => {
+    const plan = parseWorkoutPlans(v2('a', v2Plan('a', 3)))!.plans[0]
+    expect(plan.blocks[0].days[0].exercises).toEqual([
+      { exerciseId: 'e1', role: 'main', sets: 3, reps: { min: 8, max: 12 } },
+      { exerciseId: 'e2', role: 'isolation', sets: 3, reps: { min: 8, max: 12 } },
+      { exerciseId: 'e3', role: 'isolation', sets: 3, reps: { min: 8, max: 12 } },
+    ])
+  })
+
+  it('keeps a plan of 4-day blocks as Upper and Lower', () => {
+    expect(parseWorkoutPlans(v2('a', v2Plan('a', 4)))!.plans.map((p) => p.split)).toEqual(['ul'])
+  })
+
+  it('drops a plan of 5-day blocks and one mixing 3 and 4 days, and the active plan moves to the first kept', () => {
+    expect(parseWorkoutPlans(v2('five', v2Plan('five', 5), v2Plan('mixed', 3, 4), v2Plan('ok', 4)))).toEqual({
+      plans: [expect.objectContaining({ id: 'ok', split: 'ul' })],
+      activePlanId: 'ok',
+    })
+    expect(parseWorkoutPlans(v2('five', v2Plan('five', 5)))).toEqual({ plans: [], activePlanId: null })
+  })
+
+  it('reads a version 1 plan of 3 days as one Bloco A of 6 weeks, not started, and drops one of 1 day', () => {
+    const v1 = { version: 1, plans: [{ id: 'p1', name: 'Força', days: [v2Day('a', ['e1']), v2Day('b'), v2Day('c')] }, { id: 'p2', name: 'Um', days: [v2Day('z')] }], activePlanId: 'p2' }
+    expect(parseWorkoutPlans(v1)).toEqual({
+      plans: [
+        {
+          id: 'p1',
+          name: 'Força',
+          split: 'ppf',
+          blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [{ ...v2Day('a'), exercises: [{ ...v2Row('e1'), role: 'main' }] }, v2Day('b'), v2Day('c')] }],
+          start: null,
+        },
+      ],
+      activePlanId: 'p1',
+    })
+  })
+
+  it('keeps the version 2 text aside when it loads, so a dropped plan is not lost', () => {
+    const text = JSON.stringify(v2('five', v2Plan('five', 5)))
+    const storage = memoryStorage({ [STORES.workoutPlans.key]: text })
+    expect(loadStore(STORES.workoutPlans, storage)).toEqual({ plans: [], activePlanId: null })
+    const copies = Object.entries(storage.data).filter(([k]) => k.startsWith(`${STORES.workoutPlans.key}:migrated:`))
     expect(copies.map(([, v]) => v)).toEqual([text])
   })
 })

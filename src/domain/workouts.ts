@@ -1,8 +1,11 @@
 import type { Rating } from './body.ts'
 import { addDays, mondayOf } from './days.ts'
-import { exerciseKey } from './exerciseCatalog.ts'
+import { resolveExercise } from './exerciseCatalog.ts'
 import { editNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
+import { suggestTarget } from './progression.ts'
+import type { Suggestion } from './progression.ts'
+import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 
 export interface Exercise {
@@ -21,21 +24,10 @@ export type Split = 'ppf' | 'ul'
 /** What a Planned Exercise does in its day. It sets the default rep range and how close to failure it goes. */
 export type Role = 'main' | 'secondary' | 'isolation' | 'abs'
 
-export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
-
-export interface BlockOf<S extends Split> {
-  readonly id: WorkoutBlockId
-  readonly name: string
-  readonly weeks: number
-  readonly rir: readonly (RirTarget | null)[]
-  readonly days: DaysOf<S>
-}
-
-export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
-
 /** What a Workout Day prescribes for one Exercise. An Exercise appears at most once in a day. */
 export interface PlannedExercise {
   readonly exerciseId: ExerciseId
+  readonly role: Role
   readonly sets: number
   readonly reps: RepRange
 }
@@ -46,17 +38,19 @@ export interface WorkoutDay {
   readonly exercises: readonly PlannedExercise[]
 }
 
+export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
+
 export interface RirTarget {
   readonly min: number
   readonly max: number
 }
 
-export interface WorkoutBlock {
+export interface BlockOf<S extends Split> {
   readonly id: WorkoutBlockId
   readonly name: string
   readonly weeks: number
   readonly rir: readonly (RirTarget | null)[]
-  readonly days: readonly WorkoutDay[]
+  readonly days: DaysOf<S>
 }
 
 export interface CycleStart {
@@ -64,23 +58,36 @@ export interface CycleStart {
   readonly since: IsoDate
 }
 
-export interface WorkoutPlan {
+/** Every block of a plan has its split's days, so a plan cannot mix 3- and 4-day blocks. */
+export interface PlanOf<S extends Split> {
   readonly id: WorkoutPlanId
   readonly name: string
-  readonly blocks: readonly WorkoutBlock[]
+  readonly split: S
+  readonly blocks: readonly [BlockOf<S>, ...BlockOf<S>[]]
   readonly start: CycleStart | null
 }
 
-/** `reps` null is a set not filled in yet; `kg` null is bodyweight. */
-export interface LoggedSet {
-  readonly reps: number | null
+export type WorkoutPlan = PlanOf<'ppf'> | PlanOf<'ul'>
+export type WorkoutBlock = WorkoutPlan['blocks'][number]
+
+/** `kg` null is bodyweight. A pending set holds what was suggested or typed and counts for nothing until it is done. */
+export type PendingSet = { readonly done: false; readonly kg: number | null; readonly reps: number | null; readonly rir: number | null }
+/** A set the user marked done; it always has its reps. */
+export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
+export type LoggedSet = PendingSet | DoneSet
+
+/** What the session suggested when it started: the next session reads `rir` as what these sets aimed at. */
+export interface SetTarget {
   readonly kg: number | null
+  readonly reps: number
+  readonly rir: number
 }
 
 /** One Exercise's sets in a session. An Exercise appears at most once in a session. */
 export interface SessionExercise {
   readonly exerciseId: ExerciseId
   readonly sets: readonly LoggedSet[]
+  readonly target?: SetTarget
   /** Pain, discomfort or anything else about this Exercise in this session. */
   readonly note?: TimedNote
 }
@@ -117,18 +124,10 @@ export interface WorkoutState extends WorkoutPlanState {
   readonly sessions: readonly WorkoutSession[]
 }
 
-export const EMPTY_SET: LoggedSet = { reps: null, kg: null }
+export const EMPTY_SET: PendingSet = { done: false, reps: null, kg: null, rir: null }
 
-export const findExercise = (exercises: readonly Exercise[], name: string): Exercise | undefined =>
-  exercises.find((e) => exerciseKey(e.name) === exerciseKey(name))
-
-/** The Exercise with this name, ignoring case, or a new one under `newId`. Null for a blank name. */
-function resolveExercise(exercises: readonly Exercise[], name: string, newId: ExerciseId): { exercises: readonly Exercise[]; id: ExerciseId } | null {
-  const trimmed = name.trim()
-  if (trimmed === '') return null
-  const found = findExercise(exercises, trimmed)
-  return found ? { exercises, id: found.id } : { exercises: [...exercises, { id: newId, name: trimmed }], id: newId }
-}
+/** The smallest load step the suggestion moves by. */
+export const LOAD_INCREMENT = 2.5
 
 function parseRange(text: string): { min: number; max: number } | null {
   const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)
@@ -151,39 +150,66 @@ export function parseRir(text: string): RirTarget | null {
   return r && isRirTarget(r) ? r : null
 }
 
-const isFilled = (set: LoggedSet) => set.reps !== null
+/** The one rule for what counts: a set is logged when it is done. */
+export const isDone = (set: LoggedSet): set is DoneSet => set.done
 
-/** The filled sets of `exerciseId` in the latest session on or before `date`; on the same date, the one logged last. Null when none. */
-export function lastLoggedSets(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate): readonly LoggedSet[] | null {
-  let found: readonly LoggedSet[] | null = null
+export const doneSets = (exercise: SessionExercise): number => exercise.sets.filter(isDone).length
+
+/** What a session holds once the sets not done are left out. */
+export function loggedCounts(session: WorkoutSession): { exercises: number; sets: number } {
+  const done = session.exercises.map(doneSets)
+  return { exercises: done.filter((n) => n > 0).length, sets: done.reduce((a, b) => a + b, 0) }
+}
+
+/**
+ * The done sets of `exerciseId` in the latest session on or before `date` that has any, on the same date the one
+ * logged last, with the RIR they aimed at when the session knew it. Null when none.
+ */
+export function lastDoneSets(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate): { sets: DoneSet[]; targetRir: number | null } | null {
+  let found: { sets: DoneSet[]; targetRir: number | null } | null = null
   let foundDate: IsoDate | null = null
   for (const session of sessions) {
     if (session.date > date || (foundDate !== null && session.date < foundDate)) continue
-    const filled = session.exercises.find((e) => e.exerciseId === exerciseId)?.sets.filter(isFilled) ?? []
-    if (filled.length === 0) continue
-    found = filled
+    const exercise = session.exercises.find((e) => e.exerciseId === exerciseId)
+    const sets = exercise?.sets.filter(isDone) ?? []
+    if (sets.length === 0) continue
+    found = { sets, targetRir: exercise?.target?.rir ?? null }
     foundDate = session.date
   }
   return found
 }
 
-/** `count` sets copied from the last time, the last set repeating when there were fewer; empty sets when never logged. */
-export function prefillSets(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, count: number): LoggedSet[] {
-  const last = lastLoggedSets(sessions, exerciseId, date)
-  return Array.from({ length: count }, (_, i) => (last ? (last[i] ?? last[last.length - 1]) : EMPTY_SET))
+/** The sessions logged before `session`: earlier dates, and on its date the ones logged before it. */
+export function sessionsBefore(sessions: readonly WorkoutSession[], session: WorkoutSession): WorkoutSession[] {
+  const index = sessions.indexOf(session)
+  return sessions.filter((s, i) => s.date < session.date || (s.date === session.date && i < index))
 }
 
-export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, sessions: readonly WorkoutSession[]): WorkoutSession {
-  const exercises = (day?.exercises ?? []).map((p) => ({ exerciseId: p.exerciseId, sets: prefillSets(sessions, p.exerciseId, date, p.sets) }))
+/** How close to failure a role goes in a week: the week's lowest RIR, never under 1 for compounds; 2 when the week has none. */
+export function targetRir(role: Role, week: RirTarget | null): number {
+  if (!week) return 2
+  return role === 'main' || role === 'secondary' ? Math.max(1, week.min) : week.min
+}
+
+/** The suggested target for `exerciseId` on `date`, from the last time it was done; null when it never was. */
+export function suggestion(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, nextRir: number, range: RepRange): Suggestion | null {
+  const last = lastDoneSets(sessions, exerciseId, date)
+  return last && suggestTarget({ sets: last.sets, previousRir: last.targetRir ?? nextRir, nextRir, range, increment: LOAD_INCREMENT })
+}
+
+/**
+ * A session from a Workout Day has one row per Planned Exercise, each set pending at the suggested target, which is
+ * kept; an Exercise never done starts with empty sets. `week` is the RIR target of the week the date falls in.
+ */
+export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, week: RirTarget | null, sessions: readonly WorkoutSession[]): WorkoutSession {
+  const exercises = (day?.exercises ?? []).map((p): SessionExercise => {
+    const rir = targetRir(p.role, week)
+    const s = suggestion(sessions, p.exerciseId, date, rir, p.reps)
+    if (!s) return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(EMPTY_SET) }
+    const set: PendingSet = { done: false, kg: s.kg, reps: s.reps, rir: null }
+    return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(set), target: { kg: s.kg, reps: s.reps, rir } }
+  })
   return { id, date, workoutDayId: day?.id ?? null, exercises }
-}
-
-export const filledSets = (exercise: SessionExercise): number => exercise.sets.filter(isFilled).length
-
-/** What a session holds once the unfilled sets are left out. */
-export function loggedCounts(session: WorkoutSession): { exercises: number; sets: number } {
-  const filled = session.exercises.map(filledSets)
-  return { exercises: filled.filter((n) => n > 0).length, sets: filled.reduce((a, b) => a + b, 0) }
 }
 
 export const sessionsOn = (sessions: readonly WorkoutSession[], date: IsoDate): WorkoutSession[] => sessions.filter((s) => s.date === date)
@@ -197,10 +223,12 @@ export function recentSessions(sessions: readonly WorkoutSession[], date: IsoDat
   return sessions.filter((s) => s.date >= from && s.date < date).sort((a, b) => b.date.localeCompare(a.date))
 }
 
+const blockDays = (block: WorkoutBlock): readonly WorkoutDay[] => block.days
+
 export function findDay(plans: readonly WorkoutPlan[], dayId: WorkoutDayId): WorkoutDay | undefined {
   for (const plan of plans) {
     for (const block of plan.blocks) {
-      const day = block.days.find((d) => d.id === dayId)
+      const day = blockDays(block).find((d) => d.id === dayId)
       if (day) return day
     }
   }
@@ -214,12 +242,12 @@ export interface BlockPosition {
   readonly movedFrom: WorkoutBlock | null
 }
 
-/** A week with no session that has a filled set does not count, so it pauses the block instead of using one of its weeks. */
+/** A week with no done set does not count, so it pauses the block instead of using one of its weeks. */
 function trainedWeeks(sessions: readonly WorkoutSession[], from: IsoDate, until: IsoDate): Set<IsoDate> {
   const weeks = new Set<IsoDate>()
   for (const s of sessions) {
     const week = mondayOf(s.date)
-    if (week >= from && week < until && s.exercises.some((e) => e.sets.some(isFilled))) weeks.add(week)
+    if (week >= from && week < until && s.exercises.some((e) => e.sets.some(isDone))) weeks.add(week)
   }
   return weeks
 }
@@ -230,7 +258,7 @@ export function blockPosition(plan: WorkoutPlan, sessions: readonly WorkoutSessi
   const current = mondayOf(date)
   if (current < from) return null
   const trained = trainedWeeks(sessions, from, current)
-  const blocks = plan.blocks
+  const blocks: readonly WorkoutBlock[] = plan.blocks
   let index = Math.max(0, blocks.findIndex((b) => b.id === plan.start?.blockId))
   let week = trained.size + 1
   while (week > blocks[index].weeks) {
@@ -247,8 +275,27 @@ export function currentBlock(plan: WorkoutPlan, sessions: readonly WorkoutSessio
   return { block: position?.block ?? plan.blocks[0], position }
 }
 
+/**
+ * The day to train next: the one after the latest session's day on or before `date`, counted by its place in its
+ * block so the rotation carries over into a new block, and the first day when no session started from this plan.
+ */
+export function nextDay(plan: WorkoutPlan, sessions: readonly WorkoutSession[], date: IsoDate): WorkoutDay {
+  const days = blockDays(currentBlock(plan, sessions, date).block)
+  const places = new Map<WorkoutDayId, number>()
+  for (const block of plan.blocks) blockDays(block).forEach((d, i) => places.set(d.id, i))
+  let place = -1
+  let placeDate: IsoDate | null = null
+  for (const s of sessions) {
+    const i = s.workoutDayId === null ? undefined : places.get(s.workoutDayId)
+    if (i === undefined || s.date > date || (placeDate !== null && s.date < placeDate)) continue
+    place = i
+    placeDate = s.date
+  }
+  return days[(place + 1) % days.length]
+}
+
 export function blockExercises(block: WorkoutBlock): ExerciseId[] {
-  return [...new Set(block.days.flatMap((d) => d.exercises.map((p) => p.exerciseId)))]
+  return [...new Set(blockDays(block).flatMap((d) => d.exercises.map((p) => p.exerciseId)))]
 }
 
 export function blockChanges(previous: WorkoutBlock, block: WorkoutBlock): { entering: ExerciseId[]; leaving: ExerciseId[] } {
@@ -259,28 +306,34 @@ export function blockChanges(previous: WorkoutBlock, block: WorkoutBlock): { ent
 
 export const emptyWorkouts = (): WorkoutState => ({ exercises: [], plans: [], activePlanId: null, sessions: [] })
 
+/** What the user types or taps into a set; whether it is done is set apart. */
+export interface SetValues {
+  readonly kg: number | null
+  readonly reps: number | null
+  readonly rir: number | null
+}
+
 export type WorkoutAction =
-  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string }
+  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string; split: Split }
   | { type: 'renamePlan'; planId: WorkoutPlanId; name: string }
   | { type: 'deletePlan'; planId: WorkoutPlanId }
   | { type: 'activatePlan'; planId: WorkoutPlanId }
-  | { type: 'addBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId; copyOf: WorkoutBlockId | null }
+  | { type: 'addBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId; copyOf: WorkoutBlockId }
   | { type: 'renameBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string }
   | { type: 'setBlockWeeks'; planId: WorkoutPlanId; blockId: WorkoutBlockId; weeks: number }
   | { type: 'setBlockRir'; planId: WorkoutPlanId; blockId: WorkoutBlockId; week: number; rir: RirTarget | null }
   | { type: 'removeBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId }
   | { type: 'setCycleStart'; planId: WorkoutPlanId; blockId: WorkoutBlockId; since: IsoDate }
-  | { type: 'addDay'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string }
-  | { type: 'renameDay'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string }
-  | { type: 'removeDay'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId }
-  | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; newExerciseId: ExerciseId }
+  | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; role: Role; newExerciseId: ExerciseId }
+  | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId }
   | { type: 'setPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; planned: PlannedExercise }
   | { type: 'removePlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId }
-  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null }
+  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; week: RirTarget | null }
   | { type: 'addSessionExercise'; sessionId: WorkoutSessionId; name: string; newExerciseId: ExerciseId }
   | { type: 'removeSessionExercise'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
   | { type: 'addSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
-  | { type: 'setSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number; set: LoggedSet }
+  | { type: 'setSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number; set: SetValues }
+  | { type: 'setSetDone'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number; done: boolean }
   | { type: 'removeSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; index: number }
   | { type: 'setExerciseNote'; sessionId: WorkoutSessionId; exerciseId: ExerciseId; text: string; now: LocalDateTime }
   | { type: 'setSessionNote'; sessionId: WorkoutSessionId; text: string; now: LocalDateTime }
@@ -307,14 +360,9 @@ function editAfterEffect(session: WorkoutSession, date: IsoDate, exerciseId: Exe
   return withOptional(session, 'after', next.length > 0 ? next : undefined)
 }
 
-const DEFAULT_PLANNED = { sets: 3, reps: { min: 8, max: 12 } } as const
-
-export const DEFAULT_BLOCK_WEEKS = 6
 export const MAX_BLOCK_WEEKS = 52
 
-export const newBlock = (id: WorkoutBlockId, name: string): WorkoutBlock => ({ id, name, weeks: DEFAULT_BLOCK_WEEKS, rir: Array(DEFAULT_BLOCK_WEEKS).fill(null), days: [] })
-
-function nextBlockName(blocks: readonly WorkoutBlock[]): string {
+function nextBlockName(blocks: readonly { name: string }[]): string {
   const taken = new Set(blocks.map((b) => b.name))
   for (let i = blocks.length; ; i++) {
     const name = `Bloco ${i < 26 ? String.fromCharCode(65 + i) : i + 1}`
@@ -322,35 +370,62 @@ function nextBlockName(blocks: readonly WorkoutBlock[]): string {
   }
 }
 
-/** Unique because the new block's id is. */
-const copiedDayId = (blockId: WorkoutBlockId, index: number) => `${blockId}-d${index + 1}` as WorkoutDayId
+/** A function the reducer applies to a plan of either split, giving back a plan of the same split. */
+type PlanFn = <S extends Split>(plan: PlanOf<S>) => PlanOf<S>
+type BlockFn = <S extends Split>(block: BlockOf<S>) => BlockOf<S>
 
-function addBlock(plan: WorkoutPlan, blockId: WorkoutBlockId, copyOf: WorkoutBlockId | null): WorkoutPlan {
-  const source = plan.blocks.find((b) => b.id === copyOf)
-  const name = nextBlockName(plan.blocks)
-  const block = source ? { ...source, id: blockId, name, days: source.days.map((d, i) => ({ ...d, id: copiedDayId(blockId, i) })) } : newBlock(blockId, name)
-  return { ...plan, blocks: [...plan.blocks, block] }
+const onPlan = (plan: WorkoutPlan, fn: PlanFn): WorkoutPlan => (plan.split === 'ppf' ? fn(plan) : fn(plan))
+
+const mapBlocks = <S extends Split>(blocks: PlanOf<S>['blocks'], fn: (block: BlockOf<S>) => BlockOf<S>): PlanOf<S>['blocks'] => {
+  const [first, ...rest] = blocks
+  return [fn(first), ...rest.map(fn)]
 }
 
-function removeBlock(plan: WorkoutPlan, blockId: WorkoutBlockId): WorkoutPlan {
-  const blocks = plan.blocks.filter((b) => b.id !== blockId)
-  if (blocks.length === 0 || blocks.length === plan.blocks.length) return plan
-  const start = plan.start?.blockId === blockId ? { ...plan.start, blockId: blocks[0].id } : plan.start
-  return { ...plan, blocks, start }
+/** Every day of every block of the plan through `fn`. */
+export const mapPlanDays = (plan: WorkoutPlan, fn: (day: WorkoutDay) => WorkoutDay): WorkoutPlan =>
+  onPlan(plan, (p) => ({ ...p, blocks: mapBlocks(p.blocks, (b) => ({ ...b, days: mapDays(b, fn) })) }))
+
+const addBlock =
+  (blockId: WorkoutBlockId, copyOf: WorkoutBlockId): PlanFn =>
+  (plan) => {
+    const source = plan.blocks.find((b) => b.id === copyOf)
+    if (!source) return plan
+    const block = { ...source, id: blockId, name: nextBlockName(plan.blocks), days: mapDays(source, (d, i) => ({ ...d, id: blockDayId(blockId, i) })) }
+    return { ...plan, blocks: [...plan.blocks, block] }
+  }
+
+const removeBlock =
+  (blockId: WorkoutBlockId): PlanFn =>
+  (plan) => {
+    const [first, ...rest] = plan.blocks.filter((b) => b.id !== blockId)
+    if (!first || rest.length + 1 === plan.blocks.length) return plan
+    const start = plan.start?.blockId === blockId ? { ...plan.start, blockId: first.id } : plan.start
+    return { ...plan, blocks: [first, ...rest], start }
+  }
+
+function newPlan(action: Extract<WorkoutAction, { type: 'createPlan' }>, exercises: readonly Exercise[]): { plan: WorkoutPlan; exercises: readonly Exercise[] } {
+  const { planId, blockId, name } = action
+  const exerciseId = (catalogId: string) => `${blockId}-${catalogId}` as ExerciseId
+  if (action.split === 'ppf') {
+    const made = templateBlock('ppf', blockId, 'Bloco A', exercises, exerciseId)
+    return { plan: { id: planId, name, split: 'ppf', blocks: [made.block], start: null }, exercises: made.exercises }
+  }
+  const made = templateBlock('ul', blockId, 'Bloco A', exercises, exerciseId)
+  return { plan: { id: planId, name, split: 'ul', blocks: [made.block], start: null }, exercises: made.exercises }
 }
 
 const resized = <T>(items: readonly T[], length: number, fill: T): T[] => Array.from({ length }, (_, i) => (i < items.length ? items[i] : fill))
 
-function updatePlan(state: WorkoutState, planId: WorkoutPlanId, fn: (plan: WorkoutPlan) => WorkoutPlan): WorkoutState {
-  return { ...state, plans: state.plans.map((p) => (p.id === planId ? fn(p) : p)) }
+function updatePlan(state: WorkoutState, planId: WorkoutPlanId, fn: PlanFn): WorkoutState {
+  return { ...state, plans: state.plans.map((p) => (p.id === planId ? onPlan(p, fn) : p)) }
 }
 
-function updateBlock(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, fn: (block: WorkoutBlock) => WorkoutBlock): WorkoutState {
-  return updatePlan(state, planId, (p) => ({ ...p, blocks: p.blocks.map((b) => (b.id === blockId ? fn(b) : b)) }))
+function updateBlock(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, fn: BlockFn): WorkoutState {
+  return updatePlan(state, planId, (p) => ({ ...p, blocks: mapBlocks(p.blocks, (b) => (b.id === blockId ? fn(b) : b)) }))
 }
 
 function updateDay(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, dayId: WorkoutDayId, fn: (day: WorkoutDay) => WorkoutDay): WorkoutState {
-  return updateBlock(state, planId, blockId, (b) => ({ ...b, days: b.days.map((d) => (d.id === dayId ? fn(d) : d)) }))
+  return updateBlock(state, planId, blockId, (b) => ({ ...b, days: mapDays(b, (d) => (d.id === dayId ? fn(d) : d)) }))
 }
 
 function updateSession(state: WorkoutState, sessionId: WorkoutSessionId, fn: (session: WorkoutSession) => WorkoutSession): WorkoutState {
@@ -365,10 +440,29 @@ function updateSets(state: WorkoutState, sessionId: WorkoutSessionId, exerciseId
   return updateExercise(state, sessionId, exerciseId, (e) => ({ ...e, sets: fn(e.sets) }))
 }
 
+/** A done set stays done while it has reps. A new RIR also fills the next pending set that has none, as the next set is usually as hard. */
+function setValues(sets: readonly LoggedSet[], index: number, values: SetValues): readonly LoggedSet[] {
+  const old = sets[index]
+  if (!old) return sets
+  const set: LoggedSet = old.done && values.reps !== null ? { ...values, done: true, reps: values.reps } : { ...values, done: false }
+  const forward = values.rir !== null && values.rir !== old.rir ? sets.findIndex((s, i) => i > index && !s.done && s.rir === null) : -1
+  return sets.map((s, i) => (i === index ? set : i === forward ? { ...s, rir: values.rir } : s))
+}
+
+function setDone(sets: readonly LoggedSet[], index: number, done: boolean): readonly LoggedSet[] {
+  return sets.map((s, i): LoggedSet => {
+    if (i !== index || s.done === done) return s
+    if (!done) return { ...s, done: false }
+    return s.reps === null ? s : { ...s, done: true, reps: s.reps }
+  })
+}
+
 export function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutState {
   switch (action.type) {
-    case 'createPlan':
-      return { ...state, plans: [...state.plans, { id: action.planId, name: action.name, blocks: [newBlock(action.blockId, 'Bloco A')], start: null }], activePlanId: action.planId }
+    case 'createPlan': {
+      const { plan, exercises } = newPlan(action, state.exercises)
+      return { ...state, exercises, plans: [...state.plans, plan], activePlanId: action.planId }
+    }
     case 'renamePlan':
       return updatePlan(state, action.planId, (p) => ({ ...p, name: action.name }))
     case 'deletePlan': {
@@ -379,7 +473,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'activatePlan':
       return state.plans.some((p) => p.id === action.planId) ? { ...state, activePlanId: action.planId } : state
     case 'addBlock':
-      return updatePlan(state, action.planId, (p) => addBlock(p, action.blockId, action.copyOf))
+      return updatePlan(state, action.planId, addBlock(action.blockId, action.copyOf))
     case 'renameBlock':
       return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, name: action.name }))
     case 'setBlockWeeks':
@@ -391,20 +485,22 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
         action.week >= 1 && action.week <= b.weeks ? { ...b, rir: b.rir.map((r, i) => (i === action.week - 1 ? action.rir : r)) } : b,
       )
     case 'removeBlock':
-      return updatePlan(state, action.planId, (p) => removeBlock(p, action.blockId))
+      return updatePlan(state, action.planId, removeBlock(action.blockId))
     case 'setCycleStart':
       return updatePlan(state, action.planId, (p) => (p.blocks.some((b) => b.id === action.blockId) ? { ...p, start: { blockId: action.blockId, since: action.since } } : p))
-    case 'addDay':
-      return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, days: [...b.days, { id: action.dayId, name: action.name, exercises: [] }] }))
-    case 'renameDay':
-      return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({ ...d, name: action.name }))
-    case 'removeDay':
-      return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, days: b.days.filter((d) => d.id !== action.dayId) }))
     case 'addPlannedExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state
+      const planned: PlannedExercise = { exerciseId: resolved.id, role: action.role, sets: DEFAULT_SETS, reps: ROLE_REPS[action.role] }
       return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) =>
-        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: [...d.exercises, { exerciseId: resolved.id, ...DEFAULT_PLANNED }] },
+        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: [...d.exercises, planned] },
+      )
+    }
+    case 'swapPlannedExercise': {
+      const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
+      if (!resolved) return state
+      return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) =>
+        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: d.exercises.map((p) => (p.exerciseId === action.exerciseId ? { ...p, exerciseId: resolved.id } : p)) },
       )
     }
     case 'setPlannedExercise':
@@ -415,13 +511,14 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'removePlannedExercise':
       return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({ ...d, exercises: d.exercises.filter((p) => p.exerciseId !== action.exerciseId) }))
     case 'startSession':
-      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, state.sessions)] }
+      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, action.week, state.sessions)] }
     case 'addSessionExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state
       return updateSession({ ...state, exercises: resolved.exercises }, action.sessionId, (s) => {
         if (s.exercises.some((e) => e.exerciseId === resolved.id)) return s
-        const sets = lastLoggedSets(state.sessions, resolved.id, s.date) ?? [EMPTY_SET]
+        const last = lastDoneSets(state.sessions, resolved.id, s.date)?.sets
+        const sets = last?.map((d): PendingSet => ({ done: false, kg: d.kg, reps: d.reps, rir: null })) ?? [EMPTY_SET]
         return { ...s, exercises: [...s.exercises, { exerciseId: resolved.id, sets }] }
       })
     }
@@ -431,9 +528,14 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
         return withOptional({ ...s, exercises: s.exercises.filter((e) => e.exerciseId !== action.exerciseId) }, 'after', after?.length ? after : undefined)
       })
     case 'addSet':
-      return updateSets(state, action.sessionId, action.exerciseId, (sets) => [...sets, sets[sets.length - 1] ?? EMPTY_SET])
+      return updateSets(state, action.sessionId, action.exerciseId, (sets) => {
+        const last = sets[sets.length - 1]
+        return [...sets, last ? { ...last, done: false } : EMPTY_SET]
+      })
     case 'setSet':
-      return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.map((s, i) => (i === action.index ? action.set : s)))
+      return updateSets(state, action.sessionId, action.exerciseId, (sets) => setValues(sets, action.index, action.set))
+    case 'setSetDone':
+      return updateSets(state, action.sessionId, action.exerciseId, (sets) => setDone(sets, action.index, action.done))
     case 'removeSet':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => sets.filter((_, i) => i !== action.index))
     case 'setExerciseNote':

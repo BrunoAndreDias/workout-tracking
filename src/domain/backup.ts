@@ -10,7 +10,8 @@ import type { PlanState } from './plans.ts'
 import { saveStore, STORE_NAMES, STORES } from './stores.ts'
 import type { AppData, StoreName } from './stores.ts'
 import type { DayLog, ExerciseId, IsoDate, MealPlan, PlanId } from './types.ts'
-import { findExercise } from './workouts.ts'
+import { findExercise } from './exerciseCatalog.ts'
+import { mapPlanDays } from './workouts.ts'
 
 export const BACKUP_APP = 'plano-alimentar'
 export const BACKUP_VERSION = 1
@@ -112,7 +113,7 @@ function mergeWorkouts(current: AppData, incoming: BackupData): Pick<AppData, 'e
   const planIds = new Set(current.workoutPlans.plans.map((p) => p.id))
   const addedPlans = incoming.workoutPlans.plans
     .filter((p) => !planIds.has(p.id))
-    .map((p) => ({ ...p, blocks: p.blocks.map((b) => ({ ...b, days: b.days.map((d) => ({ ...d, exercises: map(d.exercises) })) })) }))
+    .map((p) => mapPlanDays(p, (d) => ({ ...d, exercises: map(d.exercises) })))
   const plans = [...current.workoutPlans.plans, ...addedPlans]
   const sessionIds = new Set(current.workoutSessions.map((s) => s.id))
   const addedSessions = incoming.workoutSessions

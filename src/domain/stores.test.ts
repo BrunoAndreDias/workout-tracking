@@ -3,6 +3,7 @@ import type { TimedNote } from './notes.ts'
 import { DEFAULT_GOALS } from './plans.ts'
 import { NUTRIENTS } from './types.ts'
 import type { CustomFoodDef, DayLog, EntryId, ExerciseId, FoodId, IsoDate, LocalDateTime, Meal, MealId, NutrientValues, OptionId, PlanId, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { PlannedExercise, WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
 
 function written(save: (storage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void }) => boolean): Record<string, string> {
@@ -75,29 +76,30 @@ describe('the text each store writes', () => {
   })
 
   it('workout plans', () => {
-    const days = [{ id: 'wd1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: 'x1' as ExerciseId, sets: 3, reps: { min: 8, max: 12 } }] }]
-    const blocks = [{ id: 'wb1' as WorkoutBlockId, name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days }]
-    const plans = [{ id: 'wp1' as WorkoutPlanId, name: 'Força', blocks, start: { blockId: 'wb1' as WorkoutBlockId, since: '2026-10-05' as IsoDate } }]
+    const day = (id: string, exercises: PlannedExercise[] = []) => ({ id: id as WorkoutDayId, name: id, exercises })
+    const days = [day('Push', [{ exerciseId: 'x1' as ExerciseId, role: 'main', sets: 3, reps: { min: 6, max: 8 } }]), day('Pull'), day('Full body')] as const
+    const blocks = [{ id: 'wb1' as WorkoutBlockId, name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days }] as const
+    const plans: WorkoutPlan[] = [{ id: 'wp1' as WorkoutPlanId, name: 'Força', split: 'ppf', blocks, start: { blockId: 'wb1' as WorkoutBlockId, since: '2026-10-05' as IsoDate } }]
     expect(written((s) => saveStore(STORES.workoutPlans, { plans, activePlanId: 'wp1' as WorkoutPlanId }, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:workout-plans": "{"version":2,"plans":[{"id":"wp1","name":"Força","blocks":[{"id":"wb1","name":"Bloco A","weeks":2,"rir":[{"min":5,"max":6},null],"days":[{"id":"wd1","name":"Peito","exercises":[{"exerciseId":"x1","sets":3,"reps":{"min":8,"max":12}}]}]}],"start":{"blockId":"wb1","since":"2026-10-05"}}],"activePlanId":"wp1"}",
+        "nutrition-tracking:workout-plans": "{"version":3,"plans":[{"id":"wp1","name":"Força","split":"ppf","blocks":[{"id":"wb1","name":"Bloco A","weeks":2,"rir":[{"min":5,"max":6},null],"days":[{"id":"Push","name":"Push","exercises":[{"exerciseId":"x1","role":"main","sets":3,"reps":{"min":6,"max":8}}]},{"id":"Pull","name":"Pull","exercises":[]},{"id":"Full body","name":"Full body","exercises":[]}]}],"start":{"blockId":"wb1","since":"2026-10-05"}}],"activePlanId":"wp1"}",
       }
     `)
   })
 
   it('workout sessions', () => {
-    const sessions = [
+    const sessions: WorkoutSession[] = [
       {
         id: 's1' as WorkoutSessionId,
         date: '2026-10-05' as IsoDate,
         workoutDayId: 'wd1' as WorkoutDayId,
-        exercises: [{ exerciseId: 'x1' as ExerciseId, sets: [{ reps: 10, kg: 42.5 }, { reps: null, kg: null }], note: note('Ombro bem', '2026-10-05T18:00:00') }],
+        exercises: [{ exerciseId: 'x1' as ExerciseId, sets: [{ done: true, reps: 10, kg: 42.5, rir: 2 }, { done: false, reps: null, kg: null, rir: null }], target: { kg: 42.5, reps: 10, rir: 2 }, note: note('Ombro bem', '2026-10-05T18:00:00') }],
         note: note('Bom treino', '2026-10-05T18:30:00'),
       },
     ]
     expect(written((s) => saveStore(STORES.workoutSessions, sessions, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:workout-sessions": "{"version":2,"sessions":[{"id":"s1","date":"2026-10-05","workoutDayId":"wd1","exercises":[{"exerciseId":"x1","sets":[{"reps":10,"kg":42.5},{"reps":null,"kg":null}],"note":{"text":"Ombro bem","createdAt":"2026-10-05T18:00:00","updatedAt":"2026-10-05T18:00:00"}}],"note":{"text":"Bom treino","createdAt":"2026-10-05T18:30:00","updatedAt":"2026-10-05T18:30:00"}}]}",
+        "nutrition-tracking:workout-sessions": "{"version":3,"sessions":[{"id":"s1","date":"2026-10-05","workoutDayId":"wd1","exercises":[{"exerciseId":"x1","sets":[{"done":true,"reps":10,"kg":42.5,"rir":2},{"done":false,"reps":null,"kg":null,"rir":null}],"target":{"kg":42.5,"reps":10,"rir":2},"note":{"text":"Ombro bem","createdAt":"2026-10-05T18:00:00","updatedAt":"2026-10-05T18:00:00"}}],"note":{"text":"Bom treino","createdAt":"2026-10-05T18:30:00","updatedAt":"2026-10-05T18:30:00"}}]}",
       }
     `)
   })

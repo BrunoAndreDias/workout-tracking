@@ -1,0 +1,184 @@
+export type Muscle = 'abs' | 'back' | 'biceps' | 'calves' | 'chest' | 'forearms' | 'glutes' | 'hamstrings' | 'quadriceps' | 'shoulders' | 'triceps'
+
+export type Pattern =
+  | 'horizontal_push'
+  | 'horizontal_pull'
+  | 'vertical_push'
+  | 'vertical_pull'
+  | 'elbow_flexion'
+  | 'elbow_extension'
+  | 'quad_dominant'
+  | 'hip_hamstring_dominant'
+  | 'calves_accessories'
+  | 'core'
+
+export interface CatalogEntry {
+  readonly id: string
+  readonly name: string
+  /** The group it is listed under. */
+  readonly muscle: Muscle
+  readonly primary: readonly Muscle[]
+  readonly pattern: Pattern
+  readonly kind: 'compound' | 'isolation'
+}
+
+/** Two Exercise names with the same key are the same Exercise. */
+export const exerciseKey = (name: string) => name.trim().toLocaleLowerCase('pt')
+
+/** The order the muscle-group filters show in. */
+export const MUSCLE_LABEL: Readonly<Record<Muscle, string>> = {
+  chest: 'Peito',
+  back: 'Costas',
+  shoulders: 'Ombros',
+  quadriceps: 'Quadríceps',
+  hamstrings: 'Posteriores',
+  biceps: 'Bíceps',
+  triceps: 'Tríceps',
+  forearms: 'Antebraços',
+  abs: 'Abdominais',
+  glutes: 'Glúteos',
+  calves: 'Gémeos',
+}
+
+// Generated from just-workout's src/plan-builder/exercise-catalog.ts; names stay in English.
+export const CATALOG = [
+  { id: 'flat-barbell-bench-press', name: 'Flat Barbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'flat-dumbbell-bench-press', name: 'Flat Dumbbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'incline-barbell-bench-press', name: 'Incline Barbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'incline-dumbbell-bench-press', name: 'Incline Dumbbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'decline-barbell-bench-press', name: 'Decline Barbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'decline-dumbbell-bench-press', name: 'Decline Dumbbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'flat-chest-press-machine', name: 'Flat Chest Press Machine', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'incline-chest-press-machine', name: 'Incline Chest Press Machine', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'decline-chest-press-machine', name: 'Decline Chest Press Machine', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'dips-parallel-bars-slight-forward-lean', name: 'Dips (Parallel Bars, Slight Forward Lean)', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'push-ups', name: 'Push-Ups', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'flat-dumbbell-flyes', name: 'Flat Dumbbell Flyes', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'isolation' },
+  { id: 'incline-dumbbell-flyes', name: 'Incline Dumbbell Flyes', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'isolation' },
+  { id: 'decline-dumbbell-flyes', name: 'Decline Dumbbell Flyes', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'isolation' },
+  { id: 'pec-deck-machine', name: 'Pec Deck Machine', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'isolation' },
+  { id: 'cable-crossovers-cable-flyes', name: 'Cable Crossovers/Cable Flyes', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'isolation' },
+  { id: 'pull-ups', name: 'Pull-Ups', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'chin-ups', name: 'Chin-Ups', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'lat-pull-downs', name: 'Lat Pull-Downs', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'neutral-grip-pulldown', name: 'Neutral-Grip Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'assisted-pull-up', name: 'Assisted Pull-Up', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'wide-grip-lat-pulldown', name: 'Wide-Grip Lat Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'close-grip-lat-pulldown', name: 'Close-Grip Lat Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'reverse-grip-lat-pulldown', name: 'Reverse-Grip Lat Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'close-neutral-grip-pulldown', name: 'Close Neutral-Grip Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'medium-grip-lat-pulldown', name: 'Medium-Grip Lat Pulldown', muscle: 'back', primary: ['back'], pattern: 'vertical_pull', kind: 'compound' },
+  { id: 'bent-over-barbell-rows', name: 'Bent Over Barbell Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'bent-over-dumbbell-rows', name: 'Bent Over Dumbbell Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 't-bar-rows', name: 'T-Bar Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'seated-cable-rows', name: 'Seated Cable Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'chest-supported-barbell-rows', name: 'Chest Supported Barbell Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'chest-supported-dumbbell-rows', name: 'Chest Supported Dumbbell Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'chest-supported-machine-rows', name: 'Chest Supported Machine Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'inverted-rows', name: 'Inverted Rows', muscle: 'back', primary: ['back'], pattern: 'horizontal_pull', kind: 'compound' },
+  { id: 'barbell-shrugs', name: 'Barbell Shrugs', muscle: 'back', primary: ['back'], pattern: 'calves_accessories', kind: 'isolation' },
+  { id: 'dumbbell-shrugs', name: 'Dumbbell Shrugs', muscle: 'back', primary: ['back'], pattern: 'calves_accessories', kind: 'isolation' },
+  { id: 'machine-shrugs', name: 'Machine Shrugs', muscle: 'back', primary: ['back'], pattern: 'calves_accessories', kind: 'isolation' },
+  { id: 'seated-overhead-barbell-press', name: 'Seated Overhead Barbell Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'seated-overhead-dumbbell-press', name: 'Seated Overhead Dumbbell Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'standing-overhead-barbell-press', name: 'Standing Overhead Barbell Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'standing-overhead-dumbbell-press', name: 'Standing Overhead Dumbbell Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'overhead-machine-press', name: 'Overhead Machine Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'arnold-press', name: 'Arnold Press', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'compound' },
+  { id: 'barbell-upright-rows', name: 'Barbell Upright Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'calves_accessories', kind: 'compound' },
+  { id: 'dumbbell-upright-rows', name: 'Dumbbell Upright Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'calves_accessories', kind: 'compound' },
+  { id: 'machine-upright-rows', name: 'Machine Upright Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'calves_accessories', kind: 'compound' },
+  { id: 'dumbbell-lateral-raises', name: 'Dumbbell Lateral Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'cable-lateral-raises', name: 'Cable Lateral Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'machine-lateral-raises', name: 'Machine Lateral Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'dumbbell-front-raises', name: 'Dumbbell Front Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'cable-front-raises', name: 'Cable Front Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'machine-front-raises', name: 'Machine Front Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'vertical_push', kind: 'isolation' },
+  { id: 'barbell-rear-delt-rows', name: 'Barbell Rear Delt Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'dumbbell-rear-delt-rows', name: 'Dumbbell Rear Delt Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'machine-rear-delt-rows', name: 'Machine Rear Delt Rows', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'dumbbell-rear-delt-raises', name: 'Dumbbell Rear Delt Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'machine-rear-delt-raises', name: 'Machine Rear Delt Raises', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'dumbbell-rear-delt-flyes', name: 'Dumbbell Rear Delt Flyes', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'machine-rear-delt-flyes', name: 'Machine Rear Delt Flyes', muscle: 'shoulders', primary: ['shoulders'], pattern: 'horizontal_pull', kind: 'isolation' },
+  { id: 'barbell-squats', name: 'Barbell Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'dumbbell-squats', name: 'Dumbbell Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'barbell-front-squats', name: 'Barbell Front Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'dumbbell-front-squats', name: 'Dumbbell Front Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'barbell-split-squats', name: 'Barbell Split Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'dumbbell-split-squats', name: 'Dumbbell Split Squats', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'barbell-lunges', name: 'Barbell Lunges', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'dumbbell-lunges', name: 'Dumbbell Lunges', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'barbell-step-ups', name: 'Barbell Step-Ups', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'dumbbell-step-ups', name: 'Dumbbell Step-Ups', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'leg-press', name: 'Leg Press', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'single-leg-press', name: 'Single Leg Press', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'machine-squat-hack-squat', name: 'Machine Squat/Hack Squat', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'compound' },
+  { id: 'leg-extensions', name: 'Leg Extensions', muscle: 'quadriceps', primary: ['quadriceps'], pattern: 'quad_dominant', kind: 'isolation' },
+  { id: 'barbell-romanian-deadlifts', name: 'Barbell Romanian Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'dumbbell-romanian-deadlifts', name: 'Dumbbell Romanian Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'barbell-straight-leg-deadlifts', name: 'Barbell Straight Leg Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'dumbbell-straight-leg-deadlifts', name: 'Dumbbell Straight Leg Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'barbell-sumo-deadlifts', name: 'Barbell Sumo Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'dumbbell-sumo-deadlifts', name: 'Dumbbell Sumo Deadlifts', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'glute-ham-raises', name: 'Glute-Ham Raises', muscle: 'hamstrings', primary: ['hamstrings'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'hyperextensions', name: 'Hyperextensions', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'cable-pull-throughs', name: 'Cable Pull-Throughs', muscle: 'hamstrings', primary: ['hamstrings', 'glutes'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'good-mornings', name: 'Good-Mornings', muscle: 'hamstrings', primary: ['hamstrings'], pattern: 'hip_hamstring_dominant', kind: 'compound' },
+  { id: 'leg-curls', name: 'Leg Curls', muscle: 'hamstrings', primary: ['hamstrings'], pattern: 'hip_hamstring_dominant', kind: 'isolation' },
+  { id: 'standing-calf-raises', name: 'Standing Calf Raises', muscle: 'calves', primary: ['calves'], pattern: 'calves_accessories', kind: 'isolation' },
+  { id: 'standing-barbell-curls', name: 'Standing Barbell Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'standing-dumbbell-curls', name: 'Standing Dumbbell Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'barbell-preacher-curls', name: 'Barbell Preacher Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'dumbbell-preacher-curls', name: 'Dumbbell Preacher Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'seated-dumbbell-curls', name: 'Seated Dumbbell Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'incline-dumbbell-curls', name: 'Incline Dumbbell Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'hammer-curls', name: 'Hammer Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'concentration-curls', name: 'Concentration Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'cable-curls', name: 'Cable Curls', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'biceps-curl-machine', name: 'Biceps Curl Machine', muscle: 'biceps', primary: ['biceps'], pattern: 'elbow_flexion', kind: 'isolation' },
+  { id: 'dips-elbows-close-no-forward-lean', name: 'Dips (Elbows Close, No Forward Lean)', muscle: 'triceps', primary: ['triceps'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'flat-close-grip-bench-press', name: 'Flat Close Grip Bench Press', muscle: 'triceps', primary: ['triceps'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'decline-close-grip-bench-press', name: 'Decline Close Grip Bench Press', muscle: 'triceps', primary: ['triceps'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'close-grip-push-ups', name: 'Close Grip Push-Ups', muscle: 'triceps', primary: ['triceps'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'laying-barbell-triceps-extensions', name: 'Laying Barbell Triceps Extensions', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'laying-dumbbell-triceps-extensions', name: 'Laying Dumbbell Triceps Extensions', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'skull-crushers', name: 'Skull Crushers', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'overhead-barbell-triceps-extensions', name: 'Overhead Barbell Triceps Extensions', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'overhead-dumbbell-triceps-extensions', name: 'Overhead Dumbbell Triceps Extensions', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'cable-press-downs', name: 'Cable Press-Downs', muscle: 'triceps', primary: ['triceps'], pattern: 'elbow_extension', kind: 'isolation' },
+  { id: 'bench-dips', name: 'Bench Dips', muscle: 'triceps', primary: ['triceps'], pattern: 'horizontal_push', kind: 'compound' },
+  { id: 'cable-crunches', name: 'Cable Crunches', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'hanging-leg-raises', name: 'Hanging Leg Raises', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'planks', name: 'Planks', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'ab-wheel-rollouts', name: 'Ab Wheel Rollouts', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'dead-bugs', name: 'Dead Bugs', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'reverse-crunches', name: 'Reverse Crunches', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'side-planks', name: 'Side Planks', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+  { id: 'hollow-holds', name: 'Hollow Holds', muscle: 'abs', primary: ['abs'], pattern: 'core', kind: 'isolation' },
+] as const satisfies readonly CatalogEntry[]
+
+export type CatalogId = (typeof CATALOG)[number]['id']
+
+const byKey = new Map<string, CatalogEntry>(CATALOG.map((e) => [exerciseKey(e.name), e]))
+const byId = new Map<string, CatalogEntry>(CATALOG.map((e) => [e.id, e]))
+
+/** The catalog entry of an Exercise named like it, ignoring case; undefined for the user's own names. */
+export const catalogEntry = (name: string): CatalogEntry | undefined => byKey.get(exerciseKey(name))
+
+export const catalogById = (id: CatalogId): CatalogEntry => byId.get(id)!
+
+/**
+ * The entries whose name holds every word of `query`, of `muscle` when given. Swapping `current` lists the other
+ * entries of its movement pattern as `same`, so the first choices train what the swapped one did.
+ */
+export function pickerList(query: string, muscle: Muscle | null, current: string | null): { same: CatalogEntry[]; others: CatalogEntry[] } {
+  const words = exerciseKey(query).split(/\s+/).filter(Boolean)
+  const swapped = current === null ? undefined : catalogEntry(current)
+  const found = CATALOG.filter((e: CatalogEntry) => {
+    const key = exerciseKey(e.name)
+    return e !== swapped && words.every((w) => key.includes(w)) && (muscle === null || e.muscle === muscle || e.primary.includes(muscle))
+  })
+  const same = swapped ? found.filter((e) => e.pattern === swapped.pattern) : []
+  return { same, others: found.filter((e) => !same.includes(e)) }
+}

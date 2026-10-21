@@ -4,7 +4,8 @@ import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { exerciseKey, isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.ts'
+import { exerciseKey } from './exerciseCatalog.ts'
+import { isRirTarget, MAX_BLOCK_WEEKS, newBlock } from './workouts.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, SessionExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1

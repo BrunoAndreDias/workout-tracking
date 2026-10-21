@@ -1,5 +1,6 @@
 import type { Rating } from './body.ts'
 import { addDays, mondayOf } from './days.ts'
+import { exerciseKey } from './exerciseCatalog.ts'
 import { editNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
@@ -13,6 +14,24 @@ export interface RepRange {
   readonly min: number
   readonly max: number
 }
+
+/** A Training Split: Push · Pull · Full body over 3 days, or Upper · Lower · Upper · Lower over 4. */
+export type Split = 'ppf' | 'ul'
+
+/** What a Planned Exercise does in its day. It sets the default rep range and how close to failure it goes. */
+export type Role = 'main' | 'secondary' | 'isolation' | 'abs'
+
+export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
+
+export interface BlockOf<S extends Split> {
+  readonly id: WorkoutBlockId
+  readonly name: string
+  readonly weeks: number
+  readonly rir: readonly (RirTarget | null)[]
+  readonly days: DaysOf<S>
+}
+
+export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
 
 /** What a Workout Day prescribes for one Exercise. An Exercise appears at most once in a day. */
 export interface PlannedExercise {
@@ -99,9 +118,6 @@ export interface WorkoutState extends WorkoutPlanState {
 }
 
 export const EMPTY_SET: LoggedSet = { reps: null, kg: null }
-
-/** Two Exercise names with the same key are the same Exercise. */
-export const exerciseKey = (name: string) => name.trim().toLocaleLowerCase('pt')
 
 export const findExercise = (exercises: readonly Exercise[], name: string): Exercise | undefined =>
   exercises.find((e) => exerciseKey(e.name) === exerciseKey(name))

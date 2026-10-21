@@ -4,7 +4,7 @@ import { newId } from '../domain/plans.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { blockChanges, currentBlock, findDay, sessionsOn } from '../domain/workouts.ts'
+import { blockChanges, currentBlock, findDay, nextDay, sessionsBefore, sessionsOn } from '../domain/workouts.ts'
 import type { BlockPosition, Exercise, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import { DateStepper } from './DateStepper.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
@@ -51,6 +51,8 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
   const watched = watchWorkoutsOn(watch, date)
   const activePlan = state.plans.find((p) => p.id === state.activePlanId)
   const { block, position } = activePlan ? currentBlock(activePlan, state.sessions, date) : { block: undefined, position: null }
+  const next = activePlan && nextDay(activePlan, state.sessions, date)
+  const days: readonly WorkoutDay[] = block?.days ?? []
   const goTo = (next: IsoDate) => {
     setAdding(false)
     onDate(next)
@@ -92,7 +94,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
 
           {sessions.map((s) => {
             const day = s.workoutDayId === null ? undefined : findDay(state.plans, s.workoutDayId)
-            return <WorkoutSessionCard key={s.id} session={s} day={day} title={sessionTitle(s, state.plans)} exercises={state.exercises} dispatch={dispatch} />
+            return <WorkoutSessionCard key={s.id} session={s} before={sessionsBefore(state.sessions, s)} day={day} title={sessionTitle(s, state.plans)} exercises={state.exercises} dispatch={dispatch} />
           })}
 
           {sessions.length > 0 && !adding ? (
@@ -111,16 +113,23 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
               ) : (
                 <>
                   <p className="muted">
-                    {activePlan && block && block.days.length > 0
-                      ? `Começa por um dia de ${activePlan.name}: as séries vêm preenchidas com o que fizeste da última vez.`
-                      : 'Ainda não tens dias de treino. Escreve-os em Plano de treino, ou regista um treino livre.'}
+                    {activePlan && next
+                      ? `As séries vêm com o alvo sugerido a partir da última vez. Um toque em ✓ marca cada série feita.`
+                      : 'Ainda não tens plano de treino. Cria um em Plano de treino, ou regista um treino livre.'}
                   </p>
                   <div className="day-start">
-                    {block?.days.map((d, i) => (
-                      <button key={d.id} type="button" className={i === 0 ? 'primary' : 'secondary'} onClick={() => start(d)}>
-                        {d.name}
+                    {next && (
+                      <button type="button" className="primary" onClick={() => start(next)}>
+                        Começar {next.name}
                       </button>
-                    ))}
+                    )}
+                    {days
+                      .filter((d) => d.id !== next?.id)
+                      .map((d) => (
+                        <button key={d.id} type="button" className="secondary" onClick={() => start(d)}>
+                          {d.name}
+                        </button>
+                      ))}
                     <button type="button" className="secondary" onClick={() => start(null)}>
                       Treino livre
                     </button>

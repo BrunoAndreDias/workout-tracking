@@ -1,4 +1,4 @@
-import { catalogById, resolveExercise } from './exerciseCatalog.ts'
+import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
 import type { CatalogId } from './exerciseCatalog.ts'
 import type { ExerciseId, WorkoutBlockId, WorkoutDayId } from './types.ts'
 import type { BlockOf, DaysOf, Exercise, RepRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
@@ -138,6 +138,13 @@ export const DEFAULT_RIR_RAMP: readonly RirTarget[] = [
   { min: 1, max: 2 },
   { min: 0, max: 1 },
 ]
+
+/** The role an Exercise added by hand starts with: core work is abs, a catalog compound secondary, anything else isolation. */
+export function defaultRole(name: string): Role {
+  const entry = catalogEntry(name)
+  if (!entry) return 'isolation'
+  return entry.pattern === 'core' ? 'abs' : entry.kind === 'compound' ? 'secondary' : 'isolation'
+}
 
 /** The split whose plans have `n` days a block, or null when none has. */
 export const splitForDayCount = (n: number): Split | null => SPLIT_IDS.find((s) => SPLITS[s].days.length === n) ?? null

@@ -4,7 +4,7 @@ import { newId } from '../domain/plans.ts'
 import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
 import type { Exercise, PlannedExercise, SessionExercise, WorkoutAction, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
-import { ExerciseAdder } from './ExerciseAdder.tsx'
+import { ExercisePicker } from './ExercisePicker.tsx'
 import { formatPlanned } from './format.ts'
 import { AfterEffects } from './AfterEffects.tsx'
 import { CloseIcon, PlusIcon } from './icons.tsx'
@@ -21,8 +21,9 @@ interface Props {
 }
 
 export function WorkoutSessionCard({ session, day, title, exercises, dispatch }: Props) {
+  const [picking, setPicking] = useState(false)
   const names = new Map(exercises.map((e) => [e.id, e.name]))
-  const planned = new Map<ExerciseId, PlannedExercise>(day?.exercises.map((p) => [p.exerciseId, p]))
+  const planned =new Map<ExerciseId, PlannedExercise>(day?.exercises.map((p) => [p.exerciseId, p]))
   const sessionId = session.id
   return (
     <section className="card session" aria-label={title}>
@@ -51,7 +52,20 @@ export function WorkoutSessionCard({ session, day, title, exercises, dispatch }:
       ))}
 
       <div className="session-foot">
-        <ExerciseAdder exercises={exercises} onAdd={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })} />
+        <button type="button" className="text-btn add-exercise" onClick={() => setPicking(true)}>
+          <PlusIcon />
+          Exercício
+        </button>
+        {picking && (
+          <ExercisePicker
+            eyebrow={title}
+            current={null}
+            exercises={exercises}
+            taken={session.exercises.map((e) => names.get(e.exerciseId) ?? '')}
+            onPick={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })}
+            onClose={() => setPicking(false)}
+          />
+        )}
         <p className="hint muted">Sem kg é peso corporal.</p>
         <div className="rating-row" role="group" aria-label="No fim do treino">
           <span className="rating-label">No fim do treino</span>

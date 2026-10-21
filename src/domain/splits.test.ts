@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CATALOG } from './exerciseCatalog.ts'
 import type { CatalogId } from './exerciseCatalog.ts'
-import { mapDays, splitForDayCount, SPLITS, templateBlock } from './splits.ts'
+import { defaultRole, mapDays, splitForDayCount, SPLITS, templateBlock } from './splits.ts'
 import type { ExerciseId, WorkoutBlockId } from './types.ts'
 
 const catalogIds = new Set<string>(CATALOG.map((e) => e.id))
@@ -43,6 +43,10 @@ describe('Training Splits', () => {
     expect(block.days[2].exercises[0].exerciseId).toBe('mine')
     expect(exercises.filter((e) => e.name === 'Bent Over Barbell Rows')).toHaveLength(1)
     expect(new Set(exercises.map((e) => e.id)).size).toBe(exercises.length)
+  })
+
+  it('an Exercise added by hand starts as abs for core work, secondary for a compound and isolation otherwise', () => {
+    expect(['Planks', 'Leg Press', 'Hammer Curls', 'Supino'].map(defaultRole)).toEqual(['abs', 'secondary', 'isolation', 'isolation'])
   })
 
   it('mapDays keeps the block’s days in order', () => {

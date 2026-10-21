@@ -254,18 +254,48 @@ export const watchDay = (page) =>
         .join(' · '),
     )
 
-export async function addExercise(scope, name) {
-  await scope.getByLabel('Exercício a adicionar').fill(name)
-  await scope.getByLabel('Exercício a adicionar').press('Enter')
+const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+
+/** In the open exercise picker, picks `name`: a catalog Exercise or one of the user's own by name, else a new one. */
+export async function pickExercise(page, name) {
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Pesquisar exercício').fill(name)
+  const found = dialog.locator('.result:not([disabled])').filter({ has: page.locator('.result-name', { hasText: exactly(name) }) })
+  if ((await found.count()) > 0) await found.first().click()
+  else {
+    const create = dialog.getByRole('button', { name: `+ Criar “${name}”` })
+    if ((await create.count()) === 0) {
+      const names = await dialog.locator('.result:not([disabled]) .result-name').allTextContents()
+      throw new FlowError(`cannot pick "${name}": it is already in the day or session`, `pickable: ${names.slice(0, 10).join(', ')}`)
+    }
+    await create.click()
+  }
+  await dialog.waitFor({ state: 'detached' })
 }
 
-export async function addWorkoutDay(page, name, exercises = []) {
-  const n = await page.locator('.workout-day').count()
-  await page.getByRole('button', { name: 'Adicionar dia' }).click()
-  await page.getByRole('button', { name: `Nome do dia de treino: Dia ${n + 1}. Clique para renomear` }).click()
-  await page.getByLabel('Nome do dia de treino').fill(name)
-  await page.getByLabel('Nome do dia de treino').press('Enter')
-  const day = page.getByRole('region', { name, exact: true })
-  for (const exercise of exercises) await addExercise(day, exercise)
-  return day
+/** Adds an Exercise to a Workout Day's card or a session's card through its "+ Exercício" picker. */
+export async function addExercise(scope, name) {
+  await scope.getByRole('button', { name: 'Exercício', exact: true }).click()
+  await pickExercise(scope.page(), name)
+}
+
+/** Swaps a Planned Exercise for another through its ⇄ picker, keeping its role, sets and reps. */
+export async function swapExercise(scope, from, to) {
+  await scope.getByRole('button', { name: `Trocar ${from}`, exact: true }).click()
+  await pickExercise(scope.page(), to)
+}
+
+/** On Treino → Plano de treino, creates a Workout Plan of 3 (Push · Pull · Full body) or 4 (Upper and Lower twice) days. */
+export async function createWorkoutPlan(page, { name, days = 3 } = {}) {
+  if ((await page.getByRole('heading', { name: 'Novo plano de treino' }).count()) === 0) await page.getByRole('button', { name: '+ Novo plano' }).click()
+  if (name) await page.getByRole('textbox', { name: 'Nome', exact: true }).fill(name)
+  await page.getByRole('button', { name: new RegExp(`^${days} dias`) }).click()
+  await page.getByRole('button', { name: 'Criar plano' }).click()
+  await page.getByRole('region', { name: 'Blocos' }).waitFor()
+}
+
+/** Shows one day of the selected Training Block in Plano de treino and returns its card. */
+export async function workoutDay(page, name) {
+  await page.getByRole('navigation', { name: /^Dias de / }).getByRole('button', { name, exact: true }).click()
+  return page.getByRole('region', { name, exact: true })
 }

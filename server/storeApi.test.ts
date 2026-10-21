@@ -59,6 +59,15 @@ describe('store API', () => {
     expect(await api.get()).toEqual({ [PLANS]: { doc: '{"version":3,"x":1}', rev: 2 } })
   })
 
+  it('leaves out the doc of each store the client already has at its current rev', async () => {
+    const api = await start()
+    await api.put(PLANS, '{"version":3}', null)
+    await api.put(PLANS, '{"version":3,"x":1}', 1)
+    const pull = async (have: string) => (await fetch(`${api.base}?have=${encodeURIComponent(have)}`)).json()
+    expect(await pull(`${PLANS}:2`)).toEqual({ [PLANS]: { rev: 2 } })
+    expect(await pull(`${PLANS}:1`)).toEqual({ [PLANS]: { doc: '{"version":3,"x":1}', rev: 2 } })
+  })
+
   it('returns one store by key, and null at rev 0 for one never written', async () => {
     const api = await start()
     await api.put(PLANS, '{"version":3}', null)

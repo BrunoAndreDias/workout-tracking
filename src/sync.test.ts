@@ -24,11 +24,16 @@ function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) 
   const stores = new Map(Object.entries(initial))
   const server = {
     stores,
+    pulls: [] as string[],
     up: true,
     fetch: async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
       if (!server.up) throw new TypeError('Failed to fetch')
-      const path = String(url)
-      if (!init?.method && path === '/api/stores') return Response.json(Object.fromEntries(stores))
+      const [path, query] = String(url).split('?')
+      server.pulls.push(String(url))
+      if (!init?.method && path === '/api/stores') {
+        const have = new URLSearchParams(query).get('have')?.split(',') ?? []
+        return Response.json(Object.fromEntries([...stores].map(([key, s]) => [key, have.includes(`${key}:${s.rev}`) ? { rev: s.rev } : s])))
+      }
       const key = decodeURIComponent(path.slice('/api/stores/'.length))
       if (!init?.method) return Response.json(stores.get(key) ?? { doc: null, rev: 0 })
       const { doc, baseRev } = JSON.parse(String(init.body)) as { doc: string; baseRev: number | null }
@@ -155,6 +160,18 @@ describe('startSync', () => {
     sync.dropConflicts()
     await startSync({ storage, fetch: server.fetch })
     expect(storage.data[SLEEP]).toBe('"other device"')
+  })
+  it('downloads only the stores that changed since this browser last had them', async () => {
+    const server = fakeServer({ [PLANS]: { doc: '{"v":"one"}', rev: 1 }, [SLEEP]: { doc: '{"s":1}', rev: 1 } })
+    const storage = memoryStorage()
+    await startSync({ storage, fetch: server.fetch })
+    server.stores.set(SLEEP, { doc: '{"s":2}', rev: 2 })
+    server.pulls.length = 0
+    await startSync({ storage, fetch: server.fetch })
+    const body = await (await server.fetch(server.pulls[0])).json()
+    expect(body).toEqual({ [PLANS]: { rev: 1 }, [SLEEP]: { doc: '{"s":2}', rev: 2 } })
+    expect(storage.data[PLANS]).toBe('{"v":"one"}')
+    expect(storage.data[SLEEP]).toBe('{"s":2}')
   })
 })
 

@@ -114,6 +114,15 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
 
 const MAX_BODY_BYTES = 64 * 1024 * 1024
 
+/**
+ * `have` lists the client's copies as `key:rev,…`. A store still at that rev goes back as `{ rev }` alone, so a reopen
+ * with nothing new downloads none of the year of stores it already holds.
+ */
+function unchangedWithoutDoc(all: Partial<Record<StoreKey, Stored>>, have: string | null): Record<string, Stored | { rev: number }> {
+  const revs = new Map((have ?? '').split(',').map((pair) => [pair.slice(0, pair.lastIndexOf(':')), Number(pair.slice(pair.lastIndexOf(':') + 1))]))
+  return Object.fromEntries(Object.entries(all).map(([key, stored]) => [key, revs.get(key) === stored.rev ? { rev: stored.rev } : stored]))
+}
+
 function send(res: ServerResponse, status: number, body: unknown) {
   endCompressed(res.req, res, status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, JSON.stringify(body))
 }
@@ -210,7 +219,7 @@ export function storeHandler(stores: () => Stores, { allowReset = false, shortcu
       return void res.end(file)
     }
     if (path === '/api/stores') {
-      if (req.method === 'GET') return send(res, 200, stores().all())
+      if (req.method === 'GET') return send(res, 200, unchangedWithoutDoc(stores().all(), url.searchParams.get('have')))
       if (req.method === 'DELETE' && allowReset) {
         stores().reset()
         return send(res, 200, {})

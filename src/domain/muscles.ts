@@ -39,10 +39,16 @@ const planned = (day: WorkoutDay, nameOf: (id: ExerciseId) => string): NamedSets
 export const doneMuscleSets = (sessions: readonly WorkoutSession[], nameOf: (id: ExerciseId) => string): MuscleSets =>
   muscleSets(sessions.flatMap((s) => s.exercises.map((e) => ({ name: nameOf(e.exerciseId), sets: doneSets(e) }))))
 
-/** The muscle groups a day trains: each catalog Exercise's primary muscles, in the picker's order. */
-export function dayMuscles(day: WorkoutDay, nameOf: (id: ExerciseId) => string): Muscle[] {
+export interface DayMuscle {
+  readonly muscle: Muscle
+  /** Planned sets that day. */
+  readonly sets: number
+}
+
+/** The muscle groups a day's catalog Exercises train, with their sets, in the picker's order. */
+export function dayMuscleSets(day: WorkoutDay, nameOf: (id: ExerciseId) => string): DayMuscle[] {
   const { muscles } = muscleSets(planned(day, nameOf))
-  return MUSCLES.filter((m) => muscles[m] > 0)
+  return MUSCLES.filter((m) => muscles[m] > 0).map((muscle) => ({ muscle, sets: muscles[muscle] }))
 }
 
 export interface MuscleVolume {
@@ -63,7 +69,7 @@ export interface BlockMuscles {
 /** The weekly planned sets of each muscle group over a block's days. */
 export function blockMuscles(days: readonly WorkoutDay[], nameOf: (id: ExerciseId) => string): BlockMuscles {
   const week = muscleSets(days.flatMap((d) => planned(d, nameOf)))
-  const trains = days.map((d) => ({ name: d.name, muscles: dayMuscles(d, nameOf) }))
+  const trains = days.map((d) => ({ name: d.name, muscles: dayMuscleSets(d, nameOf).map((m) => m.muscle) }))
   return {
     muscles: MUSCLES.map((muscle) => ({ muscle, sets: week.muscles[muscle], days: trains.filter((d) => d.muscles.includes(muscle)).map((d) => d.name) })),
     ungrouped: week.ungrouped,

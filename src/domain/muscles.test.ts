@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CatalogId } from './exerciseCatalog.ts'
-import { blockMuscles, dayMuscles, doneMuscleSets } from './muscles.ts'
+import { blockMuscles, dayMuscleSets, doneMuscleSets } from './muscles.ts'
 import { templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutSessionId } from './types.ts'
 import type { Exercise, LoggedSet, WorkoutDay, WorkoutSession } from './workouts.ts'
@@ -27,9 +27,31 @@ describe('muscle groups of a Training Block', () => {
     ])
   })
 
-  it('Push trains chest, shoulders, triceps and abs', () => {
+  const daySets = (day: WorkoutDay, exercises: readonly Exercise[]) => dayMuscleSets(day, namer(exercises)).map((m) => [m.muscle, m.sets])
+
+  it('Push trains chest 3, shoulders 6, triceps 3 and abs 3 sets', () => {
     const { block, exercises } = ppf()
-    expect(dayMuscles(block.days[0], namer(exercises))).toEqual(['chest', 'shoulders', 'triceps', 'abs'])
+    expect(daySets(block.days[0], exercises)).toEqual([['chest', 3], ['shoulders', 6], ['triceps', 3], ['abs', 3]])
+  })
+
+  it('Full body trains nine groups, back twice over', () => {
+    const { block, exercises } = ppf()
+    expect(daySets(block.days[2], exercises)).toEqual([
+      ['chest', 3],
+      ['back', 6],
+      ['shoulders', 3],
+      ['quadriceps', 3],
+      ['hamstrings', 3],
+      ['biceps', 3],
+      ['triceps', 3],
+      ['glutes', 3],
+      ['calves', 3],
+    ])
+  })
+
+  it('a day with no Exercise trains no group', () => {
+    const day: WorkoutDay = { id: 'd' as WorkoutDayId, name: 'Vazio', exercises: [] }
+    expect(dayMuscleSets(day, namer([]))).toEqual([])
   })
 
   it('an Exercise of the user’s own has no group: its sets count apart', () => {
@@ -38,7 +60,7 @@ describe('muscle groups of a Training Block', () => {
     const { muscles, ungrouped } = blockMuscles([day], namer(exercises))
     expect(ungrouped).toEqual([{ name: 'Supino', sets: 4 }])
     expect(muscles.every((m) => m.sets === 0 && m.days.length === 0)).toBe(true)
-    expect(dayMuscles(day, namer(exercises))).toEqual([])
+    expect(dayMuscleSets(day, namer(exercises))).toEqual([])
   })
 })
 

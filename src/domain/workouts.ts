@@ -13,6 +13,12 @@ export interface Exercise {
   readonly name: string
 }
 
+/** Each Exercise's name by its id; one since deleted reads "Exercício desconhecido". */
+export function nameLookup(exercises: readonly Exercise[]): (id: ExerciseId) => string {
+  const names = new Map(exercises.map((e) => [e.id, e.name]))
+  return (id) => names.get(id) ?? 'Exercício desconhecido'
+}
+
 export interface RepRange {
   readonly min: number
   readonly max: number

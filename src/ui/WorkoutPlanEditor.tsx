@@ -5,7 +5,7 @@ import { blockMuscles, dayMuscles } from '../domain/muscles.ts'
 import { newId } from '../domain/plans.ts'
 import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
-import { blockExercises, currentBlock, parseRepRange, parseRir } from '../domain/workouts.ts'
+import { blockExercises, currentBlock, nameLookup, parseRepRange, parseRir } from '../domain/workouts.ts'
 import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
 import { ExercisePicker } from './ExercisePicker.tsx'
@@ -271,11 +271,6 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
       <BlockMuscles days={days} exercises={exercises} />
     </>
   )
-}
-
-function nameLookup(exercises: WorkoutState['exercises']) {
-  const names = new Map(exercises.map((e) => [e.id, e.name]))
-  return (id: ExerciseId) => names.get(id) ?? 'Exercício desconhecido'
 }
 
 function BlockMuscles({ days, exercises }: { days: readonly WorkoutDay[]; exercises: WorkoutState['exercises'] }) {

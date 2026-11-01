@@ -656,6 +656,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-table thead th.ov-quiet { width: 20%; }
 .ov-table tr > :first-child { text-align: left; }
 .ov-table tbody th { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: normal; }
+.ov-table tbody .ov-group th { padding-top: 18px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .ov-col { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .ov-value { display: block; font-weight: 600; }
 .ov-value.met { color: var(--accent); }

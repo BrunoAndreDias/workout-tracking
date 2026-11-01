@@ -1,9 +1,11 @@
 import { useId, useState } from 'react'
 import type { Dispatch } from 'react'
+import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
+import { doneMuscleSets, MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/plans.ts'
 import { ROLE_REPS } from '../domain/splits.ts'
 import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
-import { doneSets, suggestion } from '../domain/workouts.ts'
+import { doneSets, nameLookup, suggestion } from '../domain/workouts.ts'
 import type { Exercise, PlannedExercise, SessionExercise, SetValues, WorkoutAction, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import { AfterEffects } from './AfterEffects.tsx'
 import { CountField } from './CountField.tsx'
@@ -27,6 +29,9 @@ interface Props {
 export function WorkoutSessionCard({ session, before, day, title, exercises, dispatch }: Props) {
   const [picking, setPicking] = useState(false)
   const names = new Map(exercises.map((e) => [e.id, e.name]))
+  const nameOf = nameLookup(exercises)
+  const trained = doneMuscleSets([session], nameOf).muscles
+  const muscles = MUSCLES.filter((m) => trained[m] > 0)
   const planned = new Map<ExerciseId, PlannedExercise>(day?.exercises.map((p) => [p.exerciseId, p]))
   const sessionId = session.id
   const total = session.exercises.reduce((n, e) => n + e.sets.length, 0)
@@ -56,7 +61,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
             key={exercise.exerciseId}
             sessionId={sessionId}
             exercise={exercise}
-            name={names.get(exercise.exerciseId) ?? 'Exercício desconhecido'}
+            name={nameOf(exercise.exerciseId)}
             plan={plan}
             note={note ?? null}
             current={exercise.exerciseId === current}
@@ -71,6 +76,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
             {done}/{total} séries feitas
           </p>
         )}
+        {muscles.length > 0 && <p className="muted session-muscles">Músculos: {muscles.map((m) => `${MUSCLE_LABEL[m]} ${trained[m]}`).join(' · ')}</p>}
         <button type="button" className="text-btn add-exercise" onClick={() => setPicking(true)}>
           <PlusIcon />
           Exercício

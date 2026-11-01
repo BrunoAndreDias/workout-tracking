@@ -418,6 +418,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .lift-check { font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 .lift-done .lift-name { color: var(--ink-2); }
 .sets-done { font-size: 14px; font-weight: 600; }
+.session-muscles { font-size: 14px; margin-top: -4px; }
 .set-num { font-size: 13px; color: var(--muted); text-align: right; }
 .set-field { display: inline-flex; align-items: center; gap: 6px; }
 .count-input { width: 64px; height: 44px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--field); font-size: 16px; font-weight: 500; text-align: right; }

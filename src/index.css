@@ -418,6 +418,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .lift-check { font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 .lift-done .lift-name { color: var(--ink-2); }
 .sets-done { font-size: 14px; font-weight: 600; }
+.session-muscles { font-size: 14px; margin-top: -4px; }
 .set-num { font-size: 13px; color: var(--muted); text-align: right; }
 .set-field { display: inline-flex; align-items: center; gap: 6px; }
 .count-input { width: 64px; height: 44px; padding: 0 10px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--field); font-size: 16px; font-weight: 500; text-align: right; }
@@ -643,7 +644,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .ruled-table tr > :first-child { padding-left: 0; }
 
 /* overview */
-.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; }
 .ov-card { padding: 16px 24px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .ov-title { font: 500 22px/1.2 var(--font-serif); }
 .ov-title a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: inherit; text-decoration: none; }
@@ -656,6 +657,7 @@ small { font-size: 0.85em; color: var(--muted); }
 .ov-table thead th.ov-quiet { width: 20%; }
 .ov-table tr > :first-child { text-align: left; }
 .ov-table tbody th { font-size: 13px; font-weight: 500; color: var(--ink-2); overflow-wrap: normal; }
+.ov-table tbody .ov-group th { padding-top: 18px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .ov-col { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .ov-value { display: block; font-weight: 600; }
 .ov-value.met { color: var(--accent); }

@@ -1,7 +1,49 @@
 import { catalogEntry, MUSCLE_LABEL } from './exerciseCatalog.ts'
 import type { Muscle } from './exerciseCatalog.ts'
 import type { ExerciseId } from './types.ts'
-import type { WorkoutDay } from './workouts.ts'
+import { doneSets } from './workouts.ts'
+import type { WorkoutDay, WorkoutSession } from './workouts.ts'
+
+/** Every muscle group, in the order of the picker's filters. */
+export const MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[]
+
+/** Some sets of one Exercise, by its name. */
+export interface NamedSets {
+  readonly name: string
+  readonly sets: number
+}
+
+export interface MuscleSets {
+  /** Every muscle group, untrained ones at 0 sets. */
+  readonly muscles: Readonly<Record<Muscle, number>>
+  /** The user's own Exercises, which have no muscle group, with their sets, in the order first met. */
+  readonly ungrouped: readonly NamedSets[]
+}
+
+/** The sets of each muscle group. A set counts in full for every primary muscle of its catalog Exercise. */
+export function muscleSets(items: readonly NamedSets[]): MuscleSets {
+  const muscles = Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Record<Muscle, number>
+  const ungrouped = new Map<string, number>()
+  for (const { name, sets } of items) {
+    if (sets === 0) continue
+    const entry = catalogEntry(name)
+    if (!entry) ungrouped.set(name, (ungrouped.get(name) ?? 0) + sets)
+    else for (const m of entry.primary) muscles[m] += sets
+  }
+  return { muscles, ungrouped: [...ungrouped].map(([name, n]) => ({ name, sets: n })) }
+}
+
+const planned = (day: WorkoutDay, nameOf: (id: ExerciseId) => string): NamedSets[] => day.exercises.map((p) => ({ name: nameOf(p.exerciseId), sets: p.sets }))
+
+/** The done sets of each muscle group over some Workout Sessions. */
+export const doneMuscleSets = (sessions: readonly WorkoutSession[], nameOf: (id: ExerciseId) => string): MuscleSets =>
+  muscleSets(sessions.flatMap((s) => s.exercises.map((e) => ({ name: nameOf(e.exerciseId), sets: doneSets(e) }))))
+
+/** The muscle groups a day trains: each catalog Exercise's primary muscles, in the picker's order. */
+export function dayMuscles(day: WorkoutDay, nameOf: (id: ExerciseId) => string): Muscle[] {
+  const { muscles } = muscleSets(planned(day, nameOf))
+  return MUSCLES.filter((m) => muscles[m] > 0)
+}
 
 export interface MuscleVolume {
   readonly muscle: Muscle
@@ -15,38 +57,15 @@ export interface BlockMuscles {
   /** Every muscle group, in the order of the picker's filters, untrained ones at 0 sets. */
   readonly muscles: readonly MuscleVolume[]
   /** The user's own Exercises, which have no muscle group, with their weekly sets. */
-  readonly ungrouped: readonly { readonly name: string; readonly sets: number }[]
+  readonly ungrouped: readonly NamedSets[]
 }
 
-const MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[]
-
-/** The muscle groups a day trains: each catalog Exercise's primary muscles, in the picker's order. */
-export function dayMuscles(day: WorkoutDay, nameOf: (id: ExerciseId) => string): Muscle[] {
-  const trained = new Set(day.exercises.flatMap((p) => catalogEntry(nameOf(p.exerciseId))?.primary ?? []))
-  return MUSCLES.filter((m) => trained.has(m))
-}
-
-/** The weekly planned sets of each muscle group over a block's days. A set counts in full for every primary muscle. */
+/** The weekly planned sets of each muscle group over a block's days. */
 export function blockMuscles(days: readonly WorkoutDay[], nameOf: (id: ExerciseId) => string): BlockMuscles {
-  const sets = new Map<Muscle, number>()
-  const trainedOn = new Map<Muscle, Set<string>>()
-  const ungrouped = new Map<string, number>()
-  for (const day of days) {
-    for (const p of day.exercises) {
-      const name = nameOf(p.exerciseId)
-      const entry = catalogEntry(name)
-      if (!entry) {
-        ungrouped.set(name, (ungrouped.get(name) ?? 0) + p.sets)
-        continue
-      }
-      for (const m of entry.primary) {
-        sets.set(m, (sets.get(m) ?? 0) + p.sets)
-        trainedOn.set(m, (trainedOn.get(m) ?? new Set()).add(day.name))
-      }
-    }
-  }
+  const week = muscleSets(days.flatMap((d) => planned(d, nameOf)))
+  const trains = days.map((d) => ({ name: d.name, muscles: dayMuscles(d, nameOf) }))
   return {
-    muscles: MUSCLES.map((muscle) => ({ muscle, sets: sets.get(muscle) ?? 0, days: [...(trainedOn.get(muscle) ?? [])] })),
-    ungrouped: [...ungrouped].map(([name, n]) => ({ name, sets: n })),
+    muscles: MUSCLES.map((muscle) => ({ muscle, sets: week.muscles[muscle], days: trains.filter((d) => d.muscles.includes(muscle)).map((d) => d.name) })),
+    ungrouped: week.ungrouped,
   }
 }

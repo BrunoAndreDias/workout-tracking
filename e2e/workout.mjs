@@ -130,9 +130,8 @@ assert(JSON.stringify(supinoSets.map((s) => [s.done, s.kg, s.reps, s.rir])) === 
 assert(stored['workout-plans'].version === 3 && stored['workout-plans'].plans[0].split === 'ppf', 'the plan is stored as version 3 with its split')
 assert(stored.exercises.exercises.some((e) => e.name === 'Supino') && stored.exercises.exercises.some((e) => e.name === BENCH), 'the user’s and the catalog’s exercises are stored by name')
 
-await view('Diário').click()
+await page.goto(`${URL}#diario/${yesterday}`)
 await page.locator('.calendar').waitFor()
-await page.getByRole('button', { name: new RegExp(`^${longDate.format(daysAgo(1))}(,|$)`) }).click()
 const line = page.locator('.workout-line')
 assert((await line.textContent()) === 'TreinoPush2 exercícios, 5 séries', `Diário shows the session line, counting done sets (got ${await line.textContent()})`)
 const yesterdayCell = await page.locator('.cal-day[aria-pressed="true"]').getAttribute('aria-label')

@@ -9,7 +9,7 @@
 }
 
 body { margin: 0; background: var(--bg); }
-h1, h2, h3, p, ul { margin: 0; padding: 0; }
+h1, h2, h3, h4, p, ul { margin: 0; padding: 0; }
 ul { list-style: none; }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -482,7 +482,14 @@ small { font-size: 0.85em; color: var(--muted); }
 .planned-fields { display: inline-flex; align-items: center; gap: 6px; }
 .planned-fields .count-input { width: 52px; }
 .planned-fields .reps-input { width: 76px; }
-.day-muscles { font-size: 14px; }
+.day-trains { display: grid; grid-template-columns: minmax(0, 1fr) 220px; grid-template-areas: 'plan muscles'; align-items: start; gap: 16px 28px; }
+.day-planned { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.day-trains .day-planned { grid-area: plan; }
+.day-muscle-sets { grid-area: muscles; display: grid; gap: 10px; padding-left: 20px; border-left: 1px solid var(--rule); }
+.day-muscles-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+.day-muscle-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.day-muscle { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 3px 8px; font-size: 14px; }
+.day-muscle .muscle-track { grid-column: 1 / -1; height: 6px; border-radius: 3px; }
 .block-muscles { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
 .muscle-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .muscle-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 72px minmax(0, 1fr); align-items: center; gap: 4px 12px; font-size: 14px; }
@@ -619,6 +626,12 @@ small { font-size: 0.85em; color: var(--muted); }
   .muscle-row { grid-template-columns: 88px minmax(0, 1fr) 68px; gap: 2px 8px; font-size: 13px; }
   .muscle-days { grid-column: 2 / -1; font-size: 12px; }
   .muscle-days:empty { display: none; }
+  .day-trains { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'muscles' 'plan'; gap: 12px; }
+  .day-planned { gap: 12px; }
+  .day-muscle-sets { padding: 0; border-left: 0; gap: 6px; }
+  .day-muscle-rows { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .day-muscle { display: inline-flex; gap: 4px; font-size: 13px; }
+  .day-muscle .muscle-track { display: none; }
   .new-plan { padding: 16px; gap: 12px; }
 }
 @media (max-width: 480px) {

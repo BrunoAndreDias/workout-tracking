@@ -82,7 +82,7 @@ One stage of a Workout Plan's cycle, such as "Bloco A", with its own Workout Day
 _Avoid_: Mesocycle, phase, cycle (that is the order of the blocks), program
 
 **Workout Day** (Dia de treino):
-One day of a Training Block, named by its Training Split, such as "Push", holding its Planned Exercises in order, and named in the plan with the muscle groups its catalog Exercises train. An Exercise appears at most once in a day. Each day's id is unique across every block of every plan, so a session always finds the day it started from.
+One day of a Training Block, named by its Training Split, such as "Push", holding its Planned Exercises in order. Beside them the plan shows each muscle group its catalog Exercises train, with that day's planned sets, counting every set for each primary muscle. An Exercise appears at most once in a day. Each day's id is unique across every block of every plan, so a session always finds the day it started from.
 _Avoid_: Workout template
 
 **Planned Exercise**:

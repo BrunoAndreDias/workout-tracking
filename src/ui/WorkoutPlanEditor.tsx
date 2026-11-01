@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { Dispatch } from 'react'
+import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
+import { blockMuscles, dayMuscles } from '../domain/muscles.ts'
 import { newId } from '../domain/plans.ts'
 import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
@@ -266,7 +268,41 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
         </nav>
       </div>
       <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} dispatch={dispatch} />
+      <BlockMuscles days={days} exercises={exercises} />
     </>
+  )
+}
+
+function nameLookup(exercises: WorkoutState['exercises']) {
+  const names = new Map(exercises.map((e) => [e.id, e.name]))
+  return (id: ExerciseId) => names.get(id) ?? 'Exercício desconhecido'
+}
+
+function BlockMuscles({ days, exercises }: { days: readonly WorkoutDay[]; exercises: WorkoutState['exercises'] }) {
+  const { muscles, ungrouped } = blockMuscles(days, nameLookup(exercises))
+  const most = Math.max(...muscles.map((m) => m.sets)) || 1
+  return (
+    <section className="card block-muscles" aria-labelledby="musculos-semana">
+      <h3 id="musculos-semana" className="blocks-title">
+        Músculos por semana
+      </h3>
+      <ul className="muscle-rows">
+        {muscles.map((m) => (
+          <li key={m.muscle} className={m.sets === 0 ? 'muscle-row muscle-gap' : 'muscle-row'}>
+            <span className="muscle-name">{MUSCLE_LABEL[m.muscle]}</span>
+            <span className="track muscle-track" aria-hidden="true">
+              <span style={{ width: `${(m.sets / most) * 100}%` }} />
+            </span>
+            <span className="muscle-sets">{m.sets === 0 ? '—' : plural(m.sets, 'série', 'séries')}</span>
+            <span className="muscle-days">{m.days.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
+      {ungrouped.length > 0 && (
+        <p className="muted muscles-note">Sem grupo muscular: {ungrouped.map((u) => `${u.name} (${plural(u.sets, 'série', 'séries')})`).join(' · ')}</p>
+      )}
+      <p className="muted muscles-note">Séries planeadas por semana, contando cada dia uma vez.</p>
+    </section>
   )
 }
 
@@ -283,8 +319,8 @@ interface DayProps {
 function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayProps) {
   const [picking, setPicking] = useState<{ swapping: ExerciseId | null } | null>(null)
   const dayId: WorkoutDayId = day.id
-  const names = new Map(exercises.map((e) => [e.id, e.name]))
-  const nameOf = (id: ExerciseId) => names.get(id) ?? 'Exercício desconhecido'
+  const nameOf = nameLookup(exercises)
+  const muscles = dayMuscles(day, nameOf)
   const onPick = (name: string) => {
     const swapping = picking?.swapping ?? null
     if (swapping === null) dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: defaultRole(name), newExerciseId: newId<ExerciseId>() })
@@ -293,6 +329,7 @@ function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayPro
 
   return (
     <section className="card workout-day" aria-label={day.name}>
+      {muscles.length > 0 && <p className="muted day-muscles">Músculos: {muscles.map((m) => MUSCLE_LABEL[m]).join(' · ')}</p>}
       {day.exercises.length === 0 && <p className="muted workout-empty">Sem exercícios. Adiciona o primeiro abaixo.</p>}
       <ul className="planned-list">
         {day.exercises.map((p) => {

@@ -481,6 +481,17 @@ small { font-size: 0.85em; color: var(--muted); }
 .planned-fields { display: inline-flex; align-items: center; gap: 6px; }
 .planned-fields .count-input { width: 52px; }
 .planned-fields .reps-input { width: 76px; }
+.day-muscles { font-size: 14px; }
+.block-muscles { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.muscle-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.muscle-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 72px minmax(0, 1fr); align-items: center; gap: 4px 12px; font-size: 14px; }
+.muscle-name { color: var(--ink-2); }
+.muscle-track { height: 8px; border-radius: 4px; }
+.muscle-track > span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.muscle-sets { text-align: right; font-weight: 500; white-space: nowrap; }
+.muscle-days { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.muscle-gap .muscle-name, .muscle-gap .muscle-sets { color: var(--muted); font-weight: 400; }
+.muscles-note { font-size: 14px; }
 .home-day { display: flex; flex-direction: column; gap: 12px; }
 .home-date { font: 500 30px/1.15 var(--font-serif); letter-spacing: -0.01em; }
 .home-workouts { display: flex; flex-wrap: wrap; gap: 4px 16px; }
@@ -603,6 +614,10 @@ small { font-size: 0.85em; color: var(--muted); }
   .workout-plan-note { margin-top: -10px; }
   .planned { grid-template-columns: minmax(0, 1fr) 36px 36px; }
   .planned-fields { grid-row: 2; grid-column: 1 / -1; }
+  .block-muscles { padding: 16px; gap: 12px; }
+  .muscle-row { grid-template-columns: 88px minmax(0, 1fr) 68px; gap: 2px 8px; font-size: 13px; }
+  .muscle-days { grid-column: 2 / -1; font-size: 12px; }
+  .muscle-days:empty { display: none; }
   .new-plan { padding: 16px; gap: 12px; }
 }
 @media (max-width: 480px) {

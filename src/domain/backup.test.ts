@@ -129,6 +129,21 @@ describe('backup', () => {
     expect(data.sleep).toEqual({ '2026-05-01': { date: '2026-05-01', quality: 4 }, '2026-05-02': { date: '2026-05-02', quality: 2 } })
   })
 
+  it('keeps a per-meal protein floor through export and parse, and reads a file written before it as 30 g', () => {
+    const storage = memoryStorage()
+    const plans = planReducer(withEntry(A, 'Treino'), { type: 'setGoals', planId: A, goals: { ...withEntry(A, 'x').plans[0].goals, mealProtein: 22 } })
+    saveStore(STORES.plans, plans, storage)
+    saveStore(STORES.days, { days: { '2026-05-01': day('2026-05-01', A) } as Record<IsoDate, DayLog> }, storage)
+    const file = JSON.parse(JSON.stringify(exportBackup(storage).file))
+    expect(parsed(file).plans!.plans[0].goals.mealProtein).toBe(22)
+
+    delete file.stores.plans.state.plans[0].goals.mealProtein
+    delete file.stores.days.days[0].goals.mealProtein
+    const old = parsed(file)
+    expect(old.plans!.plans[0].goals).toEqual({ ...plans.plans[0].goals, mealProtein: 30 })
+    expect(old.days.days['2026-05-01' as IsoDate].goals.mealProtein).toBe(30)
+  })
+
   it('migrates an old-version plans document inside a backup', () => {
     const v2 = { version: 2, state: { plans: [{ id: 'old', name: 'Antigo', meals: [{ id: 'm', name: 'Almoço', entries: [{ id: 'e', foodId: 'f', grams: 90 }] }] }], selectedId: 'old' } }
     const data = parsed({ app: 'plano-alimentar', version: 1, exportedAt: 'x', stores: { plans: v2 } })

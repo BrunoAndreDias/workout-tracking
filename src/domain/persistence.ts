@@ -86,12 +86,15 @@ export function parseMeals(raw: unknown, parse: (raw: unknown) => Meal | null): 
   return meals
 }
 
+/** Goals added after plans, days and Backups were already written: a missing one takes its default, so those files still load. */
+const ADDED_LATER: ReadonlySet<keyof Goals> = new Set(['mealProtein'])
+
 // Version 1 had no goals; a bad goals object costs only the goals, never the plan's meals.
 export function parseGoals(raw: unknown): Goals {
   if (!isRecord(raw)) return DEFAULT_GOALS
   const goals: Record<keyof Goals, number> = { ...DEFAULT_GOALS }
   for (const { key } of GOALS) {
-    const v = raw[key]
+    const v = raw[key] === undefined && ADDED_LATER.has(key) ? DEFAULT_GOALS[key] : raw[key]
     if (typeof v !== 'number') return DEFAULT_GOALS
     goals[key] = v
   }

@@ -38,7 +38,7 @@ describe('the text each store writes', () => {
     const state = { plans: [{ id: 'p1' as PlanId, name: 'Plano 1', goals: DEFAULT_GOALS, meals: [meal], notes: 'Água 3L' }], selectedId: 'p1' as PlanId }
     expect(written((s) => saveStore(STORES.plans, state, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:plans": "{"version":3,"state":{"plans":[{"id":"p1","name":"Plano 1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"notes":"Água 3L"}],"selectedId":"p1"}}",
+        "nutrition-tracking:plans": "{"version":3,"state":{"plans":[{"id":"p1","name":"Plano 1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5,"mealProtein":30},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"notes":"Água 3L"}],"selectedId":"p1"}}",
       }
     `)
   })
@@ -62,7 +62,7 @@ describe('the text each store writes', () => {
   it('days, sorted by date', () => {
     expect(written((s) => saveStore(STORES.days, { days: { ['2026-10-05' as IsoDate]: day('2026-10-05'), ['2026-10-04' as IsoDate]: day('2026-10-04') } }, s))).toMatchInlineSnapshot(`
       {
-        "nutrition-tracking:days": "{"version":3,"days":[{"date":"2026-10-04","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]},{"date":"2026-10-05","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]}]}",
+        "nutrition-tracking:days": "{"version":3,"days":[{"date":"2026-10-04","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5,"mealProtein":30},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]},{"date":"2026-10-05","planId":"p1","goals":{"energyKcal":2000,"protein":130,"carbohydrate":220,"fat":65,"fiber":30,"salt":5,"mealProtein":30},"meals":[{"id":"m1","name":"Almoço","time":"13:00","notes":"Sem pressa","optional":false,"options":[{"id":"o1","name":"Opção 1","entries":[{"id":"e1","foodId":"430","grams":60}]}],"activeOptionId":"o1"}],"baseline":[],"eaten":[]}]}",
       }
     `)
   })

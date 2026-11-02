@@ -70,6 +70,7 @@ export const GOAL_FIELDS = {
   fat: 'Lípidos (g)',
   fiber: 'Fibra (g)',
   salt: 'Sal (g)',
+  mealProtein: 'Proteína por refeição (g)',
 }
 
 async function requireMeal(page, name) {

@@ -165,7 +165,7 @@ export interface Meal {
   readonly activeOptionId: OptionId
 }
 
-/** What one Meal Plan aims for in a day. Grams, except energy in kcal. */
+/** What one Meal Plan aims for in a day. Grams, except energy in kcal. `mealProtein` is a floor for each Meal, not the day; 0 turns it off. */
 export interface Goals {
   readonly energyKcal: number
   readonly protein: number
@@ -173,6 +173,7 @@ export interface Goals {
   readonly fat: number
   readonly fiber: number
   readonly salt: number
+  readonly mealProtein: number
 }
 
 export interface MealPlan {

@@ -10,7 +10,7 @@ import { upsertSamples } from './domain/health.ts'
 import { upsertWatchWorkouts } from './domain/watchWorkouts.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
 import { planReducer } from './domain/plans.ts'
-import { buildSearchIndex } from './domain/search.ts'
+import { buildSearchIndex, stapleFoodIds } from './domain/search.ts'
 import { loadAll, loadStore, saveStore, STORES } from './domain/stores.ts'
 import type { Food, FoodId, IsoDate } from './domain/types.ts'
 import { unitsReducer } from './domain/units.ts'
@@ -89,6 +89,9 @@ function useToday(): IsoDate {
   return today
 }
 
+/** The foods the APN table prescribes rank first in the food panel, as in the catalog's own search. */
+const catalogStaples = stapleFoodIds(catalogTable)
+
 const userUnitsReducer = (state: readonly FoodUnit[], action: UnitsAction) => unitsReducer(state, action, SEED_UNITS)
 
 /** `sync` is null only when the browser blocks localStorage. */
@@ -159,7 +162,7 @@ export default function App({ sync }: { sync: Sync | null }) {
       customFoods,
       foodsById: new Map<FoodId, Food>([...catalogById, ...customFoods.map((f) => [f.id, f] as const)]),
       allFoods,
-      searchIndex: buildSearchIndex(allFoods),
+      searchIndex: buildSearchIndex(allFoods, catalogStaples),
       ingredientIndex: buildSearchIndex([...customFoods.filter((f) => !f.recipe), ...catalogFoods]),
       table: withCustomEquivalents(catalogTable, customFoods, catalogById),
     }

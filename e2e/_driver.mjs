@@ -294,6 +294,27 @@ export async function createWorkoutPlan(page, { name, days = 3 } = {}) {
   await page.getByRole('region', { name: 'Blocos' }).waitFor()
 }
 
+/** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') through the header link and the tab bar. */
+export async function openWorkoutTab(page, name) {
+  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Treino', exact: true }).click()
+  const tab = page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name, exact: true })
+  await tab.click()
+  await tab.and(page.locator('[aria-current="page"]')).waitFor()
+}
+
+/** On Treino → Material, adds a Gym (it becomes the active one) and ticks each material label in `has`. */
+export async function addGym(page, name, has = []) {
+  await page.getByRole('textbox', { name: 'Nome do novo local' }).fill(name)
+  await page.getByRole('button', { name: 'Adicionar local' }).click()
+  const checks = page.getByRole('list', { name: `Material em ${name}` })
+  await checks.waitFor()
+  for (const label of has) {
+    const box = checks.getByRole('checkbox', { name: label, exact: true })
+    if ((await box.count()) === 0) throw new FlowError(`no material "${label}"`, `material: ${(await checks.locator('label').allTextContents()).join(', ')}`)
+    await box.check()
+  }
+}
+
 /** Shows one day of the selected Training Block in Plano de treino and returns its card. */
 export async function workoutDay(page, name) {
   await page.getByRole('navigation', { name: /^Dias de / }).getByRole('button', { name, exact: true }).click()

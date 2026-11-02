@@ -1,7 +1,10 @@
-import { useId, useState } from 'react'
+import { useContext, useId, useState } from 'react'
+import { activeGym, missingAt, needsOf, readyFirst } from '../domain/equipment.ts'
 import { catalogEntry, exerciseKey, MUSCLE_LABEL, pickerList } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
 import type { Exercise } from '../domain/workouts.ts'
+import { EquipmentContext } from './equipmentContext.ts'
+import { materialText } from './format.ts'
 import { SearchIcon } from './icons.tsx'
 import { Panel } from './Panel.tsx'
 
@@ -19,14 +22,21 @@ interface Props {
 
 const MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[]
 
-/** One tap picks a catalog Exercise, one of the user's own, or a new name. */
+/**
+ * One tap picks a catalog Exercise, one of the user's own, or a new name. With an active Gym, what it has the material
+ * for lists first in each section, and the rest is flagged with what it lacks but stays pickable.
+ */
 export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onClose }: Props) {
   const searchId = useId()
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<Muscle | null>(null)
-  const { same, others } = pickerList(query, muscle, current)
+  const { state: equipment, dispatch: dispatchEquipment } = useContext(EquipmentContext)
+  const listed = pickerList(query, muscle, current)
+  const same = readyFirst(equipment, listed.same, (e) => e.name)
+  const others = readyFirst(equipment, listed.others, (e) => e.name)
   const words = exerciseKey(query).split(/\s+/).filter(Boolean)
-  const own = muscle !== null ? [] : exercises.filter((e) => !catalogEntry(e.name) && words.every((w) => exerciseKey(e.name).includes(w)))
+  const own = muscle !== null ? [] : readyFirst(equipment, exercises.filter((e) => !catalogEntry(e.name) && words.every((w) => exerciseKey(e.name).includes(w))), (e) => e.name)
+  const gym = activeGym(equipment)
   const takenKeys = new Set(taken.map(exerciseKey))
   const q = query.trim()
   const exact = q !== '' && (catalogEntry(q) !== undefined || exercises.some((e) => exerciseKey(e.name) === exerciseKey(q)))
@@ -60,6 +70,18 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
           />
         </div>
       </div>
+      {equipment.gyms.length > 1 && (
+        <div className="filter-chips" role="group" aria-label="Local">
+          <span className="filter-label" aria-hidden="true">
+            Local
+          </span>
+          {equipment.gyms.map((g) => (
+            <button key={g.id} type="button" className="filter-chip" aria-pressed={g.id === gym?.id} onClick={() => dispatchEquipment({ type: 'setActiveGym', gymId: g.id })}>
+              {g.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="filter-chips" role="group" aria-label="Grupos musculares">
         <button type="button" className="filter-chip" aria-pressed={muscle === null} onClick={() => setMuscle(null)}>
           Todos
@@ -73,14 +95,16 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
     </>
   )
 
-  const row = (name: string, sub: string) => {
+  const row = (name: string, group: string) => {
     const isTaken = takenKeys.has(exerciseKey(name))
+    const missing = missingAt(equipment, name) ?? []
     return (
       <li key={name}>
-        <button type="button" className="result" disabled={isTaken} onClick={() => pick(name)}>
+        <button type="button" className={missing.length > 0 ? 'result is-missing' : 'result'} disabled={isTaken} onClick={() => pick(name)}>
           <span className="result-main">
             <span className="result-name">{name}</span>
-            <span className="result-sub">{isTaken ? 'Já adicionado' : sub}</span>
+            <span className="result-sub">{isTaken ? 'Já adicionado' : `${group} · ${materialText(equipment, needsOf(equipment, name))}`}</span>
+            {!isTaken && missing.length > 0 && <span className="missing-line">Falta: {materialText(equipment, missing)}</span>}
           </span>
         </button>
       </li>
@@ -91,6 +115,7 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   return (
     <Panel eyebrow={eyebrow} title={current === null ? 'Adicionar exercício' : 'Trocar exercício'} onClose={onClose} head={head}>
       <div className="panel-body">
+        {!gym && <p className="muted hint picker-hint">Marca o material que tens em Treino → Material, e o que dá para fazer aparece primeiro.</p>}
         {current !== null && (
           <div className="swap-card">
             <div className="swap-card-eyebrow">A trocar</div>

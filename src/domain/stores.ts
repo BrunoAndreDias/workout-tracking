@@ -1,6 +1,9 @@
 import type { FeelLog, MoodLog, Rating } from './body.ts'
 import { FEEL_SCHEMA_VERSION, MOODS_SCHEMA_VERSION, parseFeel, parseMoods, parseSleep, SLEEP_SCHEMA_VERSION } from './bodyStorage.ts'
 import type { SleepLog } from './bodyStorage.ts'
+import { freshEquipment } from './equipment.ts'
+import type { EquipmentState } from './equipment.ts'
+import { EQUIPMENT_SCHEMA_VERSION, parseEquipment } from './equipmentStorage.ts'
 import { FOODS_SCHEMA_VERSION, parseCustomFoods } from './customFoodsStorage.ts'
 import type { DayState } from './days.ts'
 import { DAYS_SCHEMA_VERSION, daysText, parseDays, storedDay } from './daysStorage.ts'
@@ -104,6 +107,14 @@ export const STORES = {
     parse: parseWatchWorkouts,
     toDoc: (log) => ({ workouts: Object.values(log).sort(byStart) }),
     fresh: () => ({}),
+  }),
+  equipment: store<EquipmentState>({
+    key: STORE_KEY.equipment,
+    label: 'material',
+    version: EQUIPMENT_SCHEMA_VERSION,
+    parse: parseEquipment,
+    toDoc: ({ custom, gyms, activeGymId, needs }) => ({ custom, gyms, activeGymId, needs }),
+    fresh: freshEquipment,
   }),
 } satisfies Record<keyof typeof STORE_KEY, unknown>
 

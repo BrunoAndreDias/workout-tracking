@@ -5,6 +5,7 @@ import { bodyReducer } from './domain/body.ts'
 import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
 import type { CustomFoodsAction } from './domain/customFoods.ts'
 import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
+import { equipmentReducer } from './domain/equipment.ts'
 import { upsertSamples } from './domain/health.ts'
 import { upsertWatchWorkouts } from './domain/watchWorkouts.ts'
 import { countEntries, foodsByUse } from './domain/meals.ts'
@@ -101,6 +102,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, feel: stored.feel, moods: stored.moods })
   const [health, setHealth] = useState(stored.health)
   const [watchWorkouts, setWatchWorkouts] = useState(stored.watchWorkouts)
+  const [equipment, dispatchEquipment] = useReducer(equipmentReducer, stored.equipment)
   const [{ view, date: routeDate, foodTab }, setRoute] = useState(routeFromHash)
   const today = useToday()
 
@@ -117,6 +119,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
   useEffect(() => void saveStore(STORES.health, health), [health])
   useEffect(() => void saveStore(STORES.watchWorkouts, watchWorkouts), [watchWorkouts])
+  useEffect(() => void saveStore(STORES.equipment, equipment), [equipment])
   // The iPhone posts watch values straight to the server, so an open tab looks for them each time it comes back.
   useEffect(() => {
     if (!sync) return
@@ -248,7 +251,7 @@ export default function App({ sync }: { sync: Sync | null }) {
               />
             )}
             {view === 'treino' && (
-              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} watch={watchWorkouts} />
+              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} watch={watchWorkouts} equipment={equipment} dispatchEquipment={dispatchEquipment} />
             )}
           </main>
           <BackupSection>

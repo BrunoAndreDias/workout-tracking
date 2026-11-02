@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import type { Dispatch } from 'react'
+import { missingAt } from '../domain/equipment.ts'
 import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import { blockMuscles, dayMuscleSets } from '../domain/muscles.ts'
 import type { DayMuscle } from '../domain/muscles.ts'
@@ -9,8 +10,9 @@ import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId }
 import { blockExercises, currentBlock, nameLookup, parseRepRange, parseRir } from '../domain/workouts.ts'
 import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
+import { EquipmentContext } from './equipmentContext.ts'
 import { ExercisePicker } from './ExercisePicker.tsx'
-import { formatRange, plural } from './format.ts'
+import { formatRange, materialText, plural } from './format.ts'
 import { CloseIcon, PlusIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
 
@@ -334,6 +336,7 @@ interface DayProps {
 
 function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayProps) {
   const [picking, setPicking] = useState<{ swapping: ExerciseId | null } | null>(null)
+  const { state: equipment } = useContext(EquipmentContext)
   const dayId: WorkoutDayId = day.id
   const nameOf = nameLookup(exercises)
   const muscles = dayMuscleSets(day, nameOf)
@@ -352,6 +355,7 @@ function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayPro
           {day.exercises.map((p) => {
             const name = nameOf(p.exerciseId)
             const isNew = before !== null && !before.has(p.exerciseId)
+            const missing = missingAt(equipment, name) ?? []
             const set = (change: Partial<typeof p>) => dispatch({ type: 'setPlannedExercise', planId, blockId, dayId, planned: { ...p, ...change } })
             return (
               <li key={p.exerciseId} className="planned">
@@ -373,6 +377,7 @@ function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayPro
                     {name}
                     {isNew && ' · novo'}
                   </span>
+                  {missing.length > 0 && <span className="missing-line">Falta: {materialText(equipment, missing)}</span>}
                 </span>
                 <span className="planned-fields">
                   <CountField value={p.sets} required label={`Séries de ${name}`} onCommit={(n) => n && set({ sets: n })} />

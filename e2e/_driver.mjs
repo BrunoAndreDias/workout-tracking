@@ -2,7 +2,7 @@
 // so a UI change is fixed here once instead of in every script's copy.
 // Every quantity field opens in grams (2fc4aaf), so typing grams needs no unit switch.
 
-const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions', 'sleep', 'feel', 'pains', 'health', 'watch-workouts']
+const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions', 'sleep', 'feel', 'pains', 'health', 'watch-workouts', 'equipment']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -292,6 +292,27 @@ export async function createWorkoutPlan(page, { name, days = 3 } = {}) {
   await page.getByRole('button', { name: new RegExp(`^${days} dias`) }).click()
   await page.getByRole('button', { name: 'Criar plano' }).click()
   await page.getByRole('region', { name: 'Blocos' }).waitFor()
+}
+
+/** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') through the header link and the tab bar. */
+export async function openWorkoutTab(page, name) {
+  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Treino', exact: true }).click()
+  const tab = page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name, exact: true })
+  await tab.click()
+  await tab.and(page.locator('[aria-current="page"]')).waitFor()
+}
+
+/** On Treino → Material, adds a Gym (it becomes the active one) and ticks each material label in `has`. */
+export async function addGym(page, name, has = []) {
+  await page.getByRole('textbox', { name: 'Nome do novo local' }).fill(name)
+  await page.getByRole('button', { name: 'Adicionar local' }).click()
+  const checks = page.getByRole('list', { name: `Material em ${name}` })
+  await checks.waitFor()
+  for (const label of has) {
+    const box = checks.getByRole('checkbox', { name: label, exact: true })
+    if ((await box.count()) === 0) throw new FlowError(`no material "${label}"`, `material: ${(await checks.locator('label').allTextContents()).join(', ')}`)
+    await box.check()
+  }
 }
 
 /** Shows one day of the selected Training Block in Plano de treino and returns its card. */

@@ -321,3 +321,40 @@ export async function workoutDay(page, name) {
   await page.getByRole('navigation', { name: /^Dias de / }).getByRole('button', { name, exact: true }).click()
   return page.getByRole('region', { name, exact: true })
 }
+
+/** A stand-in for the Whisper worker, so a script dictates a known text without the 250 MB model. */
+const FAKE_WHISPER = `self.onmessage = async ({ data }) => {
+  if (data.type === 'warmUp') self.postMessage({ type: 'ready' })
+  if (data.type === 'transcribe') self.postMessage({ type: 'result', id: data.id, text: await (await fetch('/__fake-whisper')).text() })
+}`
+
+/**
+ * Replaces the Whisper worker in `context` with one that transcribes any recording as the text last passed to `say`.
+ * The browser needs a fake microphone: launch it with --use-fake-ui-for-media-stream and --use-fake-device-for-media-stream.
+ */
+export async function fakeWhisper(context) {
+  let text = ''
+  await context.route('**/whisper.worker.ts*', (route) => route.fulfill({ contentType: 'text/javascript', body: FAKE_WHISPER }))
+  await context.route('**/__fake-whisper', (route) => route.fulfill({ contentType: 'text/plain; charset=utf-8', body: text }))
+  return { say: (said) => { text = said } }
+}
+
+/** Opens a meal's add-food panel unless one is open, dictates what `fakeWhisper` says, and returns the panel once it reviews the foods heard. */
+export async function dictateFoods(page, mealName) {
+  const dialog = page.getByRole('dialog')
+  if ((await dialog.count()) === 0) {
+    const meal = await requireMeal(page, mealName)
+    await meal.getByRole('button', { name: `Adicionar alimento ao ${mealName}`, exact: true }).click()
+  }
+  await dialog.getByRole('button', { name: 'Ditar alimentos' }).click()
+  const stop = dialog.getByRole('button', { name: 'Parar ditado' })
+  try {
+    await stop.waitFor({ timeout: 5000 })
+  } catch {
+    throw new FlowError('the mic did not start recording', 'launch the browser with a fake microphone (--use-fake-ui-for-media-stream --use-fake-device-for-media-stream) and grant the microphone permission')
+  }
+  await page.waitForTimeout(300)
+  await stop.click()
+  await dialog.getByRole('heading', { name: 'Ditar alimentos' }).waitFor()
+  return dialog
+}

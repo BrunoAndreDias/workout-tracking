@@ -96,11 +96,11 @@ describe('the suggested target', () => {
 const P = 'p1' as WorkoutPlanId
 const B = 'b1' as WorkoutBlockId
 const S1 = 's1' as WorkoutSessionId
-const created = run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf' }])
+const TODAY = date('2026-11-02')
+const created = run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf', today: TODAY }])
 const PUSH = created.plans[0].blocks[0].days[0]
 const BENCH = PUSH.exercises[0].exerciseId
 const day = (state: WorkoutState, i = 0) => state.plans[0].blocks[0].days[i]
-const TODAY = date('2026-11-02')
 
 describe('Workout Plans', () => {
   it('a new plan is its split’s template in one Bloco A, and becomes the active plan', () => {
@@ -117,7 +117,7 @@ describe('Workout Plans', () => {
   })
 
   it('a second plan reuses the Exercises the first one created', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul', today: TODAY }], created)
     expect(two.plans[1].blocks[0].days.map((d) => d.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B'])
     expect(two.plans[1].blocks[0].days[0].exercises[0].exerciseId).toBe(BENCH)
     expect(new Set(two.exercises.map((e) => e.name)).size).toBe(two.exercises.length)
@@ -152,7 +152,7 @@ describe('Workout Plans', () => {
   })
 
   it('deleting the active plan activates the next one, and the last leaves none', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul', today: TODAY }], created)
     expect(two.activePlanId).toBe('p2')
     const one = run([{ type: 'deletePlan', planId: 'p2' as WorkoutPlanId }], two)
     expect(one.activePlanId).toBe('p1')
@@ -385,8 +385,9 @@ describe('exerciseRuns', () => {
   it('swapping an Exercise that is due starts a new run, and a copied block carries the run on', () => {
     const raises = PUSH.exercises[2].exerciseId
     const sessions = ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map((d, i) => session(`w${i}`, d, [{ exerciseId: raises, sets: [done(12, 8)] }]))
-    const history = { ...created, sessions }
-    const dueOn = (s: WorkoutState, blockIndex = 0) => exerciseRuns(s.plans[0].blocks[blockIndex], s.sessions, TODAY).filter((r) => r.due).map((r) => r.exerciseId)
+    const history = { ...run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf', today: date('2026-09-01') }]), sessions }
+    const dueOn = (s: WorkoutState, blockIndex = 0) => exerciseRuns(s.plans[0].blocks[blockIndex], s.sessions, TODAY).filter((r) => r.due && r.exerciseId === raises).map((r) => r.exerciseId)
+    expect(dueOn({ ...created, sessions })).toEqual([])
     expect(dueOn(history)).toEqual([raises])
     expect(dueOn(run([{ type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B }], history), 1)).toEqual([raises])
     const swapped = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: raises, name: 'Cable Lateral Raises', newExerciseId: 'clr' as ExerciseId, today: TODAY }], history)

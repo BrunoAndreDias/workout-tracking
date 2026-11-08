@@ -373,7 +373,7 @@ export interface SetValues {
 }
 
 export type WorkoutAction =
-  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string; split: Split }
+  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string; split: Split; today: IsoDate }
   | { type: 'renamePlan'; planId: WorkoutPlanId; name: string }
   | { type: 'deletePlan'; planId: WorkoutPlanId }
   | { type: 'activatePlan'; planId: WorkoutPlanId }
@@ -466,10 +466,10 @@ function newPlan(action: Extract<WorkoutAction, { type: 'createPlan' }>, exercis
   const { planId, blockId, name } = action
   const exerciseId = (catalogId: string) => `${blockId}-${catalogId}` as ExerciseId
   if (action.split === 'ppf') {
-    const made = templateBlock('ppf', blockId, 'Bloco A', exercises, exerciseId)
+    const made = templateBlock('ppf', blockId, 'Bloco A', action.today, exercises, exerciseId)
     return { plan: { id: planId, name, split: 'ppf', blocks: [made.block], start: null }, exercises: made.exercises }
   }
-  const made = templateBlock('ul', blockId, 'Bloco A', exercises, exerciseId)
+  const made = templateBlock('ul', blockId, 'Bloco A', action.today, exercises, exerciseId)
   return { plan: { id: planId, name, split: 'ul', blocks: [made.block], start: null }, exercises: made.exercises }
 }
 

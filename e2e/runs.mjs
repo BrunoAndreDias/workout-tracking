@@ -27,6 +27,9 @@ const idOf = (name) => created.exercises.exercises.find((e) => e.name === name).
 const [bench, raises, curls] = ['Flat Barbell Bench Press', 'Dumbbell Lateral Raises', 'Standing Barbell Curls'].map(idOf)
 const done = (exerciseId) => ({ exerciseId, sets: [{ done: true, kg: 20, reps: 10, rir: 2 }] })
 const sessions = [8, 7, 6, 5, 4, 3, 2, 1].map((n) => ({ id: `w${n}`, date: mondayWeeksAgo(n), workoutDayId: null, exercises: [done(bench), done(raises), done(curls)] }))
+const backdated = structuredClone(created['workout-plans'])
+for (const day of backdated.plans[0].blocks[0].days) for (const p of day.exercises) if ([bench, raises, curls].includes(p.exerciseId)) p.since = mondayWeeksAgo(9)
+await putStore(page, URL, 'workout-plans', backdated)
 await putStore(page, URL, 'workout-sessions', { version: 3, sessions })
 await reloadApp(page)
 
@@ -51,7 +54,7 @@ await page.setViewportSize({ width: 1280, height: 900 })
 await tab('Registo').click()
 await notice.getByRole('button', { name: 'Mais 4 semanas de Dumbbell Lateral Raises' }).click()
 assert((await noticeRows()).join('|') === 'Standing Barbell Curls · 8 semanas feitas', 'Mais 4 semanas takes the exercise off the list')
-assert(JSON.stringify(plannedEverywhere(await readStored(page), raises)) === JSON.stringify([{ day: 'Push', weeks: 12, since: null }]), 'and runs it 12 weeks')
+assert(JSON.stringify(plannedEverywhere(await readStored(page), raises)) === JSON.stringify([{ day: 'Push', weeks: 12, since: mondayWeeksAgo(9) }]), 'and runs it 12 weeks')
 
 await swapExercise(notice, 'Standing Barbell Curls', 'Standing Dumbbell Curls')
 assert(await notice.count() === 0, 'Trocar swaps the last due exercise and the notice goes')

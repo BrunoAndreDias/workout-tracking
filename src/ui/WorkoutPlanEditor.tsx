@@ -42,7 +42,7 @@ interface Props {
   today: IsoDate
 }
 
-function NewPlan({ count, dispatch, onCancel }: { count: number; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
+function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: IsoDate; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
   const [name, setName] = useState(`Plano de treino ${count + 1}`)
   const [split, setSplit] = useState<Split>('ppf')
   return (
@@ -67,7 +67,7 @@ function NewPlan({ count, dispatch, onCancel }: { count: number; dispatch: Dispa
         <button
           type="button"
           className="primary"
-          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || `Plano de treino ${count + 1}`, split })}
+          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || `Plano de treino ${count + 1}`, split, today })}
         >
           Criar plano
         </button>
@@ -90,7 +90,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
     setCreating(false)
   }
 
-  if (!plan) return <NewPlan count={state.plans.length} dispatch={create} onCancel={null} />
+  if (!plan) return <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={null} />
 
   const planId = plan.id
   const { block: current, position } = currentBlock(plan, state.sessions, today)
@@ -140,7 +140,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
       </div>
 
       {creating ? (
-        <NewPlan count={state.plans.length} dispatch={create} onCancel={() => setCreating(false)} />
+        <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={() => setCreating(false)} />
       ) : (
         <>
           <h2 className="workout-plan-title">

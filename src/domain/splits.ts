@@ -1,6 +1,6 @@
 import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
 import type { CatalogId } from './exerciseCatalog.ts'
-import type { ExerciseId, WorkoutBlockId, WorkoutDayId } from './types.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
 import type { BlockOf, DaysOf, Exercise, RepRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
 
 export interface SlotSpec {
@@ -172,6 +172,7 @@ export function templateBlock<S extends Split>(
   split: S,
   blockId: WorkoutBlockId,
   name: string,
+  since: IsoDate,
   exercises: readonly Exercise[],
   newExerciseId: (catalogId: CatalogId) => ExerciseId,
 ): { block: BlockOf<S>; exercises: readonly Exercise[] } {
@@ -185,7 +186,7 @@ export function templateBlock<S extends Split>(
   const days = specs.map((spec, i) => ({
     id: blockDayId(blockId, i),
     name: spec.name,
-    exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role], weeks: ROLE_WEEKS[slot.role], since: null })),
+    exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role], weeks: ROLE_WEEKS[slot.role], since })),
   }))
   return { block: { id: blockId, name, weeks: DEFAULT_RIR_RAMP.length, rir: DEFAULT_RIR_RAMP, days: days as unknown as DaysOf<S> }, exercises: known }
 }

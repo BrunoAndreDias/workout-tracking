@@ -5,7 +5,7 @@ import { templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutSessionId } from './types.ts'
 import type { Exercise, LoggedSet, WorkoutDay, WorkoutSession } from './workouts.ts'
 
-const ppf = () => templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', [], (id: CatalogId) => `x-${id}` as ExerciseId)
+const ppf = () => templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', '2026-01-05' as IsoDate, [], (id: CatalogId) => `x-${id}` as ExerciseId)
 const namer = (exercises: readonly Exercise[]) => (id: ExerciseId) => exercises.find((e) => e.id === id)?.name ?? '?'
 
 describe('muscle groups of a Training Block', () => {

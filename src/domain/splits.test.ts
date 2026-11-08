@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CATALOG } from './exerciseCatalog.ts'
 import type { CatalogId } from './exerciseCatalog.ts'
 import { defaultRole, mapDays, splitForDayCount, SPLITS, templateBlock } from './splits.ts'
-import type { ExerciseId, WorkoutBlockId } from './types.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId } from './types.ts'
 
 const catalogIds = new Set<string>(CATALOG.map((e) => e.id))
 const newId = (id: CatalogId) => `x-${id}` as ExerciseId
@@ -27,9 +27,9 @@ describe('Training Splits', () => {
   })
 
   it('a template block fills every day, with 3 sets at the role’s rep range, the role’s run of weeks and the 6-week RIR ramp', () => {
-    const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', [], newId)
+    const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', '2026-01-05' as IsoDate, [], newId)
     expect(block.days.map((d) => d.id)).toEqual(['b1-d1', 'b1-d2', 'b1-d3'])
-    expect(block.days[0].exercises[0]).toEqual({ exerciseId: 'x-flat-barbell-bench-press', role: 'main', sets: 3, reps: { min: 6, max: 8 }, weeks: null, since: null })
+    expect(block.days[0].exercises[0]).toEqual({ exerciseId: 'x-flat-barbell-bench-press', role: 'main', sets: 3, reps: { min: 6, max: 8 }, weeks: null, since: '2026-01-05' })
     expect(block.days[0].exercises.map((p) => [p.role, p.weeks])).toEqual([
       ['main', null],
       ['secondary', 8],
@@ -44,7 +44,7 @@ describe('Training Splits', () => {
 
   it('uses an Exercise the user already has under that name, and adds each new one once across days', () => {
     const mine = { id: 'mine' as ExerciseId, name: 'flat barbell bench press' }
-    const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', [mine], newId)
+    const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', '2026-01-05' as IsoDate, [mine], newId)
     expect(block.days[0].exercises[0].exerciseId).toBe('mine')
     expect(block.days[2].exercises[0].exerciseId).toBe('mine')
     expect(exercises.filter((e) => e.name === 'Bent Over Barbell Rows')).toHaveLength(1)
@@ -56,7 +56,7 @@ describe('Training Splits', () => {
   })
 
   it('mapDays keeps the block’s days in order', () => {
-    const { block } = templateBlock('ul', 'b' as WorkoutBlockId, 'Bloco A', [], newId)
+    const { block } = templateBlock('ul', 'b' as WorkoutBlockId, 'Bloco A', '2026-01-05' as IsoDate, [], newId)
     expect(mapDays(block, (d, i) => ({ ...d, name: `${i}` })).map((d) => d.name)).toEqual(['0', '1', '2', '3'])
   })
 })

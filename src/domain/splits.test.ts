@@ -26,11 +26,17 @@ describe('Training Splits', () => {
     expect(SPLITS.ul.days.map((d) => d.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B'])
   })
 
-  it('a template block fills every day, with 3 sets at the role’s rep range and the 6-week RIR ramp', () => {
+  it('a template block fills every day, with 3 sets at the role’s rep range, the role’s run of weeks and the 6-week RIR ramp', () => {
     const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', [], newId)
     expect(block.days.map((d) => d.id)).toEqual(['b1-d1', 'b1-d2', 'b1-d3'])
-    expect(block.days[0].exercises[0]).toEqual({ exerciseId: 'x-flat-barbell-bench-press', role: 'main', sets: 3, reps: { min: 6, max: 8 } })
-    expect(block.days[0].exercises.map((p) => p.role)).toEqual(['main', 'secondary', 'isolation', 'isolation', 'abs'])
+    expect(block.days[0].exercises[0]).toEqual({ exerciseId: 'x-flat-barbell-bench-press', role: 'main', sets: 3, reps: { min: 6, max: 8 }, weeks: null, since: null })
+    expect(block.days[0].exercises.map((p) => [p.role, p.weeks])).toEqual([
+      ['main', null],
+      ['secondary', 8],
+      ['isolation', 8],
+      ['isolation', 8],
+      ['abs', 8],
+    ])
     expect(block.rir.map((r) => r && `${r.min}-${r.max}`)).toEqual(['4-5', '3-3', '2-3', '2-2', '1-2', '0-1'])
     expect(block.weeks).toBe(6)
     expect(exercises.find((e) => e.id === 'x-pull-ups')?.name).toBe('Pull-Ups')

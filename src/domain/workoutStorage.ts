@@ -5,15 +5,16 @@ import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './exerciseCatalog.ts'
-import { ROLES, splitForDayCount, SPLITS } from './splits.ts'
-import { isRirTarget, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
+import { isRirTarget, isRunWeeks, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
 /**
  * 1 had a plan's days with no blocks; 2 had Training Blocks of any number of days; 3 has a Training Split, every block
  * with its days, and a role on each Planned Exercise. Plans of 1 and 2 whose blocks all have 3 or 4 days become that
- * split; the others cannot, and are dropped: loading keeps their text under `:migrated:`.
+ * split; the others cannot, and are dropped: loading keeps their text under `:migrated:`. A Planned Exercise's `weeks` and
+ * `since` came later than 3 without a new version: absent, the run lasts its role's weeks and started when first done.
  */
 export const WORKOUT_PLANS_SCHEMA_VERSION = 3
 /**
@@ -63,7 +64,11 @@ function parsePlanned(raw: unknown, legacyIndex: number | null): PlannedExercise
   const { min, max } = raw.reps
   if (!isCount(min) || !isCount(max) || min < 1 || max < min) return null
   const role = legacyIndex === null ? raw.role : legacyIndex === 0 ? 'main' : 'isolation'
-  return isRole(role) ? { exerciseId: raw.exerciseId as ExerciseId, role, sets: raw.sets, reps: { min, max } } : null
+  if (!isRole(role)) return null
+  const weeks = raw.weeks === undefined ? ROLE_WEEKS[role] : raw.weeks
+  const since = typeof raw.since === 'string' ? parseIsoDate(raw.since) : null
+  if (!isRunWeeks(weeks) || (raw.since !== undefined && raw.since !== null && since === null)) return null
+  return { exerciseId: raw.exerciseId as ExerciseId, role, sets: raw.sets, reps: { min, max }, weeks, since }
 }
 
 function parseDay(raw: unknown, legacy: boolean): WorkoutDay | null {

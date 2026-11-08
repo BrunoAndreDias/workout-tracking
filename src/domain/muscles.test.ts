@@ -56,7 +56,7 @@ describe('muscle groups of a Training Block', () => {
 
   it('an Exercise of the user’s own has no group: its sets count apart', () => {
     const exercises = [{ id: 'mine' as ExerciseId, name: 'Supino' }]
-    const day: WorkoutDay = { id: 'd' as WorkoutDayId, name: 'Push', exercises: [{ exerciseId: 'mine' as ExerciseId, role: 'main', sets: 4, reps: { min: 6, max: 8 } }] }
+    const day: WorkoutDay = { id: 'd' as WorkoutDayId, name: 'Push', exercises: [{ exerciseId: 'mine' as ExerciseId, role: 'main', sets: 4, reps: { min: 6, max: 8 }, weeks: null, since: null }] }
     const { muscles, ungrouped } = blockMuscles([day], namer(exercises))
     expect(ungrouped).toEqual([{ name: 'Supino', sets: 4 }])
     expect(muscles.every((m) => m.sets === 0 && m.days.length === 0)).toBe(true)

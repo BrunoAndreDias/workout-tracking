@@ -50,7 +50,7 @@ const day = (date: string, planId: PlanId | null): DayLog => {
 }
 
 const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }
-const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, role: 'main' as const, sets: 3, reps: { min: 8, max: 12 } }] }
+const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, role: 'main' as const, sets: 3, reps: { min: 8, max: 12 }, weeks: null, since: null }] }
 const restDay = (id: string) => ({ id: id as WorkoutDayId, name: id, exercises: [] })
 const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,

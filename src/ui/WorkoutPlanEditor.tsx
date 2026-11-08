@@ -270,7 +270,7 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
           ))}
         </nav>
       </div>
-      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} dispatch={dispatch} />
+      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} today={today} dispatch={dispatch} />
       <BlockMuscles days={days} exercises={exercises} />
     </>
   )
@@ -331,10 +331,11 @@ interface DayProps {
   /** The Exercises of the block before, to mark the new ones; null for the first block. */
   before: ReadonlySet<ExerciseId> | null
   exercises: WorkoutState['exercises']
+  today: IsoDate
   dispatch: Dispatch<WorkoutAction>
 }
 
-function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayProps) {
+function DayEditor({ planId, blockId, day, before, exercises, today, dispatch }: DayProps) {
   const [picking, setPicking] = useState<{ swapping: ExerciseId | null } | null>(null)
   const { state: equipment } = useContext(EquipmentContext)
   const dayId: WorkoutDayId = day.id
@@ -342,8 +343,8 @@ function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayPro
   const muscles = dayMuscleSets(day, nameOf)
   const onPick = (name: string) => {
     const swapping = picking?.swapping ?? null
-    if (swapping === null) dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: defaultRole(name), newExerciseId: newId<ExerciseId>() })
-    else dispatch({ type: 'swapPlannedExercise', planId, blockId, dayId, exerciseId: swapping, name, newExerciseId: newId<ExerciseId>() })
+    if (swapping === null) dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: defaultRole(name), newExerciseId: newId<ExerciseId>(), today })
+    else dispatch({ type: 'swapPlannedExercise', planId, blockId, dayId, exerciseId: swapping, name, newExerciseId: newId<ExerciseId>(), today })
   }
 
   return (

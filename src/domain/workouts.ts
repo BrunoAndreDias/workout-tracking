@@ -292,6 +292,11 @@ export interface ExerciseRun {
   readonly due: boolean
 }
 
+/** "Mais 4 semanas": a due Exercise kept on runs this many weeks from now. */
+export const RUN_EXTENSION = 4
+
+export const runExtended = (run: ExerciseRun): number => Math.min(MAX_BLOCK_WEEKS, run.done + RUN_EXTENSION)
+
 /** An Exercise planned on several days runs as long as its longest run there, up to its shortest limit there. */
 export function exerciseRuns(block: WorkoutBlock, sessions: readonly WorkoutSession[], date: IsoDate): ExerciseRun[] {
   const runs = new Map<ExerciseId, Omit<ExerciseRun, 'due'>>()

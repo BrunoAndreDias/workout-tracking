@@ -7,8 +7,8 @@ import type { DayMuscle } from '../domain/muscles.ts'
 import { newId } from '../domain/plans.ts'
 import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
-import { blockExercises, currentBlock, nameLookup, parseRepRange, parseRir } from '../domain/workouts.ts'
-import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
+import { blockExercises, currentBlock, isRunDue, isRunWeeks, nameLookup, parseRepRange, parseRir, weeksRun } from '../domain/workouts.ts'
+import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
 import { EquipmentContext } from './equipmentContext.ts'
 import { ExercisePicker } from './ExercisePicker.tsx'
@@ -186,7 +186,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
             {!plan.start && <p className="muted blocks-note">Ainda não começaste. Usa "Começar aqui" no primeiro bloco.</p>}
           </section>
 
-          <BlockEditor key={block.id} plan={plan} block={block} today={today} exercises={state.exercises} dispatch={dispatch} />
+          <BlockEditor key={block.id} plan={plan} block={block} isCurrent={block.id === current.id} today={today} exercises={state.exercises} sessions={state.sessions} dispatch={dispatch} />
         </>
       )}
     </>
@@ -196,12 +196,15 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
 interface BlockProps {
   plan: WorkoutPlan
   block: WorkoutBlock
+  /** The block sessions start from, whose Exercise Runs are shown. */
+  isCurrent: boolean
   today: IsoDate
   exercises: WorkoutState['exercises']
+  sessions: readonly WorkoutSession[]
   dispatch: Dispatch<WorkoutAction>
 }
 
-function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
+function BlockEditor({ plan, block, isCurrent, today, exercises, sessions, dispatch }: BlockProps) {
   const [dayIndex, setDayIndex] = useState(0)
   const planId = plan.id
   const blockId = block.id
@@ -270,7 +273,7 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
           ))}
         </nav>
       </div>
-      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} today={today} dispatch={dispatch} />
+      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} runs={isCurrent ? sessions : null} today={today} dispatch={dispatch} />
       <BlockMuscles days={days} exercises={exercises} />
     </>
   )
@@ -331,11 +334,18 @@ interface DayProps {
   /** The Exercises of the block before, to mark the new ones; null for the first block. */
   before: ReadonlySet<ExerciseId> | null
   exercises: WorkoutState['exercises']
+  /** The sessions that count each Exercise Run, or null when the block is not current and shows none. */
+  runs: readonly WorkoutSession[] | null
   today: IsoDate
   dispatch: Dispatch<WorkoutAction>
 }
 
-function DayEditor({ planId, blockId, day, before, exercises, today, dispatch }: DayProps) {
+function RunLine({ weeks, done }: { weeks: number | null; done: number }) {
+  if (isRunDue(weeks, done)) return <span className="missing-line">Rever: {plural(done, 'semana feita', 'semanas feitas')}</span>
+  return <span className="run-line">{weeks === null ? `semana ${done + 1} · sem limite` : `semana ${done + 1} de ${weeks}`}</span>
+}
+
+function DayEditor({ planId, blockId, day, before, exercises, runs, today, dispatch }: DayProps) {
   const [picking, setPicking] = useState<{ swapping: ExerciseId | null } | null>(null)
   const { state: equipment } = useContext(EquipmentContext)
   const dayId: WorkoutDayId = day.id
@@ -379,12 +389,15 @@ function DayEditor({ planId, blockId, day, before, exercises, today, dispatch }:
                     {isNew && ' · novo'}
                   </span>
                   {missing.length > 0 && <span className="missing-line">Falta: {materialText(equipment, missing)}</span>}
+                  {runs && <RunLine weeks={p.weeks} done={weeksRun(p, runs, today)} />}
                 </span>
                 <span className="planned-fields">
                   <CountField value={p.sets} required label={`Séries de ${name}`} onCommit={(n) => n && set({ sets: n })} />
                   <span className="unit">×</span>
                   <RangeField value={p.reps} label={`Repetições de ${name}`} parse={parseRepRange} onCommit={(reps) => reps && set({ reps })} />
                   <span className="unit">reps</span>
+                  <CountField value={p.weeks} placeholder="∞" label={`Semanas de ${name}`} onCommit={(weeks) => isRunWeeks(weeks) && set({ weeks })} />
+                  <span className="unit">semanas</span>
                 </span>
                 <button type="button" className="icon-btn planned-swap" aria-label={`Trocar ${name}`} onClick={() => setPicking({ swapping: p.exerciseId })}>
                   ⇄

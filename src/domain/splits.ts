@@ -1,6 +1,6 @@
 import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
 import type { CatalogId } from './exerciseCatalog.ts'
-import type { ExerciseId, WorkoutBlockId, WorkoutDayId } from './types.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
 import type { BlockOf, DaysOf, Exercise, RepRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
 
 export interface SlotSpec {
@@ -118,6 +118,14 @@ export const ROLE_REPS: { readonly [R in Role]: RepRange } = {
   abs: { min: 10, max: 15 },
 }
 
+/** How many training weeks an Exercise in each role runs before the app asks to review it; null is no limit. Main lifts stay, accessories rotate. */
+export const ROLE_WEEKS: { readonly [R in Role]: number | null } = {
+  main: null,
+  secondary: 8,
+  isolation: 8,
+  abs: 8,
+}
+
 export const ROLE_LABEL: { readonly [R in Role]: string } = {
   main: 'Principal',
   secondary: 'Secundário',
@@ -164,6 +172,7 @@ export function templateBlock<S extends Split>(
   split: S,
   blockId: WorkoutBlockId,
   name: string,
+  since: IsoDate,
   exercises: readonly Exercise[],
   newExerciseId: (catalogId: CatalogId) => ExerciseId,
 ): { block: BlockOf<S>; exercises: readonly Exercise[] } {
@@ -177,7 +186,7 @@ export function templateBlock<S extends Split>(
   const days = specs.map((spec, i) => ({
     id: blockDayId(blockId, i),
     name: spec.name,
-    exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role] })),
+    exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role], weeks: ROLE_WEEKS[slot.role], since })),
   }))
   return { block: { id: blockId, name, weeks: DEFAULT_RIR_RAMP.length, rir: DEFAULT_RIR_RAMP, days: days as unknown as DaysOf<S> }, exercises: known }
 }

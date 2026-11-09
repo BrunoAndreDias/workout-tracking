@@ -4,6 +4,7 @@ import {
   blockChanges,
   blockPosition,
   emptyWorkouts,
+  exerciseRuns,
   findDay,
   lastDoneSets,
   loggedCounts,
@@ -32,7 +33,7 @@ const session = (id: string, on: string, exercises: WorkoutSession['exercises'],
   exercises,
 })
 
-const planned = (exerciseId: ExerciseId, role: PlannedExercise['role'], sets = 3, reps = { min: 6, max: 8 }): PlannedExercise => ({ exerciseId, role, sets, reps })
+const planned = (exerciseId: ExerciseId, role: PlannedExercise['role'], sets = 3, reps = { min: 6, max: 8 }): PlannedExercise => ({ exerciseId, role, sets, reps, weeks: null, since: null })
 
 const PEITO: WorkoutDay = { id: 'd-peito' as WorkoutDayId, name: 'Peito', exercises: [planned(SUPINO, 'main', 4), planned(REMO, 'isolation', 2, { min: 10, max: 15 })] }
 
@@ -95,7 +96,8 @@ describe('the suggested target', () => {
 const P = 'p1' as WorkoutPlanId
 const B = 'b1' as WorkoutBlockId
 const S1 = 's1' as WorkoutSessionId
-const created = run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf' }])
+const TODAY = date('2026-11-02')
+const created = run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf', today: TODAY }])
 const PUSH = created.plans[0].blocks[0].days[0]
 const BENCH = PUSH.exercises[0].exerciseId
 const day = (state: WorkoutState, i = 0) => state.plans[0].blocks[0].days[i]
@@ -115,37 +117,42 @@ describe('Workout Plans', () => {
   })
 
   it('a second plan reuses the Exercises the first one created', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul', today: TODAY }], created)
     expect(two.plans[1].blocks[0].days.map((d) => d.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B'])
     expect(two.plans[1].blocks[0].days[0].exercises[0].exerciseId).toBe(BENCH)
     expect(new Set(two.exercises.map((e) => e.name)).size).toBe(two.exercises.length)
   })
 
-  it('adds an Exercise with a role and its rep range, reusing one named the same ignoring case', () => {
+  it('adds an Exercise with a role, its rep range and its run of weeks from today, reusing one named the same ignoring case', () => {
     const s = run(
       [
-        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: ' Supino ', role: 'secondary', newExerciseId: 'e1' as ExerciseId },
-        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: 'supino', role: 'isolation', newExerciseId: 'e2' as ExerciseId },
-        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: '  ', role: 'isolation', newExerciseId: 'e3' as ExerciseId },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: ' Supino ', role: 'secondary', newExerciseId: 'e1' as ExerciseId, today: TODAY },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: 'supino', role: 'isolation', newExerciseId: 'e2' as ExerciseId, today: TODAY },
+        { type: 'addPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, name: '  ', role: 'isolation', newExerciseId: 'e3' as ExerciseId, today: TODAY },
       ],
       created,
     )
-    expect(day(s).exercises.slice(PUSH.exercises.length)).toEqual([{ exerciseId: 'e1', role: 'secondary', sets: 3, reps: { min: 8, max: 10 } }])
+    expect(day(s).exercises.slice(PUSH.exercises.length)).toEqual([{ exerciseId: 'e1', role: 'secondary', sets: 3, reps: { min: 8, max: 10 }, weeks: 8, since: TODAY }])
     expect(s.exercises.at(-1)).toEqual({ id: 'e1', name: 'Supino' })
   })
 
-  it('swapping keeps the role, sets, reps and place, and does nothing when the new Exercise is already in the day', () => {
-    const edited = run([{ type: 'setPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, planned: { ...PUSH.exercises[0], sets: 5 } }], created)
-    const swapped = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: 'Flat Dumbbell Bench Press', newExerciseId: 'db' as ExerciseId }], edited)
-    expect(day(swapped).exercises[0]).toEqual({ exerciseId: 'db', role: 'main', sets: 5, reps: { min: 6, max: 8 } })
+  it('swapping keeps the role, sets, reps, weeks and place, starts the run today, and does nothing when the new Exercise is already in the day', () => {
+    const edited = run([{ type: 'setPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, planned: { ...PUSH.exercises[0], sets: 5, weeks: 12 } }], created)
+    const swapped = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: 'Flat Dumbbell Bench Press', newExerciseId: 'db' as ExerciseId, today: TODAY }], edited)
+    expect(day(swapped).exercises[0]).toEqual({ exerciseId: 'db', role: 'main', sets: 5, reps: { min: 6, max: 8 }, weeks: 12, since: TODAY })
     expect(day(swapped).exercises.slice(1)).toEqual(PUSH.exercises.slice(1))
     const into = PUSH.exercises[1].exerciseId
-    const same = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: created.exercises.find((e) => e.id === into)!.name, newExerciseId: 'x' as ExerciseId }], created)
+    const same = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: BENCH, name: created.exercises.find((e) => e.id === into)!.name, newExerciseId: 'x' as ExerciseId, today: TODAY }], created)
     expect(day(same)).toEqual(PUSH)
   })
 
+  it('an Exercise Run lasts 1 to 52 weeks or has no limit', () => {
+    const weeks = (n: number | null) => day(run([{ type: 'setPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, planned: { ...PUSH.exercises[1], weeks: n } }], created)).exercises[1].weeks
+    expect([weeks(1), weeks(52), weeks(null), weeks(0), weeks(53), weeks(2.5)]).toEqual([1, 52, null, 8, 8, 8])
+  })
+
   it('deleting the active plan activates the next one, and the last leaves none', () => {
-    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul' }], created)
+    const two = run([{ type: 'createPlan', planId: 'p2' as WorkoutPlanId, blockId: 'b2' as WorkoutBlockId, name: 'Outro', split: 'ul', today: TODAY }], created)
     expect(two.activePlanId).toBe('p2')
     const one = run([{ type: 'deletePlan', planId: 'p2' as WorkoutPlanId }], two)
     expect(one.activePlanId).toBe('p1')
@@ -335,6 +342,56 @@ describe('nextDay', () => {
     expect(nextDay(cycle(null), [trained('2026-10-01', 'a1'), trained('2026-10-09', 'a2')], date('2026-10-06')).id).toBe('a2')
     const sessions = [trained(MONDAY, 'a1'), trained('2026-10-13', 'a2')]
     expect(nextDay(cycle(MONDAY), sessions, date('2026-10-19')).id).toBe('b3')
+  })
+})
+
+describe('exerciseRuns', () => {
+  const row = (exerciseId: ExerciseId, weeks: number | null, since: string | null): PlannedExercise => ({ ...planned(exerciseId, 'isolation'), weeks, since: since === null ? null : date(since) })
+  const runBlock = (one: PlannedExercise[], two: PlannedExercise[] = []) =>
+    block('R', 6, [
+      { id: 'r1' as WorkoutDayId, name: 'r1', exercises: one },
+      { id: 'r2' as WorkoutDayId, name: 'r2', exercises: two },
+      { id: 'r3' as WorkoutDayId, name: 'r3', exercises: [] },
+    ])
+  const runs = (b: BlockOf<'ppf'>, sessions: WorkoutSession[], on: string) => exerciseRuns(b, sessions, date(on)).map((r) => [r.exerciseId, r.done, r.due])
+
+  it('counts the training weeks from the week the Exercise came in, of any Exercise, before the week asked about; a week without training pauses it', () => {
+    const b = runBlock([row(REMO, 2, '2026-10-07')])
+    const sessions = [trained(MONDAY), trained('2026-10-20')]
+    expect(runs(b, sessions, '2026-10-21')).toEqual([[REMO, 1, false]])
+    expect(runs(b, sessions, '2026-10-26')).toEqual([[REMO, 2, true]])
+  })
+
+  it('an Exercise from before runs started the week it was first done, and one never done has run no weeks', () => {
+    const b = runBlock([row(REMO, 1, null), row(SUPINO, 1, null)])
+    const sessions = [session('pending-remo', '2026-10-06', [{ exerciseId: REMO, sets: [pending(8, 40)] }]), trained(MONDAY), session('remo', '2026-10-14', [{ exerciseId: REMO, sets: [done(8, 40)] }]), trained('2026-10-19')]
+    expect(runs(b, sessions, '2026-10-26')).toEqual([
+      [REMO, 2, true],
+      [SUPINO, 0, false],
+    ])
+  })
+
+  it('an Exercise with no limit is never due', () => {
+    const sessions = ['2026-09-07', '2026-09-14', '2026-09-21', MONDAY].map((d) => trained(d))
+    expect(runs(runBlock([row(SQUAT, null, '2026-09-01')]), sessions, '2026-10-12')).toEqual([[SQUAT, 4, false]])
+  })
+
+  it('an Exercise on two days is one run, as long as its longest there and due at its shortest limit', () => {
+    const b = runBlock([row(REMO, 3, '2026-10-12')], [row(REMO, 1, MONDAY)])
+    const [remo] = exerciseRuns(b, [trained(MONDAY), trained('2026-10-12')], date('2026-10-19'))
+    expect(remo).toEqual({ exerciseId: REMO, dayIds: ['r1', 'r2'], weeks: 1, done: 2, due: true })
+  })
+
+  it('swapping an Exercise that is due starts a new run, and a copied block carries the run on', () => {
+    const raises = PUSH.exercises[2].exerciseId
+    const sessions = ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map((d, i) => session(`w${i}`, d, [{ exerciseId: raises, sets: [done(12, 8)] }]))
+    const history = { ...run([{ type: 'createPlan', planId: P, blockId: B, name: 'Força', split: 'ppf', today: date('2026-09-01') }]), sessions }
+    const dueOn = (s: WorkoutState, blockIndex = 0) => exerciseRuns(s.plans[0].blocks[blockIndex], s.sessions, TODAY).filter((r) => r.due && r.exerciseId === raises).map((r) => r.exerciseId)
+    expect(dueOn({ ...created, sessions })).toEqual([])
+    expect(dueOn(history)).toEqual([raises])
+    expect(dueOn(run([{ type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B }], history), 1)).toEqual([raises])
+    const swapped = run([{ type: 'swapPlannedExercise', planId: P, blockId: B, dayId: PUSH.id, exerciseId: raises, name: 'Cable Lateral Raises', newExerciseId: 'clr' as ExerciseId, today: TODAY }], history)
+    expect(dueOn(swapped)).toEqual([])
   })
 })
 

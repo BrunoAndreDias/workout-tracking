@@ -5,7 +5,7 @@ import { editNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { suggestTarget } from './progression.ts'
 import type { Suggestion } from './progression.ts'
-import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, templateBlock } from './splits.ts'
+import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 
 export interface Exercise {
@@ -36,6 +36,10 @@ export interface PlannedExercise {
   readonly role: Role
   readonly sets: number
   readonly reps: RepRange
+  /** How many training weeks its Exercise Run lasts, 1 to MAX_BLOCK_WEEKS; null is no limit. */
+  readonly weeks: number | null
+  /** When the Exercise came into this place. Null for one from before Exercise Runs: its run starts the week it was first done. */
+  readonly since: IsoDate | null
 }
 
 export interface WorkoutDay {
@@ -258,6 +262,55 @@ function trainedWeeks(sessions: readonly WorkoutSession[], from: IsoDate, until:
   return weeks
 }
 
+/** The week an Exercise Run starts, or null when it has not: an Exercise from before runs starts the week it was first done. */
+function runStart(planned: PlannedExercise, sessions: readonly WorkoutSession[]): IsoDate | null {
+  if (planned.since) return mondayOf(planned.since)
+  let first: IsoDate | null = null
+  for (const s of sessions) {
+    if ((first === null || s.date < first) && s.exercises.some((e) => e.exerciseId === planned.exerciseId && e.sets.some(isDone))) first = s.date
+  }
+  return first && mondayOf(first)
+}
+
+/** The training weeks a Planned Exercise's run holds before the week of `date`, counted as a Training Block counts them. */
+export function weeksRun(planned: PlannedExercise, sessions: readonly WorkoutSession[], date: IsoDate): number {
+  const from = runStart(planned, sessions)
+  return from === null ? 0 : trainedWeeks(sessions, from, mondayOf(date)).size
+}
+
+export const isRunDue = (weeks: number | null, done: number): boolean => weeks !== null && done >= weeks
+
+export const isRunWeeks = (weeks: unknown): weeks is number | null => weeks === null || (Number.isInteger(weeks) && (weeks as number) >= 1 && (weeks as number) <= MAX_BLOCK_WEEKS)
+
+/** One Exercise's run across the days of a block it is planned in. */
+export interface ExerciseRun {
+  readonly exerciseId: ExerciseId
+  readonly dayIds: readonly WorkoutDayId[]
+  readonly weeks: number | null
+  /** Training weeks run before the week asked about, so the week asked about is `done + 1`. */
+  readonly done: number
+  readonly due: boolean
+}
+
+/** "Mais 4 semanas": a due Exercise kept on runs this many weeks from now. */
+export const RUN_EXTENSION = 4
+
+export const runExtended = (run: ExerciseRun): number => Math.min(MAX_BLOCK_WEEKS, run.done + RUN_EXTENSION)
+
+/** An Exercise planned on several days runs as long as its longest run there, up to its shortest limit there. */
+export function exerciseRuns(block: WorkoutBlock, sessions: readonly WorkoutSession[], date: IsoDate): ExerciseRun[] {
+  const runs = new Map<ExerciseId, Omit<ExerciseRun, 'due'>>()
+  for (const day of blockDays(block)) {
+    for (const p of day.exercises) {
+      const done = weeksRun(p, sessions, date)
+      const run = runs.get(p.exerciseId)
+      const weeks = run === undefined || run.weeks === null ? p.weeks : p.weeks === null ? run.weeks : Math.min(run.weeks, p.weeks)
+      runs.set(p.exerciseId, { exerciseId: p.exerciseId, dayIds: [...(run?.dayIds ?? []), day.id], weeks, done: Math.max(run?.done ?? 0, done) })
+    }
+  }
+  return [...runs.values()].map((r) => ({ ...r, due: isRunDue(r.weeks, r.done) }))
+}
+
 export function blockPosition(plan: WorkoutPlan, sessions: readonly WorkoutSession[], date: IsoDate): BlockPosition | null {
   if (!plan.start) return null
   const from = mondayOf(plan.start.since)
@@ -320,7 +373,7 @@ export interface SetValues {
 }
 
 export type WorkoutAction =
-  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string; split: Split }
+  | { type: 'createPlan'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string; split: Split; today: IsoDate }
   | { type: 'renamePlan'; planId: WorkoutPlanId; name: string }
   | { type: 'deletePlan'; planId: WorkoutPlanId }
   | { type: 'activatePlan'; planId: WorkoutPlanId }
@@ -330,8 +383,8 @@ export type WorkoutAction =
   | { type: 'setBlockRir'; planId: WorkoutPlanId; blockId: WorkoutBlockId; week: number; rir: RirTarget | null }
   | { type: 'removeBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId }
   | { type: 'setCycleStart'; planId: WorkoutPlanId; blockId: WorkoutBlockId; since: IsoDate }
-  | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; role: Role; newExerciseId: ExerciseId }
-  | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId }
+  | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; role: Role; newExerciseId: ExerciseId; today: IsoDate }
+  | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'setPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; planned: PlannedExercise }
   | { type: 'removePlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId }
   | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; week: RirTarget | null }
@@ -413,10 +466,10 @@ function newPlan(action: Extract<WorkoutAction, { type: 'createPlan' }>, exercis
   const { planId, blockId, name } = action
   const exerciseId = (catalogId: string) => `${blockId}-${catalogId}` as ExerciseId
   if (action.split === 'ppf') {
-    const made = templateBlock('ppf', blockId, 'Bloco A', exercises, exerciseId)
+    const made = templateBlock('ppf', blockId, 'Bloco A', action.today, exercises, exerciseId)
     return { plan: { id: planId, name, split: 'ppf', blocks: [made.block], start: null }, exercises: made.exercises }
   }
-  const made = templateBlock('ul', blockId, 'Bloco A', exercises, exerciseId)
+  const made = templateBlock('ul', blockId, 'Bloco A', action.today, exercises, exerciseId)
   return { plan: { id: planId, name, split: 'ul', blocks: [made.block], start: null }, exercises: made.exercises }
 }
 
@@ -497,7 +550,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'addPlannedExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state
-      const planned: PlannedExercise = { exerciseId: resolved.id, role: action.role, sets: DEFAULT_SETS, reps: ROLE_REPS[action.role] }
+      const planned: PlannedExercise = { exerciseId: resolved.id, role: action.role, sets: DEFAULT_SETS, reps: ROLE_REPS[action.role], weeks: ROLE_WEEKS[action.role], since: action.today }
       return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) =>
         d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: [...d.exercises, planned] },
       )
@@ -506,10 +559,11 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state
       return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) =>
-        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: d.exercises.map((p) => (p.exerciseId === action.exerciseId ? { ...p, exerciseId: resolved.id } : p)) },
+        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: d.exercises.map((p) => (p.exerciseId === action.exerciseId ? { ...p, exerciseId: resolved.id, since: action.today } : p)) },
       )
     }
     case 'setPlannedExercise':
+      if (!isRunWeeks(action.planned.weeks)) return state
       return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({
         ...d,
         exercises: d.exercises.map((p) => (p.exerciseId === action.planned.exerciseId ? action.planned : p)),

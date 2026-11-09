@@ -34,7 +34,7 @@ const SESSION = {
 const sessions = (...list: unknown[]) => ({ version: 3, sessions: list })
 const withSets = (sets: unknown[]) => sessions({ ...SESSION, exercises: [{ exerciseId: 'e1', sets }] })
 
-const ROW = { exerciseId: 'e1', role: 'main', sets: 4, reps: { min: 6, max: 6 } }
+const ROW = { exerciseId: 'e1', role: 'main', sets: 4, reps: { min: 6, max: 6 }, weeks: 10, since: '2026-09-28' }
 const day = (id: string, exercises: object[] = []) => ({ id, name: id, exercises })
 const DAYS = [day('d1', [ROW]), day('d2'), day('d3')]
 const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days: DAYS }
@@ -125,6 +125,17 @@ describe('workout storage', () => {
     expect(parseWorkoutSessions(raw)).toBe(null)
   })
 
+  it('reads a Planned Exercise stored before Exercise Runs as running its role’s weeks since it was first done', () => {
+    const { weeks: _, since: __, ...old } = ROW
+    const rows = [old, { ...old, exerciseId: 'e2', role: 'isolation' }, { ...ROW, exerciseId: 'e3', weeks: null, since: null }]
+    const read = parseWorkoutPlans(withBlock({ days: [day('d1', rows), DAYS[1], DAYS[2]] }))!.plans[0].blocks[0].days[0].exercises
+    expect(read.map((p) => [p.exerciseId, p.weeks, p.since])).toEqual([
+      ['e1', null, null],
+      ['e2', 8, null],
+      ['e3', null, null],
+    ])
+  })
+
   it('reads one day id in two plans, as version 1 did', () => {
     expect(parseWorkoutPlans(plans(PLAN, { ...PLAN, id: 'p2', blocks: [{ ...BLOCK, id: 'b2' }], start: null }))?.plans.map((p) => p.id)).toEqual(['p1', 'p2'])
   })
@@ -134,6 +145,11 @@ describe('workout storage', () => {
     ['zero sets', withBlock({ days: [day('d1', [{ ...ROW, sets: 0 }]), DAYS[1], DAYS[2]] })],
     ['no role', withBlock({ days: [day('d1', [{ ...ROW, role: undefined }]), DAYS[1], DAYS[2]] })],
     ['an unknown role', withBlock({ days: [day('d1', [{ ...ROW, role: 'warmup' }]), DAYS[1], DAYS[2]] })],
+    ['an exercise run of 0 weeks', withBlock({ days: [day('d1', [{ ...ROW, weeks: 0 }]), DAYS[1], DAYS[2]] })],
+    ['an exercise run of 53 weeks', withBlock({ days: [day('d1', [{ ...ROW, weeks: 53 }]), DAYS[1], DAYS[2]] })],
+    ['an exercise run of 2.5 weeks', withBlock({ days: [day('d1', [{ ...ROW, weeks: 2.5 }]), DAYS[1], DAYS[2]] })],
+    ['an exercise run since a bad date', withBlock({ days: [day('d1', [{ ...ROW, since: '2026-02-30' }]), DAYS[1], DAYS[2]] })],
+    ['an exercise run since a number', withBlock({ days: [day('d1', [{ ...ROW, since: 20261005 }]), DAYS[1], DAYS[2]] })],
     ['an unknown split', plans({ ...PLAN, split: 'ppl' })],
     ['four days in a 3-day split', withBlock({ days: [...DAYS, day('d4')] })],
     ['no active plan while there are plans', { ...plans(PLAN), activePlanId: null }],
@@ -189,9 +205,9 @@ describe('migrating Workout Plans to Training Splits', () => {
   it('guesses each role from its place: the first Exercise of a day is the main lift, the rest isolation', () => {
     const plan = parseWorkoutPlans(v2('a', v2Plan('a', 3)))!.plans[0]
     expect(plan.blocks[0].days[0].exercises).toEqual([
-      { exerciseId: 'e1', role: 'main', sets: 3, reps: { min: 8, max: 12 } },
-      { exerciseId: 'e2', role: 'isolation', sets: 3, reps: { min: 8, max: 12 } },
-      { exerciseId: 'e3', role: 'isolation', sets: 3, reps: { min: 8, max: 12 } },
+      { exerciseId: 'e1', role: 'main', sets: 3, reps: { min: 8, max: 12 }, weeks: null, since: null },
+      { exerciseId: 'e2', role: 'isolation', sets: 3, reps: { min: 8, max: 12 }, weeks: 8, since: null },
+      { exerciseId: 'e3', role: 'isolation', sets: 3, reps: { min: 8, max: 12 }, weeks: 8, since: null },
     ])
   })
 
@@ -215,7 +231,7 @@ describe('migrating Workout Plans to Training Splits', () => {
           id: 'p1',
           name: 'Força',
           split: 'ppf',
-          blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [{ ...v2Day('a'), exercises: [{ ...v2Row('e1'), role: 'main' }] }, v2Day('b'), v2Day('c')] }],
+          blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [{ ...v2Day('a'), exercises: [{ ...v2Row('e1'), role: 'main', weeks: null, since: null }] }, v2Day('b'), v2Day('c')] }],
           start: null,
         },
       ],

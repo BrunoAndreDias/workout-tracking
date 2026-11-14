@@ -151,7 +151,7 @@ const run = promisify(execFile)
 
 /** Signs with the Mac's `shortcuts` tool, so any iPhone imports it. Throws where there is no such tool or it fails. */
 async function sign(plist: Plist): Promise<Buffer> {
-  const dir = await mkdtemp(join(tmpdir(), 'plano-shortcut-'))
+  const dir = await mkdtemp(join(tmpdir(), 'workout-shortcut-'))
   try {
     await writeFile(join(dir, 'in.json'), JSON.stringify(plist))
     await run('plutil', ['-convert', 'binary1', '-o', join(dir, 'in.shortcut'), join(dir, 'in.json')])

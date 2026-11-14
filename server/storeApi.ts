@@ -32,11 +32,14 @@ export interface Stores {
 const pad = (n: number) => String(n).padStart(2, '0')
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-/** The database the app keeps: `PLANO_DB`, else a file in the home directory, outside every checkout. */
+/**
+ * The database the app keeps: `WORKOUT_DB`, else a file in the home directory, outside every checkout. It is not the
+ * meal app's database, so the two apps never write into each other's file.
+ */
 export function dbPath(env: NodeJS.ProcessEnv = process.env): string {
-  if (env.PLANO_DB) return env.PLANO_DB
-  if (env.PLANO_TEST === '1') throw new Error('PLANO_TEST=1 needs its own PLANO_DB: tests never open the real database')
-  return join(homedir(), '.plano-alimentar', 'plano.sqlite')
+  if (env.WORKOUT_DB) return env.WORKOUT_DB
+  if (env.WORKOUT_TEST === '1') throw new Error('WORKOUT_TEST=1 needs its own WORKOUT_DB: tests never open the real database')
+  return join(homedir(), '.workout-tracking', 'workout.sqlite')
 }
 
 /**

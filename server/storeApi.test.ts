@@ -22,7 +22,7 @@ afterEach(() => {
 
 /** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
 async function start({ allowReset = false, wrap = (stores: Stores) => stores, shortcut }: { allowReset?: boolean; wrap?: (stores: Stores) => Stores; shortcut?: (postUrl: string) => Promise<Buffer> } = {}) {
-  const file = join(mkdtempSync(join(tmpdir(), 'plano-store-')), 'plano.sqlite')
+  const file = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'workout.sqlite')
   const clock = { now: new Date(2026, 9, 6, 9, 0) }
   const stores = openStores(file, () => clock.now)
   const server = createServer(storeHandler(() => wrap(stores), { allowReset, shortcut }))
@@ -290,8 +290,8 @@ describe('GET /api/health/shortcut', () => {
 
 describe('a database that does not exist yet', () => {
   it('is not created by a read, only by the first write', async () => {
-    const dir = join(mkdtempSync(join(tmpdir(), 'plano-store-')), 'fresh')
-    const file = join(dir, 'plano.sqlite')
+    const dir = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'fresh')
+    const file = join(dir, 'workout.sqlite')
     const stores = openStores(file)
     const server = createServer(storeHandler(() => stores))
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -309,9 +309,9 @@ describe('a database that does not exist yet', () => {
 })
 
 describe('dbPath', () => {
-  it('uses PLANO_DB, refuses the default under PLANO_TEST, else lives in the home directory', () => {
-    expect(dbPath({ PLANO_DB: '/tmp/x.sqlite', PLANO_TEST: '1' })).toBe('/tmp/x.sqlite')
-    expect(() => dbPath({ PLANO_TEST: '1' })).toThrow('PLANO_TEST=1 needs its own PLANO_DB')
-    expect(dbPath({}).endsWith('/.plano-alimentar/plano.sqlite')).toBe(true)
+  it('uses WORKOUT_DB, refuses the default under WORKOUT_TEST, else lives in the home directory', () => {
+    expect(dbPath({ WORKOUT_DB: '/tmp/x.sqlite', WORKOUT_TEST: '1' })).toBe('/tmp/x.sqlite')
+    expect(() => dbPath({ WORKOUT_TEST: '1' })).toThrow('WORKOUT_TEST=1 needs its own WORKOUT_DB')
+    expect(dbPath({}).endsWith('/.workout-tracking/workout.sqlite')).toBe(true)
   })
 })

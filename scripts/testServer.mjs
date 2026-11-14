@@ -1,4 +1,4 @@
-// The one way scripts start a Vite dev server for tests: a free port, a temp database and PLANO_TEST=1.
+// The one way scripts start a Vite dev server for tests: a free port, a temp database and WORKOUT_TEST=1.
 // scripts/e2e.mjs and scripts/compare.mjs use it, so nothing they start can reach the user's database or port.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -26,8 +26,8 @@ export const freePort = () =>
 export async function startTestServer({ cwd = process.cwd(), port } = {}) {
   const chosen = String(port ?? (await freePort()))
   if (chosen === USER_DEV_PORT) throw new Error(`refusing port ${USER_DEV_PORT}: it is the user's own dev server`)
-  const dbDir = mkdtempSync(join(tmpdir(), 'plano-test-'))
-  const env = { ...process.env, PLANO_TEST: '1', PLANO_DB: join(dbDir, 'plano.sqlite') }
+  const dbDir = mkdtempSync(join(tmpdir(), 'workout-test-'))
+  const env = { ...process.env, WORKOUT_TEST: '1', WORKOUT_DB: join(dbDir, 'workout.sqlite') }
   const server = spawn('npx', ['vite', '--port', chosen, '--strictPort'], { cwd, stdio: ['ignore', 'pipe', 'inherit'], detached: true, env })
   const stop = () => {
     try { process.kill(-server.pid) } catch { /* already gone */ }

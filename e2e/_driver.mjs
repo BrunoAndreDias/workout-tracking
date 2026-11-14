@@ -17,10 +17,10 @@ export const readStored = (page) =>
 
 const storesUrl = (url, key) => new URL(key ? `api/stores/${encodeURIComponent(`workout-tracking:${key}`)}` : 'api/stores', url).href
 
-/** Empties the server's database. Only a test server (PLANO_TEST=1: scripts/e2e.mjs, verify-treino launch.sh) allows it. */
+/** Empties the server's database. Only a test server (WORKOUT_TEST=1: scripts/e2e.mjs, verify-treino launch.sh) allows it. */
 export async function resetServer(page, url) {
   const res = await page.request.delete(storesUrl(url))
-  if (!res.ok()) throw new FlowError(`${url} refused to reset its stores (${res.status()})`, 'drive a test server: npm run e2e, or verify-treino launch.sh, both set PLANO_TEST=1 and a temp PLANO_DB')
+  if (!res.ok()) throw new FlowError(`${url} refused to reset its stores (${res.status()})`, 'drive a test server: npm run e2e, or verify-treino launch.sh, both set WORKOUT_TEST=1 and a temp WORKOUT_DB')
 }
 
 /** The app renders only after it has fetched the server's stores, which is after the page's `load` event. */

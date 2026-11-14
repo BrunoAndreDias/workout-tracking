@@ -1,5 +1,5 @@
 // Serves the built app (dist/) and the store API from one Node process: `npm run serve`.
-// PORT (default 4173) and HOST (default 127.0.0.1, this machine only) choose where it listens; PLANO_DB the database.
+// PORT (default 4173) and HOST (default 127.0.0.1, this machine only) choose where it listens; WORKOUT_DB the database.
 import { readFile } from 'node:fs/promises'
 import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'

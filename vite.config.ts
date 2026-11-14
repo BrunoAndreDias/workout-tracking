@@ -7,13 +7,13 @@ import type { Stores } from './server/storeApi.ts'
 /** Mounts the store API in `vite` and `vite preview`. The database opens on the first request, so vitest never opens it. */
 function storeApi(): Plugin {
   let stores: Stores | undefined
-  const handle = storeHandler(() => (stores ??= openStores(dbPath())), { allowReset: process.env.PLANO_TEST === '1' })
+  const handle = storeHandler(() => (stores ??= openStores(dbPath())), { allowReset: process.env.WORKOUT_TEST === '1' })
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     if (req.url?.startsWith('/api/')) void handle(req, res).catch(next)
     else next()
   }
   return {
-    name: 'plano-store-api',
+    name: 'workout-store-api',
     configureServer: (server) => void server.middlewares.use(middleware),
     configurePreviewServer: (server) => void server.middlewares.use(middleware),
   }

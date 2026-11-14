@@ -16,6 +16,9 @@ export type WorkoutBlockId = Brand<string, 'WorkoutBlockId'>
 export type WorkoutSessionId = Brand<string, 'WorkoutSessionId'>
 /** A Watch Workout's start instant in UTC and its activity, so the same workout read from two exports has one id. */
 export type WatchWorkoutId = Brand<string, 'WatchWorkoutId'>
+/** Material the user named themselves, 'mat:<uuid>', so it never collides with a built-in id. */
+export type CustomEquipmentId = Brand<`mat:${string}`, 'CustomEquipmentId'>
+export type GymId = Brand<string, 'GymId'>
 
 export const NUTRIENTS = [
   { key: 'energyKcal', label: 'Energia', unit: 'kcal' },
@@ -162,7 +165,7 @@ export interface Meal {
   readonly activeOptionId: OptionId
 }
 
-/** What one Meal Plan aims for in a day. Grams, except energy in kcal. */
+/** What one Meal Plan aims for in a day. Grams, except energy in kcal. `mealProtein` is a floor for each Meal, not the day; 0 turns it off. */
 export interface Goals {
   readonly energyKcal: number
   readonly protein: number
@@ -170,6 +173,7 @@ export interface Goals {
   readonly fat: number
   readonly fiber: number
   readonly salt: number
+  readonly mealProtein: number
 }
 
 export interface MealPlan {

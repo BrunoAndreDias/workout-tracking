@@ -17,6 +17,7 @@ export const STORE_KEY = {
   moods: 'nutrition-tracking:pains',
   health: 'nutrition-tracking:health',
   watchWorkouts: 'nutrition-tracking:watch-workouts',
+  equipment: 'nutrition-tracking:equipment',
 } as const
 
 export type StoreKey = (typeof STORE_KEY)[keyof typeof STORE_KEY]

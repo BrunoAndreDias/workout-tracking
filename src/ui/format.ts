@@ -1,4 +1,6 @@
 import { daysBetween, fromIsoDate } from '../domain/days.ts'
+import { equipmentLabel } from '../domain/equipment.ts'
+import type { EquipmentId, EquipmentState } from '../domain/equipment.ts'
 import type { HealthMetric } from '../domain/health.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
@@ -118,3 +120,7 @@ export function formatNoteTimes({ createdAt, updatedAt }: TimedNote): string {
   const sameDay = updatedAt.slice(0, 10) === createdAt.slice(0, 10)
   return `${written} · editado ${sameDay ? '' : `${dayMonth(updatedAt)}, `}${clock(updatedAt)}`
 }
+
+/** "Halteres, Banco plano", or "Sem material" for none. */
+export const materialText = (state: EquipmentState, ids: readonly EquipmentId[]): string =>
+  ids.length === 0 ? 'Sem material' : ids.map((id) => equipmentLabel(state, id)).join(', ')

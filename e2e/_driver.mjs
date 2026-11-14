@@ -2,7 +2,7 @@
 // so a UI change is fixed here once instead of in every script's copy.
 // Every quantity field opens in grams (2fc4aaf), so typing grams needs no unit switch.
 
-const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions', 'sleep', 'feel', 'pains', 'health', 'watch-workouts']
+const STORAGE_KEYS = ['plans', 'foods', 'units', 'days', 'exercises', 'workout-plans', 'workout-sessions', 'sleep', 'feel', 'pains', 'health', 'watch-workouts', 'equipment']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -70,6 +70,7 @@ export const GOAL_FIELDS = {
   fat: 'Lípidos (g)',
   fiber: 'Fibra (g)',
   salt: 'Sal (g)',
+  mealProtein: 'Proteína por refeição (g)',
 }
 
 async function requireMeal(page, name) {
@@ -294,8 +295,66 @@ export async function createWorkoutPlan(page, { name, days = 3 } = {}) {
   await page.getByRole('region', { name: 'Blocos' }).waitFor()
 }
 
+/** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') through the header link and the tab bar. */
+export async function openWorkoutTab(page, name) {
+  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Treino', exact: true }).click()
+  const tab = page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name, exact: true })
+  await tab.click()
+  await tab.and(page.locator('[aria-current="page"]')).waitFor()
+}
+
+/** On Treino → Material, adds a Gym (it becomes the active one) and ticks each material label in `has`. */
+export async function addGym(page, name, has = []) {
+  await page.getByRole('textbox', { name: 'Nome do novo local' }).fill(name)
+  await page.getByRole('button', { name: 'Adicionar local' }).click()
+  const checks = page.getByRole('list', { name: `Material em ${name}` })
+  await checks.waitFor()
+  for (const label of has) {
+    const box = checks.getByRole('checkbox', { name: label, exact: true })
+    if ((await box.count()) === 0) throw new FlowError(`no material "${label}"`, `material: ${(await checks.locator('label').allTextContents()).join(', ')}`)
+    await box.check()
+  }
+}
+
 /** Shows one day of the selected Training Block in Plano de treino and returns its card. */
 export async function workoutDay(page, name) {
   await page.getByRole('navigation', { name: /^Dias de / }).getByRole('button', { name, exact: true }).click()
   return page.getByRole('region', { name, exact: true })
+}
+
+/** A stand-in for the Whisper worker, so a script dictates a known text without the 250 MB model. */
+const FAKE_WHISPER = `self.onmessage = async ({ data }) => {
+  if (data.type === 'warmUp') self.postMessage({ type: 'ready' })
+  if (data.type === 'transcribe') self.postMessage({ type: 'result', id: data.id, text: await (await fetch('/__fake-whisper')).text() })
+}`
+
+/**
+ * Replaces the Whisper worker in `context` with one that transcribes any recording as the text last passed to `say`.
+ * The browser needs a fake microphone: launch it with --use-fake-ui-for-media-stream and --use-fake-device-for-media-stream.
+ */
+export async function fakeWhisper(context) {
+  let text = ''
+  await context.route('**/whisper.worker.ts*', (route) => route.fulfill({ contentType: 'text/javascript', body: FAKE_WHISPER }))
+  await context.route('**/__fake-whisper', (route) => route.fulfill({ contentType: 'text/plain; charset=utf-8', body: text }))
+  return { say: (said) => { text = said } }
+}
+
+/** Opens a meal's add-food panel unless one is open, dictates what `fakeWhisper` says, and returns the panel once it reviews the foods heard. */
+export async function dictateFoods(page, mealName) {
+  const dialog = page.getByRole('dialog')
+  if ((await dialog.count()) === 0) {
+    const meal = await requireMeal(page, mealName)
+    await meal.getByRole('button', { name: `Adicionar alimento ao ${mealName}`, exact: true }).click()
+  }
+  await dialog.getByRole('button', { name: 'Ditar alimentos' }).click()
+  const stop = dialog.getByRole('button', { name: 'Parar ditado' })
+  try {
+    await stop.waitFor({ timeout: 5000 })
+  } catch {
+    throw new FlowError('the mic did not start recording', 'launch the browser with a fake microphone (--use-fake-ui-for-media-stream --use-fake-device-for-media-stream) and grant the microphone permission')
+  }
+  await page.waitForTimeout(300)
+  await stop.click()
+  await dialog.getByRole('heading', { name: 'Ditar alimentos' }).waitFor()
+  return dialog
 }

@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Dispatch } from 'react'
+import type { EquipmentAction, EquipmentState } from '../domain/equipment.ts'
 import { newId } from '../domain/plans.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { blockChanges, currentBlock, findDay, nextDay, sessionsBefore, sessionsOn } from '../domain/workouts.ts'
+import { blockChanges, currentBlock, exerciseRuns, findDay, nextDay, sessionsBefore, sessionsOn } from '../domain/workouts.ts'
 import type { BlockPosition, Exercise, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import { DateStepper } from './DateStepper.tsx'
+import { EquipmentContext } from './equipmentContext.ts'
+import { EquipmentView } from './EquipmentView.tsx'
+import { ExerciseRunsNotice } from './ExerciseRunsNotice.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
 import { formatRange, sessionTitle } from './format.ts'
 import { WatchWorkoutLine } from './WorkoutLines.tsx'
@@ -20,6 +24,8 @@ interface Props {
   today: IsoDate
   onDate: (date: IsoDate) => void
   watch: WatchWorkoutLog
+  equipment: EquipmentState
+  dispatchEquipment: Dispatch<EquipmentAction>
 }
 
 function blockLine(block: WorkoutBlock, position: BlockPosition | null): string {
@@ -42,9 +48,11 @@ function BlockNotice({ block, previous, exercises }: { block: WorkoutBlock; prev
 const TABS = [
   { id: 'registo', label: 'Registo' },
   { id: 'plano', label: 'Plano de treino' },
+  { id: 'material', label: 'Material' },
 ] as const
 
-export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Props) {
+export function WorkoutView({ state, dispatch, date, today, onDate, watch, equipment, dispatchEquipment }: Props) {
+  const equipmentStore = useMemo(() => ({ state: equipment, dispatch: dispatchEquipment }), [equipment, dispatchEquipment])
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('registo')
   const [adding, setAdding] = useState(false)
   const sessions = sessionsOn(state.sessions, date)
@@ -63,7 +71,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
   }
 
   return (
-    <>
+    <EquipmentContext value={equipmentStore}>
       <h1 className="sr-only">Treino</h1>
       <div className="plan-bar">
         <nav className="tabs" aria-label="Treino">
@@ -75,7 +83,9 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
         </nav>
       </div>
 
-      {tab === 'plano' ? (
+      {tab === 'material' ? (
+        <EquipmentView exercises={state.exercises} />
+      ) : tab === 'plano' ? (
         <WorkoutPlanEditor state={state} dispatch={dispatch} today={today} />
       ) : (
         <>
@@ -104,6 +114,16 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
           ) : (
             <section className="card day-empty" aria-labelledby="comecar-treino">
               {date <= today && position?.movedFrom && <BlockNotice block={position.block} previous={position.movedFrom} exercises={state.exercises} />}
+              {date <= today && activePlan && block && (
+                <ExerciseRunsNotice
+                  planId={activePlan.id}
+                  block={block}
+                  due={exerciseRuns(block, state.sessions, date).filter((r) => r.due)}
+                  exercises={state.exercises}
+                  today={today}
+                  dispatch={dispatch}
+                />
+              )}
               {date <= today && block && <p className="block-line">{blockLine(block, position)}</p>}
               <h2 id="comecar-treino" className="session-title">
                 {sessions.length > 0 ? 'Outro treino' : watched.length > 0 ? 'Registar as séries' : 'Sem treino registado'}
@@ -140,6 +160,6 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch }: Pro
           )}
         </>
       )}
-    </>
+    </EquipmentContext>
   )
 }

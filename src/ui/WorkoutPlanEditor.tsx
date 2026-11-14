@@ -1,13 +1,18 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import type { Dispatch } from 'react'
+import { missingAt } from '../domain/equipment.ts'
+import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
+import { blockMuscles, dayMuscleSets } from '../domain/muscles.ts'
+import type { DayMuscle } from '../domain/muscles.ts'
 import { newId } from '../domain/plans.ts'
 import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
-import { blockExercises, currentBlock, parseRepRange, parseRir } from '../domain/workouts.ts'
-import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutState } from '../domain/workouts.ts'
+import { blockExercises, currentBlock, isRunDue, isRunWeeks, nameLookup, parseRepRange, parseRir, weeksRun } from '../domain/workouts.ts'
+import type { RepRange, RirTarget, Role, Split, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import { CountField } from './CountField.tsx'
+import { EquipmentContext } from './equipmentContext.ts'
 import { ExercisePicker } from './ExercisePicker.tsx'
-import { formatRange, plural } from './format.ts'
+import { formatRange, materialText, plural } from './format.ts'
 import { CloseIcon, PlusIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
 
@@ -37,7 +42,7 @@ interface Props {
   today: IsoDate
 }
 
-function NewPlan({ count, dispatch, onCancel }: { count: number; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
+function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: IsoDate; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
   const [name, setName] = useState(`Plano de treino ${count + 1}`)
   const [split, setSplit] = useState<Split>('ppf')
   return (
@@ -62,7 +67,7 @@ function NewPlan({ count, dispatch, onCancel }: { count: number; dispatch: Dispa
         <button
           type="button"
           className="primary"
-          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || `Plano de treino ${count + 1}`, split })}
+          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || `Plano de treino ${count + 1}`, split, today })}
         >
           Criar plano
         </button>
@@ -85,7 +90,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
     setCreating(false)
   }
 
-  if (!plan) return <NewPlan count={state.plans.length} dispatch={create} onCancel={null} />
+  if (!plan) return <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={null} />
 
   const planId = plan.id
   const { block: current, position } = currentBlock(plan, state.sessions, today)
@@ -135,7 +140,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
       </div>
 
       {creating ? (
-        <NewPlan count={state.plans.length} dispatch={create} onCancel={() => setCreating(false)} />
+        <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={() => setCreating(false)} />
       ) : (
         <>
           <h2 className="workout-plan-title">
@@ -181,7 +186,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
             {!plan.start && <p className="muted blocks-note">Ainda não começaste. Usa "Começar aqui" no primeiro bloco.</p>}
           </section>
 
-          <BlockEditor key={block.id} plan={plan} block={block} today={today} exercises={state.exercises} dispatch={dispatch} />
+          <BlockEditor key={block.id} plan={plan} block={block} isCurrent={block.id === current.id} today={today} exercises={state.exercises} sessions={state.sessions} dispatch={dispatch} />
         </>
       )}
     </>
@@ -191,12 +196,15 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
 interface BlockProps {
   plan: WorkoutPlan
   block: WorkoutBlock
+  /** The block sessions start from, whose Exercise Runs are shown. */
+  isCurrent: boolean
   today: IsoDate
   exercises: WorkoutState['exercises']
+  sessions: readonly WorkoutSession[]
   dispatch: Dispatch<WorkoutAction>
 }
 
-function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
+function BlockEditor({ plan, block, isCurrent, today, exercises, sessions, dispatch }: BlockProps) {
   const [dayIndex, setDayIndex] = useState(0)
   const planId = plan.id
   const blockId = block.id
@@ -265,8 +273,57 @@ function BlockEditor({ plan, block, today, exercises, dispatch }: BlockProps) {
           ))}
         </nav>
       </div>
-      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} dispatch={dispatch} />
+      <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} runs={isCurrent ? sessions : null} today={today} dispatch={dispatch} />
+      <BlockMuscles days={days} exercises={exercises} />
     </>
+  )
+}
+
+function BlockMuscles({ days, exercises }: { days: readonly WorkoutDay[]; exercises: WorkoutState['exercises'] }) {
+  const { muscles, ungrouped } = blockMuscles(days, nameLookup(exercises))
+  const most = Math.max(...muscles.map((m) => m.sets)) || 1
+  return (
+    <section className="card block-muscles" aria-labelledby="musculos-semana">
+      <h3 id="musculos-semana" className="blocks-title">
+        Músculos por semana
+      </h3>
+      <ul className="muscle-rows">
+        {muscles.map((m) => (
+          <li key={m.muscle} className={m.sets === 0 ? 'muscle-row muscle-gap' : 'muscle-row'}>
+            <span className="muscle-name">{MUSCLE_LABEL[m.muscle]}</span>
+            <span className="track muscle-track" aria-hidden="true">
+              <span style={{ width: `${(m.sets / most) * 100}%` }} />
+            </span>
+            <span className="muscle-sets">{m.sets === 0 ? '—' : plural(m.sets, 'série', 'séries')}</span>
+            <span className="muscle-days">{m.days.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
+      {ungrouped.length > 0 && (
+        <p className="muted muscles-note">Sem grupo muscular: {ungrouped.map((u) => `${u.name} (${plural(u.sets, 'série', 'séries')})`).join(' · ')}</p>
+      )}
+      <p className="muted muscles-note">Séries planeadas por semana, contando cada dia uma vez.</p>
+    </section>
+  )
+}
+
+function DayMuscles({ day, muscles }: { day: string; muscles: readonly DayMuscle[] }) {
+  const most = Math.max(...muscles.map((m) => m.sets))
+  return (
+    <aside className="day-muscle-sets" aria-label={`Músculos de ${day}`}>
+      <h4 className="day-muscles-title">Músculos neste dia</h4>
+      <ul className="day-muscle-rows">
+        {muscles.map((m) => (
+          <li key={m.muscle} className="day-muscle">
+            <span className="muscle-name">{MUSCLE_LABEL[m.muscle]}</span>
+            <span className="muscle-sets">{plural(m.sets, 'série', 'séries')}</span>
+            <span className="track muscle-track" aria-hidden="true">
+              <span style={{ width: `${(m.sets / most) * 100}%` }} />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </aside>
   )
 }
 
@@ -277,69 +334,86 @@ interface DayProps {
   /** The Exercises of the block before, to mark the new ones; null for the first block. */
   before: ReadonlySet<ExerciseId> | null
   exercises: WorkoutState['exercises']
+  /** The sessions that count each Exercise Run, or null when the block is not current and shows none. */
+  runs: readonly WorkoutSession[] | null
+  today: IsoDate
   dispatch: Dispatch<WorkoutAction>
 }
 
-function DayEditor({ planId, blockId, day, before, exercises, dispatch }: DayProps) {
+function RunLine({ weeks, done }: { weeks: number | null; done: number }) {
+  if (isRunDue(weeks, done)) return <span className="missing-line">Rever: {plural(done, 'semana feita', 'semanas feitas')}</span>
+  return <span className="run-line">{weeks === null ? `semana ${done + 1} · sem limite` : `semana ${done + 1} de ${weeks}`}</span>
+}
+
+function DayEditor({ planId, blockId, day, before, exercises, runs, today, dispatch }: DayProps) {
   const [picking, setPicking] = useState<{ swapping: ExerciseId | null } | null>(null)
+  const { state: equipment } = useContext(EquipmentContext)
   const dayId: WorkoutDayId = day.id
-  const names = new Map(exercises.map((e) => [e.id, e.name]))
-  const nameOf = (id: ExerciseId) => names.get(id) ?? 'Exercício desconhecido'
+  const nameOf = nameLookup(exercises)
+  const muscles = dayMuscleSets(day, nameOf)
   const onPick = (name: string) => {
     const swapping = picking?.swapping ?? null
-    if (swapping === null) dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: defaultRole(name), newExerciseId: newId<ExerciseId>() })
-    else dispatch({ type: 'swapPlannedExercise', planId, blockId, dayId, exerciseId: swapping, name, newExerciseId: newId<ExerciseId>() })
+    if (swapping === null) dispatch({ type: 'addPlannedExercise', planId, blockId, dayId, name, role: defaultRole(name), newExerciseId: newId<ExerciseId>(), today })
+    else dispatch({ type: 'swapPlannedExercise', planId, blockId, dayId, exerciseId: swapping, name, newExerciseId: newId<ExerciseId>(), today })
   }
 
   return (
-    <section className="card workout-day" aria-label={day.name}>
-      {day.exercises.length === 0 && <p className="muted workout-empty">Sem exercícios. Adiciona o primeiro abaixo.</p>}
-      <ul className="planned-list">
-        {day.exercises.map((p) => {
-          const name = nameOf(p.exerciseId)
-          const isNew = before !== null && !before.has(p.exerciseId)
-          const set = (change: Partial<typeof p>) => dispatch({ type: 'setPlannedExercise', planId, blockId, dayId, planned: { ...p, ...change } })
-          return (
-            <li key={p.exerciseId} className="planned">
-              <span className="planned-main">
-                <span className={`role-pick role-${p.role}`}>
-                  <span className="role-label">{ROLE_LABEL[p.role]}</span>
-                  <span className="stepper-caret" aria-hidden="true">
-                    ▾
+    <section className={muscles.length > 0 ? 'card workout-day day-trains' : 'card workout-day'} aria-label={day.name}>
+      {muscles.length > 0 && <DayMuscles day={day.name} muscles={muscles} />}
+      <div className="day-planned">
+        {day.exercises.length === 0 && <p className="muted workout-empty">Sem exercícios. Adiciona o primeiro abaixo.</p>}
+        <ul className="planned-list">
+          {day.exercises.map((p) => {
+            const name = nameOf(p.exerciseId)
+            const isNew = before !== null && !before.has(p.exerciseId)
+            const missing = missingAt(equipment, name) ?? []
+            const set = (change: Partial<typeof p>) => dispatch({ type: 'setPlannedExercise', planId, blockId, dayId, planned: { ...p, ...change } })
+            return (
+              <li key={p.exerciseId} className="planned">
+                <span className="planned-main">
+                  <span className={`role-pick role-${p.role}`}>
+                    <span className="role-label">{ROLE_LABEL[p.role]}</span>
+                    <span className="stepper-caret" aria-hidden="true">
+                      ▾
+                    </span>
+                    <select aria-label={`Função de ${name}`} value={p.role} onChange={(e) => set({ role: e.target.value as Role })}>
+                      {ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
+                      ))}
+                    </select>
                   </span>
-                  <select aria-label={`Função de ${name}`} value={p.role} onChange={(e) => set({ role: e.target.value as Role })}>
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_LABEL[r]}
-                      </option>
-                    ))}
-                  </select>
+                  <span className={isNew ? 'planned-name planned-new' : 'planned-name'}>
+                    {name}
+                    {isNew && ' · novo'}
+                  </span>
+                  {missing.length > 0 && <span className="missing-line">Falta: {materialText(equipment, missing)}</span>}
+                  {runs && <RunLine weeks={p.weeks} done={weeksRun(p, runs, today)} />}
                 </span>
-                <span className={isNew ? 'planned-name planned-new' : 'planned-name'}>
-                  {name}
-                  {isNew && ' · novo'}
+                <span className="planned-fields">
+                  <CountField value={p.sets} required label={`Séries de ${name}`} onCommit={(n) => n && set({ sets: n })} />
+                  <span className="unit">×</span>
+                  <RangeField value={p.reps} label={`Repetições de ${name}`} parse={parseRepRange} onCommit={(reps) => reps && set({ reps })} />
+                  <span className="unit">reps</span>
+                  <CountField value={p.weeks} placeholder="∞" label={`Semanas de ${name}`} onCommit={(weeks) => isRunWeeks(weeks) && set({ weeks })} />
+                  <span className="unit">semanas</span>
                 </span>
-              </span>
-              <span className="planned-fields">
-                <CountField value={p.sets} required label={`Séries de ${name}`} onCommit={(n) => n && set({ sets: n })} />
-                <span className="unit">×</span>
-                <RangeField value={p.reps} label={`Repetições de ${name}`} parse={parseRepRange} onCommit={(reps) => reps && set({ reps })} />
-                <span className="unit">reps</span>
-              </span>
-              <button type="button" className="icon-btn planned-swap" aria-label={`Trocar ${name}`} onClick={() => setPicking({ swapping: p.exerciseId })}>
-                ⇄
-              </button>
-              <button type="button" className="icon-btn" aria-label={`Remover ${name} de ${day.name}`} onClick={() => dispatch({ type: 'removePlannedExercise', planId, blockId, dayId, exerciseId: p.exerciseId })}>
-                <CloseIcon />
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-      <button type="button" className="text-btn add-exercise" onClick={() => setPicking({ swapping: null })}>
-        <PlusIcon />
-        Exercício
-      </button>
+                <button type="button" className="icon-btn planned-swap" aria-label={`Trocar ${name}`} onClick={() => setPicking({ swapping: p.exerciseId })}>
+                  ⇄
+                </button>
+                <button type="button" className="icon-btn" aria-label={`Remover ${name} de ${day.name}`} onClick={() => dispatch({ type: 'removePlannedExercise', planId, blockId, dayId, exerciseId: p.exerciseId })}>
+                  <CloseIcon />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        <button type="button" className="text-btn add-exercise" onClick={() => setPicking({ swapping: null })}>
+          <PlusIcon />
+          Exercício
+        </button>
+      </div>
       {picking && (
         <ExercisePicker
           eyebrow={day.name}

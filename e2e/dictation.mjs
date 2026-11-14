@@ -78,7 +78,7 @@ await page.screenshot({ path: `${S}/dictation-desktop-light.png`, fullPage: true
 await field.getByRole('button', { name: 'Ditar nota' }).click()
 await page.getByRole('button', { name: 'Parar ditado' }).waitFor()
 assert(await page.getByRole('status').filter({ hasText: 'A ouvir…' }).count() === 1, 'the status line says A ouvir… while recording')
-await page.waitForTimeout(11000) // the clip is 10 s of speech, then silence
+await page.waitForTimeout(11000) // the clip is 8 s of speech, then 5 s of silence
 const stoppedAt = Date.now()
 const micState = await page.evaluate(
   () => [...document.querySelectorAll('.dictate-btn')].map((b) => `${b.getAttribute('aria-label')}${b.disabled ? ' (disabled)' : ''}`).join(', ') +
@@ -92,7 +92,7 @@ console.log(`transcribed ${(Date.now() - stoppedAt) / 1000} s after stop (${down
 const text = await notes.inputValue()
 console.log('note:', JSON.stringify(text))
 assert(text.startsWith('Bom treino. '), 'the dictation follows the existing note after a space')
-assert(/dois ovos mexidos/i.test(text), 'the note holds the words of the clip')
+assert(/supino/i.test(text), 'the note holds the words of the clip')
 assert((await readStored(page))['workout-sessions'].sessions[0].note.text === text, 'the dictated note is persisted')
 assert(await page.locator('.dictate-status').first().textContent() === '', 'the status line is empty again')
 await page.screenshot({ path: `${S}/dictation-desktop-after.png`, fullPage: true })

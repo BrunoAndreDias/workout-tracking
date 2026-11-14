@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatGrams } from './format.ts'
+import { formatDecimal } from './format.ts'
 
 interface Props {
   value: number | null
@@ -22,7 +22,7 @@ const parse = (raw: string, decimal: boolean): number | null | undefined => {
 // Keeps the raw text while typing, as NumberField does, so "62," is not rewritten under the cursor.
 export function CountField({ value, onCommit, label, decimal = false, required = false, placeholder, className = 'count-input' }: Props) {
   const [text, setText] = useState<string | null>(null)
-  const shown = text ?? (value === null ? '' : formatGrams(value))
+  const shown = text ?? (value === null ? '' : formatDecimal(value))
   return (
     <input
       className={className}

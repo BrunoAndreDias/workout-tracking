@@ -3,7 +3,7 @@ import { activeGym, allEquipment, equipmentLabel, isChanged, missingAt, needsOf 
 import type { EquipmentId } from '../domain/equipment.ts'
 import { CATALOG, catalogEntry, exerciseKey, MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
-import { newId } from '../domain/plans.ts'
+import { newId } from '../domain/ids.ts'
 import type { CustomEquipmentId, GymId } from '../domain/types.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'

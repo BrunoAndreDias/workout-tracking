@@ -69,7 +69,7 @@ export function WatchWorkoutImport({ log, onImport, onDone }: Props) {
       <h3 id="treinos-do-relogio" className="health-workouts-title">
         Treinos do relógio
       </h3>
-      <p className="goals-hint">{latest ? `Último treino importado: ${formatDayMonth(latest)}.` : 'Ainda não importaste treinos do relógio.'} O Atalho não consegue ler os treinos, por isso vêm da exportação do Saúde. O ficheiro é lido aqui e não sai deste dispositivo.</p>
+      <p className="hint-text">{latest ? `Último treino importado: ${formatDayMonth(latest)}.` : 'Ainda não importaste treinos do relógio.'} O Atalho não consegue ler os treinos, por isso vêm da exportação do Saúde. O ficheiro é lido aqui e não sai deste dispositivo.</p>
       <ol className="health-steps">
         <li>
           No iPhone, abre a app Saúde e toca na tua foto de perfil.
@@ -97,7 +97,7 @@ export function WatchWorkoutImport({ log, onImport, onDone }: Props) {
         }}
       />
       {reading.phase === 'reading' && (
-        <p className="goals-hint" role="status">
+        <p className="hint-text" role="status">
           A ler o ficheiro… {reading.percent} %
         </p>
       )}
@@ -109,7 +109,7 @@ export function WatchWorkoutImport({ log, onImport, onDone }: Props) {
       {found && (
         <>
           <p className="backup-summary">{found.workouts.length > 0 ? describeWorkouts(found.workouts) : 'O ficheiro não tem treinos.'}</p>
-          {describeRead(found, log) && <p className="goals-hint">{describeRead(found, log)}</p>}
+          {describeRead(found, log) && <p className="hint-text">{describeRead(found, log)}</p>}
           <button
             type="button"
             className="primary"

@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import type { Dispatch } from 'react'
 import type { EquipmentAction, EquipmentState } from '../domain/equipment.ts'
-import { newId } from '../domain/plans.ts'
+import { newId } from '../domain/ids.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { blockChanges, currentBlock, exerciseRuns, findDay, nextDay, sessionsBefore, sessionsOn } from '../domain/workouts.ts'
-import type { BlockPosition, Exercise, WorkoutAction, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
+import { blockChanges, currentBlock, exerciseRuns, findDay, nextDay } from '../domain/blocks.ts'
+import { sessionsBefore, sessionsOn } from '../domain/sessions.ts'
+import type { BlockPosition } from '../domain/blocks.ts'
+import type { Exercise, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
+import type { WorkoutAction } from '../domain/workoutReducer.ts'
 import { DateStepper } from './DateStepper.tsx'
 import { EquipmentContext } from './equipmentContext.ts'
 import { EquipmentView } from './EquipmentView.tsx'
@@ -108,7 +111,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch, equip
           })}
 
           {sessions.length > 0 && !adding ? (
-            <button type="button" className="add-meal" onClick={() => setAdding(true)}>
+            <button type="button" className="add-session" onClick={() => setAdding(true)}>
               + Outro treino neste dia
             </button>
           ) : (

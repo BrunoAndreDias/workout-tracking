@@ -1,4 +1,4 @@
-import { parseIsoDate } from './days.ts'
+import { parseIsoDate } from './dates.ts'
 import type { IsoDate, WatchWorkoutId } from './types.ts'
 
 /** One workout the Watch, or any other Health source, recorded, as read from the Health export. */

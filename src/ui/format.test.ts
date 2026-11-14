@@ -1,27 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
-import { formatAfterDay, formatAmount, formatDaysAgo, formatDayMonth, formatDayRange, formatMonthName, formatGrams, formatKcal, formatLoggedCounts, formatMacro, formatNoteTimes, formatPercent, formatPlanned, formatPortionCount, formatSigned, formatDuration, formatWatchWorkout } from './format.ts'
+import { formatAfterDay, formatCount, formatDaysAgo, formatDayMonth, formatDayRange, formatDecimal, formatMonthName, formatLoggedCounts, formatNoteTimes, formatPlanned, formatDuration, formatWatchWorkout } from './format.ts'
 import type { WatchWorkout } from '../domain/watchWorkouts.ts'
 
 describe('pt-PT formatting', () => {
   it('uses comma decimals', () => {
-    expect(formatGrams(120.5)).toBe('120,5')
-    expect(formatGrams(120)).toBe('120')
-    expect(formatMacro(5.16)).toBe('5,2')
-    expect(formatMacro(5)).toBe('5,0')
+    expect(formatDecimal(42.5)).toBe('42,5')
+    expect(formatDecimal(60)).toBe('60')
   })
 
-  it('rounds kcal to integers', () => {
-    expect(formatKcal(326.4)).toBe('326')
-    expect(formatKcal(326.5)).toBe('327')
-    expect(formatKcal(1203)).toBe('1\u202F203')
-    expect(formatKcal(12030.4)).toBe('12\u202F030')
-  })
-
-  it('formats portion counts to one decimal', () => {
-    expect(formatPortionCount(1)).toBe('1')
-    expect(formatPortionCount(1.44)).toBe('1,4')
-    expect(formatPortionCount(4.16)).toBe('4,2')
+  it('rounds counts to integers and groups thousands', () => {
+    expect(formatCount(326.5)).toBe('327')
+    expect(formatCount(1203)).toBe('1\u202F203')
+    expect(formatCount(12030.4)).toBe('12\u202F030')
   })
 
   it('writes minutes as hours and minutes', () => {
@@ -35,20 +26,6 @@ describe('pt-PT formatting', () => {
     const lift = { id: 'x', date: '2026-10-06', start: '18:02', activity: 'TraditionalStrengthTraining', minutes: 52.3, kcal: 310.5 } as unknown as WatchWorkout
     expect(formatWatchWorkout(lift)).toBe('18:02 · 52 min · 311 kcal')
     expect(formatWatchWorkout({ ...lift, minutes: 90, kcal: undefined, km: 4.99 })).toBe('18:02 · 1 h 30 min · 4,99 km')
-  })
-
-  it('signs deltas and avoids a signed zero', () => {
-    expect(formatSigned(51.4, formatKcal)).toBe('+51')
-    expect(formatSigned(-51.4, formatKcal)).toBe('−51')
-    expect(formatSigned(-0.2, formatKcal)).toBe('±0')
-    expect(formatSigned(0.04, formatMacro)).toBe('±0,0')
-  })
-
-  it('formats amounts by magnitude and percent', () => {
-    expect(formatAmount(1234.5, 'mg')).toBe('1235')
-    expect(formatAmount(12.34, 'mg')).toBe('12,3')
-    expect(formatAmount(0.125, 'g')).toBe('0,13')
-    expect(formatPercent(0.254)).toBe('25%')
   })
 
   it('writes a planned exercise and a session count', () => {

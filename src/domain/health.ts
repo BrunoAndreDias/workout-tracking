@@ -1,4 +1,4 @@
-import { parseIsoDate } from './days.ts'
+import { parseIsoDate } from './dates.ts'
 import { isRecord } from './persistence.ts'
 import type { IsoDate } from './types.ts'
 

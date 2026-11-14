@@ -1,5 +1,5 @@
-import { RATINGS } from '../domain/body.ts'
-import type { Rating } from '../domain/body.ts'
+import { RATINGS } from '../domain/rating.ts'
+import type { Rating } from '../domain/rating.ts'
 
 interface Props {
   /** Names each button, as in `Sono: Bem`. */

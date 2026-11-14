@@ -1,4 +1,4 @@
-import { addDays } from '../domain/days.ts'
+import { addDays } from '../domain/dates.ts'
 import type { IsoDate } from '../domain/types.ts'
 import { formatLongDate } from './format.ts'
 import { ChevronIcon } from './icons.tsx'

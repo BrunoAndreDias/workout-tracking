@@ -1,7 +1,8 @@
 import type { IsoDate } from '../domain/types.ts'
 import { activityLabel, watchWorkoutsOn } from '../domain/watchWorkouts.ts'
 import type { WatchWorkout, WatchWorkoutLog } from '../domain/watchWorkouts.ts'
-import { loggedCounts, sessionsOn } from '../domain/workouts.ts'
+import { loggedCounts } from '../domain/workouts.ts'
+import { sessionsOn } from '../domain/sessions.ts'
 import type { WorkoutState } from '../domain/workouts.ts'
 import { formatLoggedCounts, formatWatchWorkout, sessionTitle } from './format.ts'
 

@@ -1,4 +1,4 @@
-import { parseIsoDate } from './days.ts'
+import { parseIsoDate } from './dates.ts'
 import { isRecord } from './persistence.ts'
 import type { WatchWorkoutId } from './types.ts'
 import type { WatchWorkout, WatchWorkoutLog } from './watchWorkouts.ts'

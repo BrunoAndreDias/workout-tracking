@@ -1,12 +1,13 @@
-import { isRating } from './body.ts'
-import { parseIsoDate } from './days.ts'
+import { isRating } from './rating.ts'
+import { parseIsoDate } from './dates.ts'
 import { atTime, parseOptionalNote, parseTimedNote } from './notes.ts'
 import type { TimedNote } from './notes.ts'
 import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './exerciseCatalog.ts'
 import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
-import { isRirTarget, isRunWeeks, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { isRirTarget, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { isRunWeeks } from './blocks.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1

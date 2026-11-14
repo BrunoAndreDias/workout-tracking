@@ -1,0 +1,40 @@
+import type { IsoDate } from './types.ts'
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+export function toIsoDate(d: Date): IsoDate {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` as IsoDate
+}
+
+/** Null unless `s` is a real calendar date written as 'YYYY-MM-DD'. */
+export function parseIsoDate(s: string): IsoDate | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return toIsoDate(d) === s ? (s as IsoDate) : null
+}
+
+/** Local midday, so adding days never trips over a daylight-saving hour. */
+export function fromIsoDate(date: IsoDate): Date {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y, m - 1, d, 12)
+}
+
+/** Whole days from `from` to `to`, negative when `to` is earlier. */
+export const daysBetween = (from: IsoDate, to: IsoDate): number => Math.round((fromIsoDate(to).getTime() - fromIsoDate(from).getTime()) / 86_400_000)
+
+export function addDays(date: IsoDate, n: number): IsoDate {
+  const d = fromIsoDate(date)
+  d.setDate(d.getDate() + n)
+  return toIsoDate(d)
+}
+
+export const dayOfMonth = (date: IsoDate): number => Number(date.slice(8))
+
+/** The first and last dates of a month, `month` 1 to 12. */
+export const monthBounds = (year: number, month: number): readonly [IsoDate, IsoDate] => [toIsoDate(new Date(year, month - 1, 1)), toIsoDate(new Date(year, month, 0))]
+
+/** 0 for Monday through 6 for Sunday. */
+export const weekdayOf = (date: IsoDate): number => (fromIsoDate(date).getDay() + 6) % 7
+
+export const mondayOf = (date: IsoDate): IsoDate => addDays(date, -weekdayOf(date))

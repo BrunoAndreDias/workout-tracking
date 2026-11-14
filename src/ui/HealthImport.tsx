@@ -96,7 +96,7 @@ export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }:
         <Panel eyebrow="Apple Watch" title="Ligar Apple Watch" onClose={close}>
           <div className="panel-body backup-body health-import">
             <p className="health-latest">{latest ? `Último valor do relógio: ${formatDayMonth(latest)}` : 'Ainda não chegou nenhum valor do relógio.'}</p>
-            <p className="goals-hint">Cada vez que corre, o Atalho no iPhone envia para a app os valores do relógio dos últimos 14 dias e de hoje. Basta corrê-lo de vez em quando, e enviar outra vez os mesmos dias só substitui os valores.</p>
+            <p className="hint-text">Cada vez que corre, o Atalho no iPhone envia para a app os valores do relógio dos últimos 14 dias e de hoje. Basta corrê-lo de vez em quando, e enviar outra vez os mesmos dias só substitui os valores.</p>
             {shortcutError ? (
               <p className="backup-error" role="alert">
                 {shortcutError}
@@ -106,7 +106,7 @@ export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }:
                 Instalar atalho
               </a>
             )}
-            <p className="goals-hint">
+            <p className="hint-text">
               {thisComputerOnly
                 ? 'Aberta em localhost, a app dá um atalho que só funciona neste computador. Abre-a no iPhone pelo endereço do computador na rede Wi-Fi ou na VPN privada e instala o atalho daí.'
                 : 'O iPhone tem de chegar a este endereço: na mesma rede Wi-Fi ou por uma VPN privada.'}
@@ -125,7 +125,7 @@ export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }:
                 Opcional: em Atalhos → Automação, cria uma automação (<strong>Hora do dia</strong>, <strong>Executar imediatamente</strong>), por exemplo diária ou semanal, com este atalho.
               </li>
             </ol>
-            <p className="goals-hint">O atalho ainda não envia o sono nem as horas em pé.</p>
+            <p className="hint-text">O atalho ainda não envia o sono nem as horas em pé.</p>
             <label className="health-url">
               <span className="health-url-label">Endereço do Atalho</span>
               <span className="health-url-row">
@@ -136,7 +136,7 @@ export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }:
               </span>
             </label>
             {copyNote && (
-              <p className="goals-hint" role="status">
+              <p className="hint-text" role="status">
                 {copyNote}
               </p>
             )}
@@ -151,12 +151,12 @@ export function HealthImport({ log, onImport, watchWorkouts, onImportWorkouts }:
             <details className="health-manual">
               <summary>Colar manualmente</summary>
               <div className="health-import">
-                <p className="goals-hint">Corre o Atalho no iPhone e cola aqui o que ele copiou.</p>
+                <p className="hint-text">Corre o Atalho no iPhone e cola aqui o que ele copiou.</p>
                 <button type="button" className="secondary" onClick={() => void paste()}>
                   Colar da área de transferência
                 </button>
                 {clipboardNote && (
-                  <p className="goals-hint" role="status">
+                  <p className="hint-text" role="status">
                     {clipboardNote}
                   </p>
                 )}

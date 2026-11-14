@@ -65,13 +65,16 @@ function readMeta(storage: BrowserStorage): SyncMeta {
   }
 }
 
-function parseRemote(raw: unknown): Remote | null {
+/** `unchanged` gives the doc of a store the server left out because this browser already has it at that rev. */
+function parseRemote(raw: unknown, unchanged: (key: StoreKey, rev: number) => string | null = () => null): Remote | null {
   if (typeof raw !== 'object' || raw === null) return null
   const remote: Remote = {}
   for (const [key, value] of Object.entries(raw)) {
     if (!isStoreKey(key) || typeof value !== 'object' || value === null) continue
     const { doc, rev } = value as Record<string, unknown>
-    if (typeof doc === 'string' && Number.isInteger(rev)) remote[key] = { doc, rev: rev as number }
+    if (!Number.isInteger(rev)) continue
+    const known = typeof doc === 'string' ? doc : doc === undefined ? unchanged(key, rev as number) : null
+    if (known !== null) remote[key] = { doc: known, rev: rev as number }
   }
   return remote
 }
@@ -157,8 +160,10 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
 
   async function fetchRemote(): Promise<Remote | null> {
     try {
-      const res = await request(base, { signal: AbortSignal.timeout(timeoutMs) })
-      return res.ok ? parseRemote(await res.json()) : null
+      const held = STORE_KEYS.filter((key) => meta.revs[key] !== undefined && storage.getItem(key) !== null)
+      const url = held.length === 0 ? base : `${base}?have=${encodeURIComponent(held.map((key) => `${key}:${meta.revs[key]}`).join(','))}`
+      const res = await request(url, { signal: AbortSignal.timeout(timeoutMs) })
+      return res.ok ? parseRemote(await res.json(), (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)) : null
     } catch {
       return null
     }

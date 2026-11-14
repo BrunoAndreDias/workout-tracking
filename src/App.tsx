@@ -1,68 +1,33 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
-import { foods as catalogFoods, foodsById as catalogById, searchIndex as catalogIndex, table as catalogTable } from './data/catalog.ts'
-import { SEED_UNITS } from './data/units.ts'
-import { bodyReducer } from './domain/body.ts'
-import { customFoodsReducer, resolveCustomFoods, withCustomEquivalents } from './domain/customFoods.ts'
-import type { CustomFoodsAction } from './domain/customFoods.ts'
-import { dayReducer, parseIsoDate, toIsoDate } from './domain/days.ts'
+import { useEffect, useReducer, useState } from 'react'
+import { parseIsoDate, toIsoDate } from './domain/dates.ts'
 import { equipmentReducer } from './domain/equipment.ts'
 import { upsertSamples } from './domain/health.ts'
 import { upsertWatchWorkouts } from './domain/watchWorkouts.ts'
-import { countEntries, foodsByUse } from './domain/meals.ts'
-import { planReducer } from './domain/plans.ts'
-import { buildSearchIndex, stapleFoodIds } from './domain/search.ts'
 import { loadAll, loadStore, saveStore, STORES } from './domain/stores.ts'
-import type { Food, FoodId, IsoDate } from './domain/types.ts'
-import { unitsReducer } from './domain/units.ts'
-import type { FoodUnit, UnitsAction } from './domain/units.ts'
-import { workoutReducer } from './domain/workouts.ts'
+import type { IsoDate } from './domain/types.ts'
+import { workoutReducer } from './domain/workoutReducer.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
-import { CustomFoodsSection } from './ui/CustomFoodsSection.tsx'
-import { DayEditor } from './ui/DayEditor.tsx'
-import { DayLog } from './ui/DayLog.tsx'
-import type { FoodKit } from './ui/DayEditor.tsx'
-import { Footer } from './ui/Footer.tsx'
-import { HealthImport } from './ui/HealthImport.tsx'
-import { HistoryView } from './ui/HistoryView.tsx'
-import { HomeView } from './ui/HomeView.tsx'
-import { InlineName } from './ui/InlineName.tsx'
 import { ThemeToggle } from './ui/ThemeToggle.tsx'
-import { PlanSwitcher } from './ui/PlanSwitcher.tsx'
 import { SyncLine } from './ui/SyncLine.tsx'
+import { WatchView } from './ui/WatchView.tsx'
 import { WorkoutView } from './ui/WorkoutView.tsx'
-import { UnitsContext } from './ui/unitsContext.ts'
 import type { Sync } from './sync.ts'
 
 const VIEWS = [
-  { id: 'diario', label: 'Diário' },
   { id: 'treino', label: 'Treino' },
-  { id: 'alimentacao', label: 'Alimentação' },
+  { id: 'relogio', label: 'Relógio' },
 ] as const
 
 type View = (typeof VIEWS)[number]['id']
 
-const FOOD_TABS = [
-  { id: 'planos', label: 'Planos', hash: 'alimentacao' },
-  { id: 'hoje', label: 'Hoje', hash: 'alimentacao/hoje' },
-  { id: 'historico', label: 'Histórico', hash: 'alimentacao/historico' },
-] as const
-
-type FoodTab = (typeof FOOD_TABS)[number]['id']
-
 /**
- * `#diario/2026-10-06` and `#treino/2026-10-06` open that view on that date; a bare `#diario` or `#treino`
- * opens on today and follows it past midnight.
- * `#alimentacao/hoje` opens Alimentação on today's intake and `#alimentacao/hoje/2026-10-05` on that date's,
- * `#alimentacao/historico` on the history. `#alimentacao` and any other argument open the plans. A malformed date reads as none.
+ * `#treino/2026-10-06` and `#relogio/2026-10-06` open that view on that date; a bare `#treino` or `#relogio` opens on
+ * today and follows it past midnight. Any other hash opens Treino. A malformed date reads as none.
  */
-function routeFromHash(): { view: View; date: IsoDate | null; foodTab: FoodTab } {
-  const hash = window.location.hash.slice(1)
-  // Histórico was a view of its own before it moved under Alimentação, and old links still name it.
-  const [id, arg, dateArg] = (hash === 'historico' ? 'alimentacao/historico' : hash).split('/')
-  const view = VIEWS.find((v) => v.id === id)?.id ?? 'diario'
-  const foodTab: FoodTab = FOOD_TABS.find((t) => view === 'alimentacao' && t.id === arg)?.id ?? 'planos'
-  const raw = view !== 'alimentacao' ? arg : foodTab === 'hoje' ? dateArg : undefined
-  return { view, date: raw ? parseIsoDate(raw) : null, foodTab }
+function routeFromHash(): { view: View; date: IsoDate | null } {
+  const [id, arg] = window.location.hash.slice(1).split('/')
+  const view = VIEWS.find((v) => v.id === id)?.id ?? 'treino'
+  return { view, date: view === id && arg ? parseIsoDate(arg) : null }
 }
 
 /** The local date, kept current past midnight and when the tab comes back after sleeping. */
@@ -89,37 +54,22 @@ function useToday(): IsoDate {
   return today
 }
 
-/** The foods the APN table prescribes rank first in the food panel, as in the catalog's own search. */
-const catalogStaples = stapleFoodIds(catalogTable)
-
-const userUnitsReducer = (state: readonly FoodUnit[], action: UnitsAction) => unitsReducer(state, action, SEED_UNITS)
-
 /** `sync` is null only when the browser blocks localStorage. */
 export default function App({ sync }: { sync: Sync | null }) {
   const [stored] = useState(() => loadAll())
-  const [state, dispatch] = useReducer(planReducer, stored.plans)
-  const [dayState, dispatchDays] = useReducer(dayReducer, stored.days)
-  const [customDefs, dispatchCustomFoods] = useReducer(customFoodsReducer, stored.foods)
-  const [userUnits, dispatchUnits] = useReducer(userUnitsReducer, stored.units)
   const [workouts, dispatchWorkouts] = useReducer(workoutReducer, { exercises: stored.exercises, ...stored.workoutPlans, sessions: stored.workoutSessions })
-  const [body, dispatchBody] = useReducer(bodyReducer, { sleep: stored.sleep, feel: stored.feel, moods: stored.moods })
   const [health, setHealth] = useState(stored.health)
   const [watchWorkouts, setWatchWorkouts] = useState(stored.watchWorkouts)
   const [equipment, dispatchEquipment] = useReducer(equipmentReducer, stored.equipment)
-  const [{ view, date: routeDate, foodTab }, setRoute] = useState(routeFromHash)
+  const [{ view, date: routeDate }, setRoute] = useState(routeFromHash)
   const today = useToday()
+  const date = routeDate ?? today
+  const onDate = (next: IsoDate) => (window.location.hash = `${view}/${next}`)
 
-  useEffect(() => void saveStore(STORES.plans, state), [state])
-  useEffect(() => void saveStore(STORES.days, dayState), [dayState])
-  useEffect(() => void saveStore(STORES.foods, customDefs), [customDefs])
-  useEffect(() => void saveStore(STORES.units, userUnits), [userUnits])
   useEffect(() => void saveStore(STORES.exercises, workouts.exercises), [workouts.exercises])
   const { plans: workoutPlans, activePlanId } = workouts
   useEffect(() => void saveStore(STORES.workoutPlans, { plans: workoutPlans, activePlanId }), [workoutPlans, activePlanId])
   useEffect(() => void saveStore(STORES.workoutSessions, workouts.sessions), [workouts.sessions])
-  useEffect(() => void saveStore(STORES.sleep, body.sleep), [body.sleep])
-  useEffect(() => void saveStore(STORES.feel, body.feel), [body.feel])
-  useEffect(() => void saveStore(STORES.moods, body.moods), [body.moods])
   useEffect(() => void saveStore(STORES.health, health), [health])
   useEffect(() => void saveStore(STORES.watchWorkouts, watchWorkouts), [watchWorkouts])
   useEffect(() => void saveStore(STORES.equipment, equipment), [equipment])
@@ -139,7 +89,7 @@ export default function App({ sync }: { sync: Sync | null }) {
     // popstate fires with the navigation itself and hashchange only after the next frame, so whichever comes first routes.
     const onNavigate = () => {
       const next = routeFromHash()
-      setRoute((route) => (route.view === next.view && route.date === next.date && route.foodTab === next.foodTab ? route : next))
+      setRoute((route) => (route.view === next.view && route.date === next.date ? route : next))
     }
     window.addEventListener('popstate', onNavigate)
     window.addEventListener('hashchange', onNavigate)
@@ -148,126 +98,42 @@ export default function App({ sync }: { sync: Sync | null }) {
       window.removeEventListener('hashchange', onNavigate)
     }
   }, [])
-  const units = useMemo(() => ({ user: userUnits, dispatch: dispatchUnits }), [userUnits])
-
-  const dispatchFoods = (action: CustomFoodsAction) => {
-    dispatchCustomFoods(action)
-    if (action.type === 'deleteFood') dispatchUnits({ type: 'deleteFood', foodId: action.id })
-  }
-
-  const { customFoods, foodsById, allFoods, searchIndex, ingredientIndex, table } = useMemo(() => {
-    const customFoods = resolveCustomFoods(customDefs, catalogById)
-    const allFoods = [...customFoods, ...catalogFoods]
-    return {
-      customFoods,
-      foodsById: new Map<FoodId, Food>([...catalogById, ...customFoods.map((f) => [f.id, f] as const)]),
-      allFoods,
-      searchIndex: buildSearchIndex(allFoods, catalogStaples),
-      ingredientIndex: buildSearchIndex([...customFoods.filter((f) => !f.recipe), ...catalogFoods]),
-      table: withCustomEquivalents(catalogTable, customFoods, catalogById),
-    }
-  }, [customDefs])
-
-  const allMeals = useMemo(
-    () => [...state.plans.flatMap((p) => p.meals), ...Object.values(dayState.days).flatMap((d) => d.meals)],
-    [state.plans, dayState.days],
-  )
-  const kit: FoodKit = {
-    foods: foodsById,
-    allFoods,
-    searchIndex,
-    catalogIndex,
-    ingredientIndex,
-    table,
-    usedFoods: () => foodsByUse(allMeals),
-    dispatchFoods,
-  }
-  const plan = state.plans.find((p) => p.id === state.selectedId)!
 
   return (
-    <UnitsContext value={units}>
-      <div className="app">
-        <div className="page">
-          <header className="top">
-            <div className="top-row">
-              <nav className="views" aria-label="Secções">
-                {VIEWS.map((v) => (
-                  <a key={v.id} href={`#${v.id}`} className="view-link" aria-current={v.id === view ? 'page' : undefined}>
-                    {v.label}
-                  </a>
-                ))}
-              </nav>
-              <ThemeToggle />
-            </div>
-            {sync && <SyncLine sync={sync} />}
-            {view === 'alimentacao' && (
-              <nav className="tabs" aria-label="Alimentação">
-                {FOOD_TABS.map((t) => (
-                  <a key={t.id} href={`#${t.hash}`} className="tab" aria-current={t.id === foodTab ? 'page' : undefined}>
-                    {t.label}
-                  </a>
-                ))}
-              </nav>
-            )}
-            {view === 'alimentacao' && foodTab === 'planos' && <PlanSwitcher state={state} dispatch={dispatch} />}
-          </header>
+    <div className="app">
+      <div className="page">
+        <header className="top">
+          <div className="top-row">
+            <nav className="views" aria-label="Secções">
+              {VIEWS.map((v) => (
+                <a key={v.id} href={`#${v.id}`} className="view-link" aria-current={v.id === view ? 'page' : undefined}>
+                  {v.label}
+                </a>
+              ))}
+            </nav>
+            <ThemeToggle />
+          </div>
+          {sync && <SyncLine sync={sync} />}
+        </header>
 
-          <main className="main">
-            {view === 'alimentacao' && foodTab === 'historico' && <HistoryView days={dayState.days} foods={foodsById} today={today} />}
-            {view === 'alimentacao' && foodTab === 'hoje' && <DayLog date={routeDate ?? today} today={today} state={dayState} dispatch={dispatchDays} plans={state.plans} kit={kit} workouts={workouts} watch={watchWorkouts} />}
-            {view === 'alimentacao' && foodTab === 'planos' && (
-              <>
-                <DayEditor
-                  key={plan.id}
-                  title={<InlineName name={plan.name} label="Nome do plano" onRename={(name) => dispatch({ type: 'renamePlan', planId: plan.id, name })} />}
-                  eyebrow={plan.name}
-                  meals={plan.meals}
-                  goals={plan.goals}
-                  notes={{ value: plan.notes, onChange: (notes) => dispatch({ type: 'setPlanNotes', planId: plan.id, notes }) }}
-                  kit={kit}
-                  editMeals={(edit) => dispatch({ type: 'editMeals', planId: plan.id, edit })}
-                  onSaveGoals={(goals) => dispatch({ type: 'setGoals', planId: plan.id, goals })}
-                />
-                <CustomFoodsSection
-                  customFoods={customFoods}
-                  catalogIndex={catalogIndex}
-                  ingredientIndex={ingredientIndex}
-                  foods={foodsById}
-                  baseName={(id) => catalogById.get(id)?.name}
-                  usage={(id) => countEntries(allMeals, id)}
-                  dispatchFoods={dispatchFoods}
-                />
-              </>
-            )}
-            {view === 'diario' && (
-              <HomeView
-                date={routeDate ?? today}
-                today={today}
-                onDate={(date) => (window.location.hash = `diario/${date}`)}
-                days={dayState.days}
-                foods={foodsById}
-                workouts={workouts}
-                body={body}
-                dispatchBody={dispatchBody}
-                health={health}
-                watch={watchWorkouts}
-              />
-            )}
-            {view === 'treino' && (
-              <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={routeDate ?? today} today={today} onDate={(date) => (window.location.hash = `treino/${date}`)} watch={watchWorkouts} equipment={equipment} dispatchEquipment={dispatchEquipment} />
-            )}
-          </main>
-          <BackupSection>
-            <HealthImport
-              log={health}
+        <main className="main">
+          {view === 'treino' && (
+            <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={date} today={today} onDate={onDate} watch={watchWorkouts} equipment={equipment} dispatchEquipment={dispatchEquipment} />
+          )}
+          {view === 'relogio' && (
+            <WatchView
+              date={date}
+              today={today}
+              onDate={onDate}
+              health={health}
               onImport={(samples) => setHealth((log) => upsertSamples(log, samples))}
               watchWorkouts={watchWorkouts}
               onImportWorkouts={(workouts) => setWatchWorkouts((log) => upsertWatchWorkouts(log, workouts))}
             />
-          </BackupSection>
-          <Footer />
-        </div>
+          )}
+        </main>
+        <BackupSection />
       </div>
-    </UnitsContext>
+    </div>
   )
 }

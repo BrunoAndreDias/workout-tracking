@@ -41,13 +41,6 @@
   --under: #c08a2a;
   --under-bg: #faf0dc;
   --under-fg: #74500f;
-  --protein: #b23a62;
-  --carbs: #d9921f;
-  --fat: #3f72b0;
-  --meal-0: #2e5b3c;
-  --meal-1: #5e8c66;
-  --meal-2: #97b79a;
-  --meal-3: #c8d9c4;
   --shadow-segment: 0 1px 2px rgba(28, 27, 24, 0.12);
   --shadow-panel: -16px 0 48px rgba(28, 27, 24, 0.22);
   --space-4: 4px;
@@ -97,11 +90,4 @@
   --under: #c9973f;
   --under-bg: #362b17;
   --under-fg: #e8c27a;
-  --protein: #d9668e;
-  --carbs: #e3a648;
-  --fat: #6b9bd6;
-  --meal-0: #4c8c5f;
-  --meal-1: #6fa077;
-  --meal-2: #8fb592;
-  --meal-3: #b5ccb1;
 }

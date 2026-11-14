@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
-import type { ReactNode } from 'react'
-import { describeBackup, exportBackup, mergeBackup, parseBackup, replaceWithBackup, writeAll } from '../domain/backup.ts'
-import type { BackupData } from '../domain/backup.ts'
-import { toIsoDate } from '../domain/days.ts'
+import { describeBackup, exportBackup, mergeBackup, parseBackup, writeAll } from '../domain/backup.ts'
+import { toIsoDate } from '../domain/dates.ts'
 import { defaultStorage } from '../domain/persistence.ts'
 import { loadAll, STORES } from '../domain/stores.ts'
+import type { AppData } from '../domain/stores.ts'
 import { Panel } from './Panel.tsx'
 
 function download(name: string, text: string) {
@@ -22,12 +21,11 @@ function download(name: string, text: string) {
  */
 const reloadApp = () => window.location.reload()
 
-/** `children` are further data actions shown beside export and import. */
-export function BackupSection({ children }: { children?: ReactNode }) {
+export function BackupSection() {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
-  const [incoming, setIncoming] = useState<BackupData | null>(null)
+  const [incoming, setIncoming] = useState<AppData | null>(null)
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
@@ -46,7 +44,7 @@ export function BackupSection({ children }: { children?: ReactNode }) {
     const storage = defaultStorage()
     if (!storage) return setError('O armazenamento do navegador não está disponível.')
     const { file, skipped } = exportBackup(storage)
-    download(`plano-alimentar-${toIsoDate(new Date())}.json`, JSON.stringify(file, null, 2))
+    download(`treino-${toIsoDate(new Date())}.json`, JSON.stringify(file, null, 2))
     setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map((name) => STORES[name].label).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
   }
 
@@ -55,7 +53,7 @@ export function BackupSection({ children }: { children?: ReactNode }) {
     if (!storage || !incoming) return setError('O armazenamento do navegador não está disponível.')
     const current = loadAll(storage)
     if (mode === 'replace' && !window.confirm(`Substituir tudo?\n\nVais perder o que tens agora: ${describeBackup(current)}.\nFicas com o que está no ficheiro: ${describeBackup(incoming)}.`)) return
-    const result = mode === 'replace' ? replaceWithBackup(incoming, storage) : writeAll(mergeBackup(current, incoming).data, storage)
+    const result = writeAll(mode === 'replace' ? incoming : mergeBackup(current, incoming), storage)
     if (!result.ok) return setError(result.error)
     reloadApp()
   }
@@ -80,7 +78,6 @@ export function BackupSection({ children }: { children?: ReactNode }) {
             e.target.value = ''
           }}
         />
-        {children}
       </div>
       {error && (
         <p className="backup-error" role="alert">
@@ -96,8 +93,8 @@ export function BackupSection({ children }: { children?: ReactNode }) {
         <Panel eyebrow="Importar dados" title="Cópia de segurança" onClose={() => setIncoming(null)}>
           <div className="panel-body backup-body">
             <p className="backup-summary">{describeBackup(incoming)}</p>
-            <p className="goals-hint">
-              “Juntar” acrescenta os planos e mantém os teus alimentos, unidades, dias, treinos, sono e valores do relógio; só entram os que ainda não tens. As notas de humor do ficheiro juntam-se às tuas. “Substituir tudo” apaga o que tens agora.
+            <p className="hint-text">
+              “Juntar” mantém os teus planos de treino, treinos, material e valores do relógio; do ficheiro só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
             </p>
           </div>
           <div className="panel-foot form-actions">

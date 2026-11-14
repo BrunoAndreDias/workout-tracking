@@ -1,5 +1,5 @@
 {
-  "name": "nutrition-tracking",
+  "name": "workout-tracking",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,15 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
-    "import:portfir": "node scripts/import-portfir.ts",
-    "import:usda": "node scripts/import-usda.ts",
-    "derive:unsalted": "node scripts/derive-unsalted.ts",
-    "build:equivalents": "node scripts/build-equivalents.ts",
-    "check:equivalents": "node scripts/build-equivalents.ts --check",
     "e2e": "node scripts/e2e.mjs",
-    "perf": "node scripts/perf.mjs",
-    "plano": "node scripts/plano.mjs",
-    "eval:search": "node scripts/search-eval.ts",
     "check": "npm run typecheck && npm run lint && npm test && vite build && npm run e2e",
     "serve": "npm run build && node server/serve.ts",
     "dev-read": "HOST=0.0.0.0 npm run serve"
@@ -37,7 +29,6 @@
     "playwright": "^1.63.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.3",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "vitest": "^5.0.3"
   }
 }

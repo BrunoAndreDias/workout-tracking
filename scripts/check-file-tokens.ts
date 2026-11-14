@@ -5,8 +5,6 @@ const BYTES_PER_TOKEN = 4
 
 const GENERATED = [
   /^package-lock\.json$/,
-  /^data\/raw\//,
-  /^src\/data\/(foods|unsalted-foods|equivalents)\.json$/,
 ]
 
 function git(args: string[], input?: string): string {

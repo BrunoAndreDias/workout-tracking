@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CATALOG } from './exerciseCatalog.ts'
-import type { CatalogId } from './exerciseCatalog.ts'
+import { CATALOG } from './catalogEntries.ts'
+import type { CatalogId } from './catalogEntries.ts'
 import { defaultRole, mapDays, splitForDayCount, SPLITS, templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId } from './types.ts'
 

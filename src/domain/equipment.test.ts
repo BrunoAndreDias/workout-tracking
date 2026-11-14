@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { equipmentLabel, equipmentReducer, freshEquipment, isChanged, missingAt, needsOf, readyFirst } from './equipment.ts'
 import type { EquipmentAction } from './equipment.ts'
-import { CATALOG } from './exerciseCatalog.ts'
+import { CATALOG } from './catalogEntries.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
 import type { CustomEquipmentId, GymId } from './types.ts'
 

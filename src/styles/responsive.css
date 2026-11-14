@@ -5,7 +5,6 @@
   .plan-bar { flex-direction: column; align-items: stretch; }
   .plan-actions { padding: 4px 0 6px; margin-left: -12px; }
   .summary { padding: 20px 16px 24px; gap: 20px; border-radius: 16px; }
-  /* Kcal sits beside the name so the stepper, which grows with a unit name, shares its line only with the actions. */
   .day-empty { padding: 20px 16px; }
   .day-start > * { flex: 1 1 100%; }
   .session, .workout-day, .workout-block, .workout-blocks, .equipment-card { padding: 16px; gap: 12px; }
@@ -31,7 +30,7 @@
 }
 
 @media (max-width: 480px) {
-  /* Four views and the theme toggle share one row on a phone. */
+  /* The tabs and the theme toggle share one row on a phone. */
   .top-row { column-gap: 8px; }
   .view-link { padding: 0 8px; }
 }

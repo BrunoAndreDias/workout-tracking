@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CatalogId } from './exerciseCatalog.ts'
+import type { CatalogId } from './catalogEntries.ts'
 import { blockMuscles, dayMuscleSets, doneMuscleSets } from './muscles.ts'
 import { templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutSessionId } from './types.ts'

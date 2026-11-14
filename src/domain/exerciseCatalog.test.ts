@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CATALOG, catalogEntry, pickerList } from './exerciseCatalog.ts'
+import { CATALOG } from './catalogEntries.ts'
+import { catalogEntry, pickerList } from './exerciseCatalog.ts'
 
 const names = (list: readonly { name: string }[]) => list.map((e) => e.name)
 

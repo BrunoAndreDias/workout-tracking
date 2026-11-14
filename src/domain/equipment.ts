@@ -1,5 +1,5 @@
 import { catalogEntry, exerciseKey } from './exerciseCatalog.ts'
-import type { CatalogId } from './exerciseCatalog.ts'
+import type { CatalogId } from './catalogEntries.ts'
 import type { CustomEquipmentId, GymId } from './types.ts'
 
 /** The material the app knows, in the order it lists it. */

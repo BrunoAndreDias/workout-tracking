@@ -64,7 +64,7 @@ Each UUID is fixed per position, so one address always builds the same plist. `O
 2. 75 POSTs in one run (5 metrics times 15 days) are untested. A slow or throttled run could stop part way.
 3. Whether the "last 15 days" window is rolling or calendar is unconfirmed. Skipping its first day by date is safe either way.
 4. Whether steps from the iPhone and the Watch are de-duplicated by ActionKit's own grouping is unconfirmed (see the decision summary).
-5. If the Number field sends the sample as text, the server answers 400 and the metric is missing in the Diário.
+5. If the Number field sends the sample as text, the server answers 400 and the metric is missing on the Relógio tab.
 6. The If is untested on a device: the compare string is a token of a Format Date, and a text comparison of two dates must match. If it never matches, the first day is posted too, partial.
 7. The first run asks for Health access per type, and may ask for local network access for an `http://` address.
 8. A run while the iPhone is locked finds no Health data (fcandi).

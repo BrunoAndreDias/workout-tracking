@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { openFresh } from './_driver.mjs'
+import { openFresh, todayIso } from './_driver.mjs'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
@@ -11,31 +11,29 @@ await openFresh(page, URL)
 
 const views = page.getByRole('navigation', { name: 'Secções' })
 const current = () => views.locator('[aria-current="page"]').textContent()
-assert(await page.title() === 'Diário', 'the page title is Diário')
-assert(await current() === 'Diário', 'a bare URL opens on the Diário')
-await page.locator('.cal-grid').waitFor()
-assert(await page.getByText('Plano alimentar', { exact: true }).count() === 0, 'the header has no Plano alimentar eyebrow')
-assert((await views.getByRole('link').allTextContents()).join(' | ') === 'Diário | Treino | Alimentação', 'the tabs run Diário, Treino, Alimentação')
+assert(await page.title() === 'Treino', 'the page title is Treino')
+assert(await current() === 'Treino', 'a bare URL opens on Treino')
+await page.getByRole('navigation', { name: 'Treino' }).waitFor()
+assert((await views.getByRole('link').allTextContents()).join(' | ') === 'Treino | Relógio', 'the tabs run Treino, Relógio')
 
-await page.goto(URL + '#planos')
-assert(await current() === 'Diário', 'the old #planos hash falls back to the Diário')
+for (const old of ['#diario', '#alimentacao/hoje', '#historico']) {
+  await page.goto(URL + old)
+  await page.getByRole('navigation', { name: 'Treino' }).waitFor()
+  assert(await current() === 'Treino', `the meal app's ${old} hash falls back to Treino`)
+}
 
-const foodTabs = page.getByRole('navigation', { name: 'Alimentação' })
-await page.goto(URL + '#historico')
-await page.locator('.tiles').waitFor()
-assert(await current() === 'Alimentação' && await foodTabs.locator('[aria-current="page"]').textContent() === 'Histórico', 'the old #historico hash opens Alimentação → Histórico')
-await foodTabs.getByRole('link', { name: 'Histórico', exact: true }).click()
-assert(page.url().endsWith('#alimentacao/historico'), 'Histórico is #alimentacao/historico in the URL')
-
-await page.goto(URL + '#corpo')
-await page.locator('.cal-grid').waitFor()
-assert(await current() === 'Diário', 'the removed #corpo hash falls back to the Diário')
-
-await views.getByRole('link', { name: 'Alimentação', exact: true }).click()
-assert(page.url().endsWith('#alimentacao'), 'Alimentação is #alimentacao in the URL')
-await page.getByRole('navigation', { name: 'Planos' }).waitFor()
-await page.getByRole('region', { name: 'Almoço', exact: true }).waitFor()
-assert(await current() === 'Alimentação', 'the Alimentação tab is current and shows the plan editor')
+await views.getByRole('link', { name: 'Relógio', exact: true }).click()
+assert(page.url().endsWith('#relogio'), 'Relógio is #relogio in the URL')
+await page.getByRole('region', { name: 'Relógio', exact: true }).waitFor()
+assert(await page.getByRole('button', { name: 'Ligar Apple Watch' }).count() === 1, 'the Relógio tab holds the Health import')
+const stepper = page.getByRole('region', { name: 'Data do relógio' })
+assert(await stepper.getByRole('button', { name: 'Dia seguinte' }).isDisabled(), 'the date stepper stops at today')
+await stepper.getByRole('button', { name: 'Dia anterior' }).click()
+const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString('sv-SE')
+await page.waitForURL(`**#relogio/${yesterday}`)
+assert(await stepper.getByRole('button', { name: 'Voltar a hoje' }).count() === 1, 'a past date offers Voltar a hoje')
+await page.goto(`${URL}#relogio/${todayIso()}`)
+assert(await current() === 'Relógio', 'a dated #relogio hash opens the Relógio tab')
 
 await page.setViewportSize({ width: 375, height: 812 })
 const navBox = await views.boundingBox()

@@ -10,7 +10,7 @@ const page = await context.newPage()
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-await openFresh(page, URL)
+await openFresh(page, URL + '#relogio')
 
 const pad = (n) => String(n).padStart(2, '0')
 const now = new Date()
@@ -21,7 +21,7 @@ const todayLabel = `${now.getDate()} ${['jan', 'fev', 'mar', 'abr', 'mai', 'jun'
 const endpoint = new globalThis.URL('/api/health', URL).href
 const relogio = page.getByRole('region', { name: 'Relógio', exact: true })
 const dialog = page.getByRole('dialog')
-const serverHealth = async () => (await (await page.request.get(new globalThis.URL('/api/stores', URL).href)).json())['nutrition-tracking:health']
+const serverHealth = async () => (await (await page.request.get(new globalThis.URL('/api/stores', URL).href)).json())['workout-tracking:health']
 const post = async (body) => {
   const res = await page.request.post(endpoint, { headers: { 'content-type': 'application/json' }, data: body })
   return { status: res.status(), body: await res.json() }
@@ -38,7 +38,7 @@ assert(installHref === `${new globalThis.URL(URL).origin}/api/health/shortcut?ur
 if (process.platform === 'darwin') {
   const file = await page.request.get(installHref, { timeout: 30_000 })
   const head = (await file.body()).subarray(0, 4).toString()
-  assert(file.status() === 200 && head === 'AEA1' && file.headers()['content-disposition'] === 'attachment; filename="Plano - Saude.shortcut"', `on a Mac, the link downloads a signed Shortcut (got ${file.status()} ${head})`)
+  assert(file.status() === 200 && head === 'AEA1' && file.headers()['content-disposition'] === 'attachment; filename="Treino - Saude.shortcut"', `on a Mac, the link downloads a signed Shortcut (got ${file.status()} ${head})`)
 }
 assert(await dialog.getByText('os valores do relógio dos últimos 14 dias e de hoje', { exact: false }).count() === 1, 'the hint says the Shortcut sends the last 14 days and today')
 assert(await dialog.getByText('Aberta em localhost, a app dá um atalho que só funciona neste computador.', { exact: false }).count() === 1, 'a localhost address is flagged as unreachable from the iPhone')
@@ -87,7 +87,7 @@ assert((await serverHealth()).rev === 3, 'and changes nothing')
 
 await reloadApp(page)
 await relogio.waitFor()
-assert(await watchDay(page) === 'Horas em pé (h) 9 · Passos 9 001 · Energia ativa (kcal) 412', `after a reload the Diário shows the newest values (got ${await watchDay(page)})`)
+assert(await watchDay(page) === 'Horas em pé (h) 9 · Passos 9 001 · Energia ativa (kcal) 412', `after a reload the Relógio tab shows the newest values (got ${await watchDay(page)})`)
 await relogio.screenshot({ path: `${S}/watch-relogio.png` })
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))

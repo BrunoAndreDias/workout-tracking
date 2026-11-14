@@ -9,7 +9,7 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
-await openFresh(page, URL + '#alimentacao')
+await openFresh(page, URL + '#relogio')
 
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -157,24 +157,7 @@ assert(JSON.stringify(supinoSets.map((s) => [s.done, s.kg, s.reps, s.rir])) === 
 assert(stored['workout-plans'].version === 3 && stored['workout-plans'].plans[0].split === 'ppf', 'the plan is stored as version 3 with its split')
 assert(stored.exercises.exercises.some((e) => e.name === 'Supino') && stored.exercises.exercises.some((e) => e.name === BENCH), 'the user’s and the catalog’s exercises are stored by name')
 
-await page.goto(`${URL}#diario/${yesterday}`)
-await page.locator('.calendar').waitFor()
-const line = page.locator('.workout-line')
-assert((await line.textContent()) === 'TreinoPush2 exercícios, 5 séries', `Diário shows the session line, counting done sets (got ${await line.textContent()})`)
-const yesterdayCell = await page.locator('.cal-day[aria-pressed="true"]').getAttribute('aria-label')
-assert(yesterdayCell === `${longDate.format(daysAgo(1))}, treino` && await page.locator('.cal-day[aria-pressed="true"] .cal-trained').count() === 1, `the calendar marks the trained day (got ${yesterdayCell})`)
-const overviewRow = (row) =>
-  region('Treino')
-    .locator('tr', { has: page.getByRole('rowheader', { name: row, exact: true }) })
-    .locator('td .ov-value')
-    .allTextContents()
-    .then((t) => t.join(' | '))
-assert(await overviewRow('Ombros') === '3 | 3 | 3', `the Overview counts the 3 done ${OHP} sets as Ombros on the day, week and month (got ${await overviewRow('Ombros')})`)
-assert(await overviewRow('Peito') === '— | — | —', 'an untrained group reads — in the Overview')
-assert(await overviewRow('Sem grupo muscular') === '2 | 2 | 2', `the 2 Supino sets count with no muscle group (got ${await overviewRow('Sem grupo muscular')})`)
-await page.screenshot({ path: `${S}/workout-diario-line.png`, fullPage: true })
-await line.click()
-assert(page.url().endsWith(`#treino/${yesterday}`), 'the Diário line links to the session date')
+await page.goto(`${URL}#treino/${yesterday}`)
 await region('Push').waitFor()
 
 await page.getByRole('button', { name: 'Dia seguinte' }).click()
@@ -222,10 +205,6 @@ assert(await noScroll(), 'Plano de treino with Músculos por semana has no horiz
 await region('Músculos por semana').screenshot({ path: `${S}/workout-muscles-mobile.png` })
 await page.setViewportSize({ width: 390, height: 844 })
 await page.screenshot({ path: `${S}/workout-plan-mobile.png`, fullPage: true })
-await view('Diário').click()
-await page.locator('.workout-line').first().waitFor()
-assert(await noScroll(), 'Diário with a session line has no horizontal scroll at 390 px')
-await page.screenshot({ path: `${S}/workout-diario-mobile.png`, fullPage: true })
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

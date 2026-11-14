@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-await openFresh(page, URL)
+await openFresh(page, URL + '#relogio')
 
 const pad = (n) => String(n).padStart(2, '0')
 const daysAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - n); return d }
@@ -43,11 +43,10 @@ const pick = async (name, buffer) => {
   await page.getByRole('button', { name: 'Ligar Apple Watch' }).click()
   await section.getByLabel('Exportação do Saúde').setInputFiles({ name, mimeType: name.endsWith('.zip') ? 'application/zip' : 'text/xml', buffer })
 }
-const serverDoc = async () => (await (await page.request.get(new globalThis.URL('/api/stores', URL).href)).json())['nutrition-tracking:watch-workouts']
+const serverDoc = async () => (await (await page.request.get(new globalThis.URL('/api/stores', URL).href)).json())['workout-tracking:watch-workouts']
 const span = `2 treinos do relógio, de ${short(ran)} a ${short(lifted)}`
 const liftLine = 'RelógioForça tradicional18:02 · 52 min · 311 kcal'
 const runLine = 'RelógioCorrida07:30 · 30 min · 311 kcal · 5,2 km'
-const line = (scope) => scope.locator('.workout-line').filter({ hasText: 'Relógio' })
 
 await pick('notas.txt', Buffer.from('olá'))
 await section.locator('.backup-summary').waitFor()
@@ -58,7 +57,7 @@ await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
 await pick('export.zip', zip)
 await section.locator('.backup-summary').filter({ hasText: 'treinos do relógio' }).waitFor()
 assert(await section.locator('.backup-summary').textContent() === span, `the preview counts the export's workouts and their dates (got ${await section.locator('.backup-summary').textContent()})`)
-assert(await section.locator('.goals-hint').last().textContent() === '1 treino não se leu e fica de fora.', 'and says how many it could not read')
+assert(await section.locator('.hint-text').last().textContent() === '1 treino não se leu e fica de fora.', 'and says how many it could not read')
 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the panel has no horizontal scroll at 390 px')
 await section.screenshot({ path: `${S}/watch-workouts-preview.png` })
 await section.getByRole('button', { name: 'Importar treinos' }).click()
@@ -71,21 +70,16 @@ assert(JSON.stringify(stored.workouts.map((w) => [w.date, w.start, w.activity, w
 const first = await serverDoc()
 assert(first.doc === JSON.stringify(stored), 'and the server has the same copy')
 
-await page.goto(`${URL}#diario/${iso(lifted)}`)
-await line(page.locator('.home-day')).first().waitFor()
-assert(await line(page.locator('.home-day')).textContent() === liftLine, `the Diário shows the watch workout on its date (got ${await line(page.locator('.home-day')).textContent()})`)
-await page.evaluate(() => scrollTo(0, 0))
-await page.screenshot({ path: `${S}/watch-workouts-diario.png` })
-await line(page.locator('.home-day')).click()
+await page.goto(`${URL}#treino/${iso(lifted)}`)
 const treino = page.getByRole('list', { name: 'Treinos do relógio' })
 await treino.waitFor()
-assert(page.url().endsWith(`#treino/${iso(lifted)}`), 'the line opens Treino on that date')
 assert(await treino.locator('li').allTextContents().then((t) => JSON.stringify(t)) === JSON.stringify([liftLine]), 'Treino lists the watch workout beside the sessions')
 assert(await page.locator('#comecar-treino').textContent() === 'Registar as séries', 'and invites logging its sets instead of saying no workout was done')
 await page.screenshot({ path: `${S}/watch-workouts-treino.png`, fullPage: true })
 await page.goto(`${URL}#treino/${iso(ran)}`)
 assert(await treino.locator('li').allTextContents().then((t) => JSON.stringify(t)) === JSON.stringify([runLine]), `the run shows its distance (got ${await treino.locator('li').allTextContents()})`)
 
+await page.goto(`${URL}#relogio`)
 await pick('export.zip', zip)
 await section.locator('.backup-summary').filter({ hasText: 'treinos do relógio' }).waitFor()
 assert(await section.getByText('Já estão todos na app.').count() === 1, 'a second pick of the same export says every workout is there')

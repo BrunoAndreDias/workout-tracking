@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { startSync } from './sync.ts'
 
-const PLANS = 'nutrition-tracking:plans'
-const SLEEP = 'nutrition-tracking:sleep'
-const THEME = 'nutrition-tracking:theme'
+const PLANS = 'workout-tracking:workout-plans'
+const SLEEP = 'workout-tracking:exercises'
+const THEME = 'workout-tracking:theme'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data: Record<string, string> = { ...initial }
@@ -65,11 +65,11 @@ describe('startSync', () => {
     await startSync({ storage, fetch: server.fetch })
     await startSync({ storage, fetch: server.fetch })
     vi.useRealTimers()
-    const { 'nutrition-tracking:sync': _meta, ...docs } = storage.data
+    const { 'workout-tracking:sync': _meta, ...docs } = storage.data
     expect(docs).toEqual({
       [PLANS]: '{"v":"server"}',
       [SLEEP]: '"same"',
-      'nutrition-tracking:plans:unsynced:2026-10-06T08:00:00.000Z': '{"v":"local"}',
+      'workout-tracking:workout-plans:unsynced:2026-10-06T08:00:00.000Z': '{"v":"local"}',
     })
     expect(Object.fromEntries(server.stores)).toEqual({ [PLANS]: { doc: '{"v":"server"}', rev: 3 }, [SLEEP]: { doc: '"same"', rev: 1 } })
   })
@@ -80,7 +80,7 @@ describe('startSync', () => {
     await startSync({ storage, fetch: server.fetch })
     server.stores.set(PLANS, { doc: '{"v":"two"}', rev: 2 })
     await startSync({ storage, fetch: server.fetch })
-    const { 'nutrition-tracking:sync': _meta, ...docs } = storage.data
+    const { 'workout-tracking:sync': _meta, ...docs } = storage.data
     expect(docs).toEqual({ [PLANS]: '{"v":"two"}' })
   })
 
@@ -176,7 +176,7 @@ describe('startSync', () => {
 })
 
 describe('refresh', () => {
-  const HEALTH = 'nutrition-tracking:health'
+  const HEALTH = 'workout-tracking:health'
 
   it('takes another writer’s newer copy of the stores it is given and of no other', async () => {
     const server = fakeServer({ [HEALTH]: { doc: '"h1"', rev: 1 }, [SLEEP]: { doc: '"s1"', rev: 1 } })

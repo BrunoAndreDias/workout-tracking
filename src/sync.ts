@@ -20,7 +20,7 @@ interface SyncMeta {
   fresh: StoreKey[]
 }
 
-const SYNC_META_KEY = 'nutrition-tracking:sync'
+const SYNC_META_KEY = 'workout-tracking:sync'
 
 export interface Sync {
   /** localStorage, plus: each change to a store is sent to the server shortly after. */

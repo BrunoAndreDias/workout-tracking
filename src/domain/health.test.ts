@@ -94,7 +94,7 @@ describe('health storage', () => {
   it('stores the import rows by date and metric order and reads them back', () => {
     const storage = memoryStorage()
     saveStore(STORES.health, upsertSamples({}, samples(PASTE)), storage)
-    expect(storage.data['nutrition-tracking:health']).toBe(
+    expect(storage.data['workout-tracking:health']).toBe(
       '{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":54},{"date":"2026-10-05","metric":"standHours","value":9},{"date":"2026-10-05","metric":"steps","value":8123}]}',
     )
     expect(loadStore(STORES.health, storage)).toEqual({ '2026-10-04': { restingHeartRate: 54 }, '2026-10-05': { standHours: 9, steps: 8123 } })

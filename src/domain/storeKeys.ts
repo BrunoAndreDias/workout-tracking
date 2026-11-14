@@ -4,20 +4,12 @@
  * It imports nothing, so the Node server can import it without the browser's domain graph.
  */
 export const STORE_KEY = {
-  plans: 'nutrition-tracking:plans',
-  foods: 'nutrition-tracking:foods',
-  units: 'nutrition-tracking:units',
-  days: 'nutrition-tracking:days',
-  exercises: 'nutrition-tracking:exercises',
-  workoutPlans: 'nutrition-tracking:workout-plans',
-  workoutSessions: 'nutrition-tracking:workout-sessions',
-  sleep: 'nutrition-tracking:sleep',
-  feel: 'nutrition-tracking:feel',
-  // Mood Notes took over the key of the Pain Entries they replaced, so the server's copy migrates where it is.
-  moods: 'nutrition-tracking:pains',
-  health: 'nutrition-tracking:health',
-  watchWorkouts: 'nutrition-tracking:watch-workouts',
-  equipment: 'nutrition-tracking:equipment',
+  exercises: 'workout-tracking:exercises',
+  workoutPlans: 'workout-tracking:workout-plans',
+  workoutSessions: 'workout-tracking:workout-sessions',
+  health: 'workout-tracking:health',
+  watchWorkouts: 'workout-tracking:watch-workouts',
+  equipment: 'workout-tracking:equipment',
 } as const
 
 export type StoreKey = (typeof STORE_KEY)[keyof typeof STORE_KEY]

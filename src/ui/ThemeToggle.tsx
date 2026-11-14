@@ -8,7 +8,7 @@ export function ThemeToggle() {
 
   function toggle() {
     document.documentElement.dataset.theme = next
-    try { localStorage.setItem('nutrition-tracking:theme', next) } catch {}
+    try { localStorage.setItem('workout-tracking:theme', next) } catch {}
     setTheme(next)
   }
 

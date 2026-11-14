@@ -1,0 +1,463 @@
+{
+  "app": "plano-alimentar",
+  "version": 1,
+  "exportedAt": "2026-11-01T10:00:00.000Z",
+  "stores": {
+    "plans": {
+      "version": 3,
+      "state": {
+        "plans": [
+          {
+            "id": "a",
+            "name": "Plano 1",
+            "goals": {
+              "energyKcal": 2000,
+              "protein": 130,
+              "carbohydrate": 220,
+              "fat": 65,
+              "fiber": 35,
+              "salt": 5,
+              "mealProtein": 30
+            },
+            "meals": [
+              {
+                "id": "a-m0",
+                "name": "Pequeno-almoço",
+                "time": null,
+                "notes": "",
+                "optional": false,
+                "options": [
+                  {
+                    "id": "a-m0-o1",
+                    "name": "Opção 1",
+                    "entries": [
+                      {
+                        "id": "e1",
+                        "foodId": "custom:skyr",
+                        "grams": 200
+                      }
+                    ]
+                  }
+                ],
+                "activeOptionId": "a-m0-o1"
+              },
+              {
+                "id": "a-m1",
+                "name": "Almoço",
+                "time": null,
+                "notes": "",
+                "optional": false,
+                "options": [
+                  {
+                    "id": "a-m1-o1",
+                    "name": "Opção 1",
+                    "entries": []
+                  }
+                ],
+                "activeOptionId": "a-m1-o1"
+              },
+              {
+                "id": "a-m2",
+                "name": "Lanche",
+                "time": null,
+                "notes": "",
+                "optional": false,
+                "options": [
+                  {
+                    "id": "a-m2-o1",
+                    "name": "Opção 1",
+                    "entries": []
+                  }
+                ],
+                "activeOptionId": "a-m2-o1"
+              },
+              {
+                "id": "a-m3",
+                "name": "Jantar",
+                "time": null,
+                "notes": "",
+                "optional": false,
+                "options": [
+                  {
+                    "id": "a-m3-o1",
+                    "name": "Opção 1",
+                    "entries": []
+                  }
+                ],
+                "activeOptionId": "a-m3-o1"
+              }
+            ],
+            "notes": ""
+          }
+        ],
+        "selectedId": "a"
+      }
+    },
+    "foods": {
+      "version": 2,
+      "foods": [
+        {
+          "id": "custom:skyr",
+          "name": "Skyr",
+          "basedOn": null,
+          "kind": "label",
+          "per100": {
+            "energyKcal": 250,
+            "energyKj": null,
+            "fat": null,
+            "saturatedFat": null,
+            "monounsaturatedFat": null,
+            "polyunsaturatedFat": null,
+            "linoleicAcid": null,
+            "transFat": null,
+            "carbohydrate": null,
+            "sugars": null,
+            "oligosaccharides": null,
+            "starch": null,
+            "salt": null,
+            "fiber": null,
+            "protein": null,
+            "alcohol": null,
+            "water": null,
+            "organicAcids": null,
+            "cholesterol": null,
+            "vitaminA": null,
+            "betaCaroteneEq": null,
+            "alphaCarotene": null,
+            "betaCarotene": null,
+            "betaCryptoxanthin": null,
+            "lycopene": null,
+            "lutein": null,
+            "zeaxanthin": null,
+            "vitaminD": null,
+            "alphaTocopherol": null,
+            "thiamin": null,
+            "riboflavin": null,
+            "niacin": null,
+            "niacinEq": null,
+            "tryptophan60": null,
+            "vitaminB6": null,
+            "vitaminB12": null,
+            "vitaminC": null,
+            "folate": null,
+            "ash": null,
+            "sodium": null,
+            "potassium": null,
+            "calcium": null,
+            "phosphorus": null,
+            "magnesium": null,
+            "iron": null,
+            "zinc": null,
+            "selenium": null,
+            "iodine": null
+          }
+        }
+      ]
+    },
+    "units": {
+      "version": 1,
+      "units": [
+        {
+          "id": "unit:copo",
+          "foodId": "custom:skyr",
+          "name": "copo",
+          "grams": 150
+        }
+      ]
+    },
+    "days": {
+      "version": 3,
+      "days": [
+        {
+          "date": "2026-05-01",
+          "planId": "a",
+          "goals": {
+            "energyKcal": 2000,
+            "protein": 130,
+            "carbohydrate": 220,
+            "fat": 65,
+            "fiber": 35,
+            "salt": 5,
+            "mealProtein": 30
+          },
+          "meals": [
+            {
+              "id": "a-m0",
+              "name": "Pequeno-almoço",
+              "time": null,
+              "notes": "",
+              "optional": false,
+              "options": [
+                {
+                  "id": "a-m0-o1",
+                  "name": "Opção 1",
+                  "entries": [
+                    {
+                      "id": "e1",
+                      "foodId": "custom:skyr",
+                      "grams": 200
+                    }
+                  ]
+                }
+              ],
+              "activeOptionId": "a-m0-o1"
+            },
+            {
+              "id": "a-m1",
+              "name": "Almoço",
+              "time": null,
+              "notes": "",
+              "optional": false,
+              "options": [
+                {
+                  "id": "a-m1-o1",
+                  "name": "Opção 1",
+                  "entries": []
+                }
+              ],
+              "activeOptionId": "a-m1-o1"
+            },
+            {
+              "id": "a-m2",
+              "name": "Lanche",
+              "time": null,
+              "notes": "",
+              "optional": false,
+              "options": [
+                {
+                  "id": "a-m2-o1",
+                  "name": "Opção 1",
+                  "entries": []
+                }
+              ],
+              "activeOptionId": "a-m2-o1"
+            },
+            {
+              "id": "a-m3",
+              "name": "Jantar",
+              "time": null,
+              "notes": "",
+              "optional": false,
+              "options": [
+                {
+                  "id": "a-m3-o1",
+                  "name": "Opção 1",
+                  "entries": []
+                }
+              ],
+              "activeOptionId": "a-m3-o1"
+            }
+          ],
+          "eaten": [
+            "e1"
+          ]
+        }
+      ]
+    },
+    "exercises": {
+      "version": 1,
+      "exercises": [
+        {
+          "id": "ex-supino",
+          "name": "Supino"
+        }
+      ]
+    },
+    "workoutPlans": {
+      "version": 3,
+      "plans": [
+        {
+          "id": "wp-1",
+          "name": "Força",
+          "split": "ppf",
+          "blocks": [
+            {
+              "id": "wb-1",
+              "name": "Bloco A",
+              "weeks": 6,
+              "rir": [
+                {
+                  "min": 4,
+                  "max": 5
+                },
+                null,
+                null,
+                null,
+                null,
+                null
+              ],
+              "days": [
+                {
+                  "id": "Push",
+                  "name": "Push",
+                  "exercises": [
+                    {
+                      "exerciseId": "ex-supino",
+                      "role": "main",
+                      "sets": 3,
+                      "reps": {
+                        "min": 6,
+                        "max": 8
+                      },
+                      "weeks": null,
+                      "since": "2026-04-27"
+                    }
+                  ]
+                },
+                {
+                  "id": "Pull",
+                  "name": "Pull",
+                  "exercises": []
+                },
+                {
+                  "id": "Full body",
+                  "name": "Full body",
+                  "exercises": []
+                }
+              ]
+            }
+          ],
+          "start": {
+            "blockId": "wb-1",
+            "since": "2026-04-27"
+          }
+        }
+      ],
+      "activePlanId": "wp-1"
+    },
+    "workoutSessions": {
+      "version": 3,
+      "sessions": [
+        {
+          "id": "ws-1",
+          "date": "2026-05-01",
+          "workoutDayId": "Push",
+          "exercises": [
+            {
+              "exerciseId": "ex-supino",
+              "sets": [
+                {
+                  "done": true,
+                  "reps": 8,
+                  "kg": 60,
+                  "rir": 2
+                },
+                {
+                  "done": true,
+                  "reps": 7,
+                  "kg": 60,
+                  "rir": 1
+                }
+              ],
+              "note": {
+                "text": "Ombro bem",
+                "createdAt": "2026-05-01T18:40:00",
+                "updatedAt": "2026-05-01T18:40:00"
+              }
+            }
+          ],
+          "note": {
+            "text": "Bom treino",
+            "createdAt": "2026-05-01T19:00:00",
+            "updatedAt": "2026-05-01T19:00:00"
+          },
+          "feel": 4,
+          "after": [
+            {
+              "date": "2026-05-02",
+              "exerciseId": "ex-supino",
+              "note": {
+                "text": "Peito dorido",
+                "createdAt": "2026-05-02T09:00:00",
+                "updatedAt": "2026-05-02T09:00:00"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sleep": {
+      "version": 1,
+      "entries": [
+        {
+          "date": "2026-05-01",
+          "quality": 4
+        }
+      ]
+    },
+    "feel": {
+      "version": 1,
+      "feel": [
+        {
+          "date": "2026-05-01",
+          "rating": 3
+        }
+      ]
+    },
+    "moods": {
+      "version": 2,
+      "moods": [
+        {
+          "date": "2026-05-01",
+          "text": "Bem disposto",
+          "createdAt": "2026-05-01T21:00:00",
+          "updatedAt": "2026-05-01T21:00:00"
+        }
+      ]
+    },
+    "health": {
+      "version": 1,
+      "samples": [
+        {
+          "date": "2026-05-01",
+          "metric": "standHours",
+          "value": 9
+        },
+        {
+          "date": "2026-05-01",
+          "metric": "steps",
+          "value": 8123
+        },
+        {
+          "date": "2026-05-01",
+          "metric": "activeEnergy",
+          "value": 512
+        }
+      ]
+    },
+    "watchWorkouts": {
+      "version": 1,
+      "workouts": [
+        {
+          "id": "2026-05-01T06:30:00Z Running",
+          "date": "2026-05-01",
+          "start": "07:30",
+          "activity": "Running",
+          "minutes": 31.5,
+          "kcal": 320,
+          "km": 5.2
+        }
+      ]
+    },
+    "equipment": {
+      "version": 1,
+      "custom": [
+        {
+          "id": "mat:elasticos",
+          "name": "Elásticos"
+        }
+      ],
+      "gyms": [
+        {
+          "id": "gym-casa",
+          "name": "Casa",
+          "has": [
+            "mat:elasticos"
+          ]
+        }
+      ],
+      "activeGymId": "gym-casa",
+      "needs": {}
+    }
+  }
+}

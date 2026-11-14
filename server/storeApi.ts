@@ -213,7 +213,7 @@ export function storeHandler(stores: () => Stores, { allowReset = false, shortcu
       }
       res.writeHead(200, {
         'content-type': 'application/octet-stream',
-        'content-disposition': 'attachment; filename="Plano - Saude.shortcut"',
+        'content-disposition': 'attachment; filename="Treino - Saude.shortcut"',
         'cache-control': 'no-store',
       })
       return void res.end(file)

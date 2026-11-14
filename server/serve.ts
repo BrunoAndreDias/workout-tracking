@@ -59,7 +59,7 @@ const localHostName = (): string | undefined => {
 }
 
 server.listen(port, host, () => {
-  console.log(`Plano alimentar on http://${host}:${port}/ (database ${file})`)
+  console.log(`Treino on http://${host}:${port}/ (database ${file})`)
   if (host !== '0.0.0.0' && host !== '::') return
   console.log('Open on the iPhone (same Wi-Fi):')
   for (const url of phoneUrls(networkInterfaces(), localHostName(), port)) console.log(`  ${url}`)

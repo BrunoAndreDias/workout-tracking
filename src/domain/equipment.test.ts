@@ -119,7 +119,7 @@ describe('material store', () => {
     const storage = memoryStorage()
     const state = casa({ type: 'addCustom', id: ELASTICOS, name: 'Elásticos' }, { type: 'setNeeds', name: 'Planks', needs: [ELASTICOS] })
     saveStore(STORES.equipment, state, storage)
-    expect(JSON.parse(storage.data['nutrition-tracking:equipment'])).toEqual({
+    expect(JSON.parse(storage.data['workout-tracking:equipment'])).toEqual({
       version: 1,
       custom: [{ id: ELASTICOS, name: 'Elásticos' }],
       gyms: [{ id: CASA, name: 'Casa', has: ['dumbbells', 'bench'] }],

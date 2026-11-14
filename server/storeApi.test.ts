@@ -10,9 +10,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { dbPath, openStores, storeHandler } from './storeApi.ts'
 import type { Stores } from './storeApi.ts'
 
-const PLANS = 'nutrition-tracking:plans'
-const SLEEP = 'nutrition-tracking:sleep'
-const HEALTH = 'nutrition-tracking:health'
+const PLANS = 'workout-tracking:workout-plans'
+const SLEEP = 'workout-tracking:exercises'
+const HEALTH = 'workout-tracking:health'
 
 let close = () => {}
 afterEach(() => {
@@ -121,7 +121,7 @@ describe('store API', () => {
 
   it('rejects an unknown key with 404 and a body that is not { doc: JSON text, baseRev } with 400', async () => {
     const api = await start()
-    expect((await api.put('nutrition-tracking:theme', '"dark"', null)).status).toBe(404)
+    expect((await api.put('workout-tracking:theme', '"dark"', null)).status).toBe(404)
     expect((await api.put(PLANS, '{not json', null)).status).toBe(400)
     const raw = await fetch(`${api.base}/${encodeURIComponent(PLANS)}`, { method: 'PUT', body: '{"doc":{"version":3},"baseRev":null}' })
     expect(raw.status).toBe(400)
@@ -282,7 +282,7 @@ describe('GET /api/health/shortcut', () => {
     expect([res.status, res.headers.get('content-type'), res.headers.get('content-disposition'), body.subarray(0, 4).toString()]).toEqual([
       200,
       'application/octet-stream',
-      'attachment; filename="Plano - Saude.shortcut"',
+      'attachment; filename="Treino - Saude.shortcut"',
       'AEA1',
     ])
   }, 30_000)

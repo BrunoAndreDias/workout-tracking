@@ -26,9 +26,20 @@ export interface StoreDef<T> {
   parse(raw: unknown): T | null
   toDoc(value: T): object
   fresh(): T
+  /** The same text as the default, `JSON.stringify({ version, ...toDoc(value) })`, made faster. */
+  serialize?(value: T): string
 }
 
 const store = <T>(def: StoreDef<T>): StoreDef<T> => def
+
+// Sessions are saved on every set tick and keystroke, and the reducer keeps every session it did not change as the
+// same object, so each session's text is kept and only the edited one is serialized again.
+const sessionText = new WeakMap<WorkoutSession, string>()
+const sessionJson = (session: WorkoutSession): string => {
+  let text = sessionText.get(session)
+  if (text === undefined) sessionText.set(session, (text = JSON.stringify(session)))
+  return text
+}
 
 /** Every store the app keeps, in the order a Backup lists them. */
 export const STORES = {
@@ -55,6 +66,7 @@ export const STORES = {
     parse: parseWorkoutSessions,
     toDoc: (sessions) => ({ sessions }),
     fresh: () => [],
+    serialize: (sessions) => `{"version":${WORKOUT_SESSIONS_SCHEMA_VERSION},"sessions":[${sessions.map(sessionJson).join(',')}]}`,
   }),
   health: store<HealthLog>({ key: STORE_KEY.health, label: 'valores do relógio', version: HEALTH_SCHEMA_VERSION, parse: parseHealth, toDoc: (log) => ({ samples: logSamples(log) }), fresh: () => ({}) }),
   watchWorkouts: store<WatchWorkoutLog>({
@@ -115,7 +127,7 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
 }
 
 /** The exact text a store is saved as, in the browser and by the server. */
-export const serializeStore = <T>(def: StoreDef<T>, value: T): string => JSON.stringify({ version: def.version, ...def.toDoc(value) })
+export const serializeStore = <T>(def: StoreDef<T>, value: T): string => def.serialize?.(value) ?? JSON.stringify({ version: def.version, ...def.toDoc(value) })
 
 /** False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {

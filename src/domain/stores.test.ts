@@ -50,6 +50,16 @@ describe('the text each store writes', () => {
     `)
   })
 
+  it('workout sessions after an edit: the edited session, the others unchanged, the text JSON.stringify writes', () => {
+    const s = (id: string, kg: number): WorkoutSession => ({ id: id as WorkoutSessionId, date: '2026-10-05' as IsoDate, workoutDayId: null, exercises: [{ exerciseId: 'x1' as ExerciseId, sets: [{ done: true, reps: 8, kg, rir: null }] }] })
+    const plain = (sessions: WorkoutSession[]) => JSON.stringify({ version: 3, sessions })
+    const before = [s('s1', 40), s('s2', 50)]
+    expect(written((st) => saveStore(STORES.workoutSessions, before, st))['workout-tracking:workout-sessions']).toBe(plain(before))
+    const after = [before[0], s('s2', 52.5)]
+    expect(written((st) => saveStore(STORES.workoutSessions, after, st))['workout-tracking:workout-sessions']).toBe(plain(after))
+    expect(written((st) => saveStore(STORES.workoutSessions, [], st))['workout-tracking:workout-sessions']).toBe(plain([]))
+  })
+
   it('health, sorted by date then metric', () => {
     const health = { ['2026-10-05' as IsoDate]: { steps: 8000, standHours: 10 }, ['2026-10-04' as IsoDate]: { restingHeartRate: 58 } }
     expect(written((s) => saveStore(STORES.health, health, s))).toMatchInlineSnapshot(`

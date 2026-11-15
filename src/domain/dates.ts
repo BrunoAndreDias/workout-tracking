@@ -37,4 +37,11 @@ export const monthBounds = (year: number, month: number): readonly [IsoDate, Iso
 /** 0 for Monday through 6 for Sunday. */
 export const weekdayOf = (date: IsoDate): number => (fromIsoDate(date).getDay() + 6) % 7
 
-export const mondayOf = (date: IsoDate): IsoDate => addDays(date, -weekdayOf(date))
+// Block, week and Exercise Run math asks this of every session on every render, so each date is worked out once.
+const mondays = new Map<IsoDate, IsoDate>()
+
+export function mondayOf(date: IsoDate): IsoDate {
+  let monday = mondays.get(date)
+  if (monday === undefined) mondays.set(date, (monday = addDays(date, -weekdayOf(date))))
+  return monday
+}

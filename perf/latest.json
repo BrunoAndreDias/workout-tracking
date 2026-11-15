@@ -1,0 +1,86 @@
+{
+  "at": "2026-11-15T15:59:41.835Z",
+  "commit": "ffac6d2",
+  "label": "mondayOf cache + per-session JSON",
+  "cpuSlowdown": 4,
+  "work": {
+    "sessions": 208,
+    "sets": 4992,
+    "samples": 2555,
+    "watch": 208
+  },
+  "errors": [],
+  "runs": 7,
+  "metrics": {
+    "coldLoadMs": {
+      "median": 157.8,
+      "min": 156.1,
+      "max": 162.4
+    },
+    "warmLoadMs": {
+      "median": 61,
+      "min": 59.8,
+      "max": 68.4
+    },
+    "fcpMs": {
+      "median": 168,
+      "min": 164,
+      "max": 172
+    },
+    "lcpMs": {
+      "median": 168,
+      "min": 164,
+      "max": 172
+    },
+    "startSessionMs": {
+      "median": 37.9,
+      "min": 36.9,
+      "max": 42.2
+    },
+    "tickMs": {
+      "median": 5.2,
+      "min": 4.6,
+      "max": 5.8
+    },
+    "typeKgMs": {
+      "median": 3.2,
+      "min": 2.8,
+      "max": 3.9
+    },
+    "planTabMs": {
+      "median": 29.3,
+      "min": 28,
+      "max": 36.5
+    },
+    "registoTabMs": {
+      "median": 12.6,
+      "min": 12.4,
+      "max": 16.5
+    },
+    "relogioMs": {
+      "median": 9.2,
+      "min": 8.6,
+      "max": 9.6
+    },
+    "jsKB": {
+      "median": 104.6,
+      "min": 104.6,
+      "max": 104.6
+    },
+    "cssKB": {
+      "median": 6.9,
+      "min": 6.9,
+      "max": 6.9
+    },
+    "fontKB": {
+      "median": 155.4,
+      "min": 155.4,
+      "max": 155.4
+    },
+    "apiKB": {
+      "median": 27.6,
+      "min": 27.6,
+      "max": 27.6
+    }
+  }
+}

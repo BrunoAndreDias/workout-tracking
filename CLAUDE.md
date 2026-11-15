@@ -4,6 +4,8 @@ A single-user workout log in European Portuguese: Workout Plans, the sets of eac
 
 Run `npm run check` before every commit. It runs typecheck, lint, unit tests, `vite build` and every `e2e/*.mjs` against its own dev server. The `.githooks/pre-push` hook runs the same command before every push (enable it with `git config core.hooksPath .githooks`); there is no CI.
 
+`npm run perf` measures load and interaction times on a year of history and rewrites `perf/STATUS.md`. Run it after a change that could affect speed, and commit `perf/` with the change (README, Performance).
+
 Before merging, review the diff against `CODING_STANDARDS.md`.
 PRs target `main`.
 

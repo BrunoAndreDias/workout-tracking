@@ -172,6 +172,17 @@ npm run check            # all of the above plus vite build: run before every co
 
 `CONTEXT.md` holds the domain vocabulary.
 
+## Performance
+
+`npm run perf` builds the app, serves it with `server/serve.ts` on a free port and a temp database, and seeds a year of history: about 200 sessions on a 4-day plan, a year of watch values and Watch Workouts. It then times load and the main interactions in headless Chromium at phone size with 4× CPU slowdown, as the median of 7 runs. It writes `perf/STATUS.md` (baseline, previous run and now for each metric), `perf/latest.json` and `perf/history.jsonl`. Commit those three with the change they measure.
+
+```sh
+npm run perf -- --label "after X"      # record a run
+npm run perf -- --no-write --weeks 156 # three years of history, nothing written
+npm run perf -- --against ../other     # alternate runs with another worktree and compare; nothing written
+npm run perf -- --profile              # top self-time functions of a reopen and of 20 kg keystrokes
+```
+
 ## Licence
 
 MIT, see `LICENSE`.

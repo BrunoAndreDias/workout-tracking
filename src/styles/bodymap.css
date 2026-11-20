@@ -13,13 +13,13 @@
 .pick-row { display: flex; align-items: stretch; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--surface); }
 .pick-row:has(> .result:hover:not(:disabled)) { border-color: var(--input-border); }
 .pick-row:has(> .result.is-missing) { border-left: 3px solid var(--under); }
-.pick-row .result { flex: 1 1 auto; min-width: 0; min-height: 66px; padding-left: 12px; border: 0; border-radius: 0 12px 12px 0; background: transparent; }
+.pick-row .result { flex: 1 1 auto; min-width: 0; min-height: 72px; padding-left: 12px; border: 0; border-radius: 0 12px 12px 0; background: transparent; }
 .pick-row .result.is-missing { border-left: 0; }
-.muscles-btn { flex: none; width: 46px; margin: 6px 0 6px 6px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: var(--field); --bm-gap: var(--field); }
+.muscles-btn { flex: none; width: 52px; margin: 6px 0 6px 6px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: var(--field); --bm-gap: var(--field); }
 span.muscles-btn { background: transparent; }
 button.muscles-btn:hover { background: var(--accent-tint); --bm-gap: var(--accent-tint); }
 .muscles-btn:focus-visible { border-radius: 8px; }
-.bm-thumb { height: 54px; aspect-ratio: 120 / 256; --bm-gap-width: 2.2; }
+.bm-thumb { height: 62px; aspect-ratio: 120 / 256; --bm-gap-width: 2.2; }
 .pick-row:has(> .result:disabled) .bm-thumb { opacity: 0.5; }
 
 /* detail */
@@ -60,9 +60,9 @@ button.muscles-btn:hover { background: var(--accent-tint); --bm-gap: var(--accen
 
 @media (prefers-reduced-motion: no-preference) {
   .muscles-btn, .md-region { transition: background-color 0.15s ease, border-color 0.15s ease; }
-  .bm-figure .bm-region { transition: opacity 0.2s ease, fill 0.2s ease; }
+  .bm-figure .bm-region { transition: opacity 0.2s ease; }
   .bm-figure .bm-region[data-inv] { animation: bm-light 0.5s ease 0.12s both; }
   .muscle-detail { animation: md-enter 0.24s cubic-bezier(0.2, 0.8, 0.2, 1); }
 }
-@keyframes bm-light { from { fill: var(--bm-idle); } }
+@keyframes bm-light { from { opacity: 0; } }
 @keyframes md-enter { from { opacity: 0; transform: translateY(6px); } }

@@ -16,7 +16,7 @@ interface Props {
 
 const INVOLVEMENT: Record<Involvement, { title: string; hint: string }> = {
   target: { title: 'Alvo', hint: 'onde deves sentir' },
-  assist: { title: 'Ajuda', hint: 'também trabalha' },
+  assist: { title: 'Apoio', hint: 'também trabalham' },
 }
 
 /** Where a catalog Exercise should be felt: front and back figures and the worked regions, each naming the other. */

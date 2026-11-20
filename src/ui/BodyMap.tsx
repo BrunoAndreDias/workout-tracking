@@ -23,7 +23,7 @@ function litRegions(activation: Activation): CSSProperties {
 function figureLabel(activation: Activation, side: Side): string {
   const worked = workedOn(activation, side)
   const names = (inv: 'target' | 'assist') => worked.filter((w) => w.involvement === inv).map((w) => REGIONS[w.region].label).join(', ')
-  const parts = [names('target') && `alvo ${names('target')}`, names('assist') && `ajuda ${names('assist')}`].filter(Boolean)
+  const parts = [names('target') && `alvo ${names('target')}`, names('assist') && `apoio ${names('assist')}`].filter(Boolean)
   return `${SIDE_LABEL[side]}: ${parts.length > 0 ? parts.join('; ') : 'nada trabalhado deste lado'}`
 }
 

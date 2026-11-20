@@ -1,0 +1,100 @@
+import { chromium } from 'playwright'
+import { addExercise, createWorkoutPlan, openFresh, openWorkoutTab, workoutDay } from './_driver.mjs'
+const S = process.env.SHOTS ?? 'e2e/shots'
+const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
+const browser = await chromium.launch()
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+const errors = []
+page.on('pageerror', (e) => errors.push(e.message))
+page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+await openFresh(page, URL + '#treino')
+
+const INCLINE = 'Incline Barbell Bench Press'
+const dialog = page.getByRole('dialog')
+const search = dialog.getByLabel('Pesquisar exercício')
+const figureOf = (name) => dialog.getByRole('button', { name: `Ver músculos de ${name}`, exact: true })
+const regionNames = (title) => dialog.getByRole('region', { name: title, exact: true }).locator('.md-region').allTextContents()
+const readout = () => dialog.locator('.md-readout').textContent()
+const openDetail = async (name) => {
+  await figureOf(name).click()
+  await page.getByRole('dialog', { name, exact: true }).waitFor()
+}
+/** The detail fades in and its regions light up; a screenshot waits for that to end. */
+const settled = () => page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'))
+const noHorizontalScroll = () => page.evaluate(() => [document.documentElement, ...document.querySelectorAll('[role=dialog] .panel-body')].every((el) => el.scrollWidth <= el.clientWidth))
+
+await openWorkoutTab(page, 'Plano de treino')
+await createWorkoutPlan(page, { name: 'Força', days: 3 })
+const push = await workoutDay(page, 'Push')
+await addExercise(push, 'Supino')
+await push.getByRole('button', { name: 'Exercício', exact: true }).click()
+
+const catalog = dialog.getByRole('region', { name: 'Catálogo' })
+const names = await catalog.locator('.result-name').allTextContents()
+const figures = await catalog.locator('button.muscles-btn').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')))
+assert(names.length > 100 && JSON.stringify(figures) === JSON.stringify(names.map((n) => `Ver músculos de ${n}`)), `each of the ${names.length} catalog rows has a Ver músculos de <name> button`)
+const own = dialog.getByRole('region', { name: 'Os teus' })
+assert((await own.locator('.result-name').allTextContents()).join('|') === 'Supino', 'the user’s own Supino lists under Os teus')
+assert(await own.getByRole('button', { name: /^Ver músculos de/ }).count() === 0, 'and has no Ver músculos button')
+await page.screenshot({ path: `${S}/muscle-map-picker.png` })
+
+await search.fill('incline')
+await openDetail(INCLINE)
+assert(await dialog.getByRole('heading', { level: 2, name: INCLINE }).count() === 1, 'the detail is titled with the Exercise’s name')
+assert(await dialog.getByRole('button', { name: 'Voltar à lista' }).count() === 1, 'and has Voltar à lista')
+const front = await dialog.getByRole('img', { name: /^Frente:/ }).getAttribute('aria-label')
+assert(front.includes('alvo Peito (parte de cima)') && front.includes('apoio Ombro (frente), Peito'), `the front figure names what it lights: ${front}`)
+const back = await dialog.getByRole('img', { name: /^Costas:/ }).getAttribute('aria-label')
+assert(back.includes('apoio Tríceps'), `the back figure names the triceps: ${back}`)
+assert((await regionNames('Alvo')).join('|') === 'Peito (parte de cima)', 'Alvo lists Peito (parte de cima)')
+assert((await regionNames('Apoio')).join('|') === 'Ombro (frente)|Peito|Tríceps', 'Apoio lists Ombro (frente), Peito, Tríceps')
+assert((await readout()) === 'Toca ou aponta um músculo para ver o nome.', 'the readout asks for a muscle before one is pointed at')
+
+await dialog.getByRole('button', { name: 'Tríceps', exact: true }).hover()
+assert((await readout()) === 'TrícepsApoio: também trabalham', 'hovering the Tríceps pill names it in the readout')
+await dialog.getByRole('img', { name: /^Frente:/ }).locator('.bm-region[data-inv="target"]').first().hover()
+assert((await readout()) === 'Peito (parte de cima)Alvo: onde deves sentir', 'hovering the lit chest on the figure names it')
+assert(await dialog.locator('.md-region[data-active]').textContent() === 'Peito (parte de cima)', 'and highlights its pill')
+await settled()
+await page.screenshot({ path: `${S}/muscle-map-detail.png` })
+const shoulder = dialog.getByRole('button', { name: 'Ombro (frente)', exact: true })
+await shoulder.click()
+await page.mouse.move(5, 5)
+assert((await shoulder.getAttribute('aria-pressed')) === 'true' && (await readout()) === 'Ombro (frente)Apoio: também trabalham', 'a tapped pill stays named in the readout')
+
+await page.keyboard.press('Escape')
+await page.getByRole('dialog', { name: 'Adicionar exercício' }).waitFor()
+assert((await search.inputValue()) === 'incline', 'Escape returns to the list with the query kept')
+assert(await page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === `Ver músculos de ${n}`, INCLINE), 'and focuses the row it opened')
+await page.keyboard.press('Escape')
+await dialog.waitFor({ state: 'detached' })
+assert(true, 'a second Escape closes the dialog')
+
+await push.getByRole('button', { name: 'Exercício', exact: true }).click()
+await search.fill('incline barbell')
+await openDetail(INCLINE)
+await dialog.getByRole('button', { name: 'Escolher', exact: true }).click()
+await dialog.waitFor({ state: 'detached' })
+assert((await push.locator('.planned-name').allTextContents()).includes(INCLINE), 'Escolher in the detail adds the Exercise to the day')
+
+await push.getByRole('button', { name: 'Exercício', exact: true }).click()
+await search.fill('incline barbell')
+await openDetail(INCLINE)
+const taken = dialog.getByRole('button', { name: 'Já adicionado', exact: true })
+assert((await taken.count()) === 1 && (await taken.isDisabled()), 'a taken Exercise’s detail shows a disabled Já adicionado')
+assert(await dialog.getByRole('button', { name: 'Escolher', exact: true }).count() === 0, 'and no Escolher')
+await dialog.getByRole('button', { name: 'Voltar à lista' }).click()
+assert((await search.inputValue()) === 'incline barbell', 'Voltar à lista keeps the query too')
+
+await page.setViewportSize({ width: 390, height: 844 })
+await search.fill('lateral')
+await openDetail('Dumbbell Lateral Raises')
+assert(await noHorizontalScroll(), 'the detail has no horizontal scroll at 390 px')
+await settled()
+await page.screenshot({ path: `${S}/muscle-map-detail-mobile.png` })
+await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
+await dialog.waitFor({ state: 'detached' })
+
+assert(errors.length === 0, `no console errors (${errors.join(' | ')})`)
+await browser.close()

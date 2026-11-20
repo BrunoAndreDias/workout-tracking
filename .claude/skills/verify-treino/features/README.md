@@ -41,6 +41,7 @@ Each feature file starts with an H1 and one paragraph describing what the user s
 ## Features
 
 - [Workouts](./workouts.md): the `Treino` view, with Workout Plans made of a Training Split and Training Blocks, the exercise catalog, the session logger per date with suggested sets ticked with ✓, the end-of-session feel, and After-effects on the sessions of the last three days.
+- [Exercise picker](./picker.md): `Adicionar exercício` and `Trocar exercício`, with the search, the muscle-group filter, `+ Criar`, and each catalog Exercise's body map of where it is felt (`Alvo`, `Apoio`).
 - [Material](./equipment.md): `Treino` → `Material`, with the Locais and their material, the user's own material, each Exercise's material with `Alterado` and `Repor`, and the picker's `Falta:` flags and order.
 - [Relógio](./relogio.md): the `Relógio` view, with the date stepper, the card of the day's, week's and month's watch values, and `Ligar Apple Watch` (the signed Shortcut download, its address, posted values, manual paste, workouts from the Health export).
 - [Backup](./backup.md): export all data to a JSON file, import it, or a meal-app Backup, with merge or replace, and reject corrupt files.

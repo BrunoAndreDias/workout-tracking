@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activationByName, mainSide, REGIONS, workedRegions } from './anatomy.ts'
+import { activationByName, mainSide, REGIONS, workedOn, workedRegions } from './anatomy.ts'
 import { CATALOG } from './catalogEntries.ts'
 
 describe('what each catalog Exercise works', () => {
@@ -23,6 +23,13 @@ describe('what each catalog Exercise works', () => {
   it('shows the figure of the side the target is on', () => {
     expect(mainSide(activationByName('Pull-Ups')!)).toBe('back')
     expect(mainSide(activationByName('Leg Extensions')!)).toBe('front')
+  })
+
+  it('splits what it works between the front and back figures, the side delt and traps on both', () => {
+    const row = activationByName('Barbell Upright Rows')!
+    const on = (side: 'front' | 'back') => workedOn(row, side).map((w) => w.region)
+    expect(on('front')).toEqual(['traps', 'delt-side', 'delt-front', 'biceps'])
+    expect(on('back')).toEqual(['traps', 'delt-side'])
   })
 
   it('has nothing for an Exercise of the user’s own', () => {

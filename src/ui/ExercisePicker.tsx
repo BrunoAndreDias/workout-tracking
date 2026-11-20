@@ -1,11 +1,14 @@
-import { useContext, useId, useState } from 'react'
+import { useContext, useId, useLayoutEffect, useRef, useState } from 'react'
+import { activationByName } from '../domain/anatomy.ts'
 import { activeGym, missingAt, needsOf, readyFirst } from '../domain/equipment.ts'
 import { catalogEntry, exerciseKey, MUSCLE_LABEL, pickerList } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'
 import { materialText } from './format.ts'
-import { SearchIcon } from './icons.tsx'
+import { BodySprite, BodyThumb } from './BodyMap.tsx'
+import { ChevronIcon, SearchIcon } from './icons.tsx'
+import { MuscleDetail } from './MuscleDetail.tsx'
 import { Panel } from './Panel.tsx'
 
 interface Props {
@@ -24,12 +27,17 @@ const MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[]
 
 /**
  * One tap picks a catalog Exercise, one of the user's own, or a new name. With an active Gym, what it has the material
- * for lists first in each section, and the rest is flagged with what it lacks but stays pickable.
+ * for lists first in each section, and the rest is flagged with what it lacks but stays pickable. A catalog Exercise's
+ * figure opens where it should be felt, inside the panel; going back keeps the search, the filter and the scroll.
  */
 export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onClose }: Props) {
   const searchId = useId()
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<Muscle | null>(null)
+  const [detail, setDetail] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const listScroll = useRef(0)
+  const returnTo = useRef<string | null>(null)
   const { state: equipment, dispatch: dispatchEquipment } = useContext(EquipmentContext)
   const listed = pickerList(query, muscle, current)
   const same = readyFirst(equipment, listed.same, (e) => e.name)
@@ -44,6 +52,52 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   const pick = (name: string) => {
     onPick(name)
     onClose()
+  }
+  const sub = (name: string, group: string) => `${group} · ${materialText(equipment, needsOf(equipment, name))}`
+  const openDetail = (name: string) => {
+    listScroll.current = listRef.current?.scrollTop ?? 0
+    setDetail(name)
+  }
+  const closeDetail = () => {
+    returnTo.current = detail
+    setDetail(null)
+  }
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (detail !== null || !list || returnTo.current === null) return
+    list.scrollTop = listScroll.current
+    const name = returnTo.current
+    returnTo.current = null
+    list.querySelector<HTMLElement>(`.muscles-btn[data-name="${CSS.escape(name)}"]`)?.focus({ preventScroll: true })
+  }, [detail])
+
+  const detailEntry = detail === null ? undefined : catalogEntry(detail)
+  const activation = detailEntry && activationByName(detailEntry.name)
+  if (detailEntry && activation) {
+    const missing = missingAt(equipment, detailEntry.name) ?? []
+    return (
+      <Panel
+        eyebrow="Músculos trabalhados"
+        title={detailEntry.name}
+        onClose={onClose}
+        onEscape={closeDetail}
+        head={
+          <button type="button" className="text-btn md-back" autoFocus onClick={closeDetail}>
+            <ChevronIcon left />
+            Voltar à lista
+          </button>
+        }
+      >
+        <MuscleDetail
+          activation={activation}
+          sub={sub(detailEntry.name, MUSCLE_LABEL[detailEntry.muscle])}
+          missing={missing.length > 0 ? materialText(equipment, missing) : null}
+          taken={takenKeys.has(exerciseKey(detailEntry.name))}
+          onPick={() => pick(detailEntry.name)}
+        />
+      </Panel>
+    )
   }
 
   const head = (
@@ -98,12 +152,20 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   const row = (name: string, group: string) => {
     const isTaken = takenKeys.has(exerciseKey(name))
     const missing = missingAt(equipment, name) ?? []
+    const worked = activationByName(name)
     return (
-      <li key={name}>
+      <li key={name} className="pick-row">
+        {worked ? (
+          <button type="button" className="muscles-btn" data-name={name} aria-label={`Ver músculos de ${name}`} onClick={() => openDetail(name)}>
+            <BodyThumb activation={worked} />
+          </button>
+        ) : (
+          <span className="muscles-btn" aria-hidden="true" />
+        )}
         <button type="button" className={missing.length > 0 ? 'result is-missing' : 'result'} disabled={isTaken} onClick={() => pick(name)}>
           <span className="result-main">
             <span className="result-name">{name}</span>
-            <span className="result-sub">{isTaken ? 'Já adicionado' : `${group} · ${materialText(equipment, needsOf(equipment, name))}`}</span>
+            <span className="result-sub">{isTaken ? 'Já adicionado' : sub(name, group)}</span>
             {!isTaken && missing.length > 0 && <span className="missing-line">Falta: {materialText(equipment, missing)}</span>}
           </span>
         </button>
@@ -114,7 +176,8 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
 
   return (
     <Panel eyebrow={eyebrow} title={current === null ? 'Adicionar exercício' : 'Trocar exercício'} onClose={onClose} head={head}>
-      <div className="panel-body">
+      <div ref={listRef} className="panel-body">
+        <BodySprite />
         {!gym && <p className="muted hint picker-hint">Marca o material que tens em Treino → Material, e o que dá para fazer aparece primeiro.</p>}
         {current !== null && (
           <div className="swap-card">

@@ -8,11 +8,13 @@ interface Props {
   onClose: () => void
   /** Fixed content under the title, above the scrolling body. */
   head?: ReactNode
+  /** What Escape does, when it is not closing the panel. */
+  onEscape?: () => void
   children: ReactNode
 }
 
 /** A modal side sheet: full height on the right, full screen on phones. */
-export function Panel({ eyebrow, title, onClose, head, children }: Props) {
+export function Panel({ eyebrow, title, onClose, head, onEscape = onClose, children }: Props) {
   const titleId = useId()
   const ref = useRef<HTMLDivElement>(null)
   // Read during the first render, before an autofocused field inside the panel takes focus.
@@ -40,7 +42,7 @@ export function Panel({ eyebrow, title, onClose, head, children }: Props) {
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose()
+          if (e.key === 'Escape') onEscape()
         }}
       >
         <div className="panel-top">

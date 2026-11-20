@@ -93,3 +93,6 @@ export function mainSide(activation: Activation): Side {
 /** The regions it works, targets first, each list in the muscle list's order. */
 export const workedRegions = (activation: Activation): { region: Region; involvement: Involvement }[] =>
   (['target', 'assist'] as const).flatMap((inv) => REGION_ORDER.filter((r) => activation[inv].includes(r)).map((region) => ({ region, involvement: inv })))
+
+/** The worked regions a side's figure shows, in `workedRegions` order. */
+export const workedOn = (activation: Activation, side: Side) => workedRegions(activation).filter(({ region }) => REGIONS[region].sides.includes(side))

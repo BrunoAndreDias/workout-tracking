@@ -15,15 +15,15 @@ The third tab of the `Treino` view holds what the user trains with. A Local (Gym
 ## How to get to it (user POV)
 
 - `Treino` → the tab `Material` in the `nav` named `Treino`.
-- The picker from `Exercício` or ⇄ in `Plano de treino`, or `Exercício` in a session on `Registo`.
+- The picker from `Exercício` or ⇄ in `Plano de treino`, `Exercício` in a session on `Registo`, or `Trocar` in `Exercícios a rever`.
 
 ## Driving it with session.mjs
 
-Preconditions: a fresh `openApp`. Material sits under `Treino`; nothing else is needed. For the picker, create a Workout Plan with `createWorkoutPlan(page, { days: 3 })` from `e2e/_driver.mjs`.
+Preconditions: a fresh `openApp`. Material sits under `Treino`; nothing else is needed. For the picker, `app.workoutTab('Plano de treino')` and create a Workout Plan with `createWorkoutPlan(page, { days: 3 })` from `e2e/_driver.mjs`.
 
 - **Open.** `openWorkoutTab(page, 'Material')` from `e2e/_driver.mjs`.
 - **Add a Local.** `addGym(page, 'Casa', ['Halteres', 'Banco plano'])` from `e2e/_driver.mjs`: the group `Local ativo` has `Casa` pressed, and `getByRole('list', { name: 'Material em Casa' }).getByRole('checkbox', { checked: true })` counts 2.
-- **Picker flags.** On `Plano de treino`, `Push` → `Exercício`, search `curl`: `Standing Dumbbell Curls` lists before `Standing Barbell Curls`, which is `.is-missing` with `Falta: Barra`. `Flat Barbell Bench Press` in Push shows `Falta: Barra, Suporte de barra (rack)`.
+- **Picker flags.** On `Plano de treino`, `Push` → `Exercício`, search `curl`: `Standing Dumbbell Curls` lists before `Standing Barbell Curls`, which is `.is-missing` with `Falta: Barra`. On Push's card (not in the picker, where it reads `Já adicionado`), the Planned Exercise `Flat Barbell Bench Press` shows `Falta: Barra, Suporte de barra (rack)`.
 - **Correct.** In `Exercícios`, search the Exercise, click `Tirar Barra de Standing Barbell Curls`, then `selectOption({ label: 'Halteres' })` on `Juntar material a Standing Barbell Curls`: `Alterado` shows, and the picker no longer flags it. `app.stored().equipment.needs` is `{ 'standing barbell curls': ['dumbbells'] }`.
 - **Reset.** `Repor o material de Standing Barbell Curls`: `Alterado` is gone and the flag is back.
 - **Switch.** A second Local with `Marcar tudo`, then in the picker the group `Local` → `Casa` flags again.

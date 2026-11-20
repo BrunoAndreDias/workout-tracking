@@ -24,5 +24,5 @@ Preconditions:
 
 ## Gotchas
 
-- `app.stored()` reads only the twelve data stores, not the theme key. Read the key with `page.evaluate`.
+- `app.stored()` reads only the six data stores, not the theme key. Read the key with `page.evaluate`.
 - A layout or colour change should be checked in both themes. Toggle through the button rather than setting `data-theme` by hand.

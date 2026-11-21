@@ -59,15 +59,6 @@ describe('the text each store writes', () => {
     expect(written((st) => saveStore(STORES.workoutSessions, after, st))['workout-tracking:workout-sessions']).toBe(plain(after))
     expect(written((st) => saveStore(STORES.workoutSessions, [], st))['workout-tracking:workout-sessions']).toBe(plain([]))
   })
-
-  it('health, sorted by date then metric', () => {
-    const health = { ['2026-10-05' as IsoDate]: { steps: 8000, standHours: 10 }, ['2026-10-04' as IsoDate]: { restingHeartRate: 58 } }
-    expect(written((s) => saveStore(STORES.health, health, s))).toMatchInlineSnapshot(`
-      {
-        "workout-tracking:health": "{"version":1,"samples":[{"date":"2026-10-04","metric":"restingHeartRate","value":58},{"date":"2026-10-05","metric":"standHours","value":10},{"date":"2026-10-05","metric":"steps","value":8000}]}",
-      }
-    `)
-  })
 })
 
 describe('saving a store as the app starts', () => {
@@ -75,24 +66,24 @@ describe('saving a store as the app starts', () => {
     const writes: string[] = []
     return { writes, data, storage: { getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (writes.push(k), (data[k] = v)), removeItem: (k: string) => void delete data[k] } }
   }
-  const HEALTH_TEXT = '{"version":1,"samples":[{"date":"2026-10-05","metric":"steps","value":8000}]}'
+  const EXERCISES_TEXT = '{"version":1,"exercises":[{"id":"x1","name":"Supino"}]}'
 
   it('leaves a store read at the current version as it was read, until it changes', () => {
-    const { writes, data, storage } = storageWith({ [STORES.health.key]: HEALTH_TEXT })
-    const health = loadStore(STORES.health, storage)
-    expect(saveStore(STORES.health, health, storage)).toBe(true)
+    const { writes, data, storage } = storageWith({ [STORES.exercises.key]: EXERCISES_TEXT })
+    const exercises = loadStore(STORES.exercises, storage)
+    expect(saveStore(STORES.exercises, exercises, storage)).toBe(true)
     expect(writes).toEqual([])
-    expect(data[STORES.health.key]).toBe(HEALTH_TEXT)
-    saveStore(STORES.health, { ...health, ['2026-10-06' as IsoDate]: { steps: 2 } }, storage)
-    expect(data[STORES.health.key]).toBe('{"version":1,"samples":[{"date":"2026-10-05","metric":"steps","value":8000},{"date":"2026-10-06","metric":"steps","value":2}]}')
+    expect(data[STORES.exercises.key]).toBe(EXERCISES_TEXT)
+    saveStore(STORES.exercises, [...exercises, { id: 'x2' as ExerciseId, name: 'Remada' }], storage)
+    expect(data[STORES.exercises.key]).toBe('{"version":1,"exercises":[{"id":"x1","name":"Supino"},{"id":"x2","name":"Remada"}]}')
   })
 
   it('writes the read value again once the stored text is another', () => {
-    const { data, storage } = storageWith({ [STORES.health.key]: HEALTH_TEXT })
-    const health = loadStore(STORES.health, storage)
-    data[STORES.health.key] = '{"version":1,"samples":[]}'
-    saveStore(STORES.health, health, storage)
-    expect(data[STORES.health.key]).toBe(HEALTH_TEXT)
+    const { data, storage } = storageWith({ [STORES.exercises.key]: EXERCISES_TEXT })
+    const exercises = loadStore(STORES.exercises, storage)
+    data[STORES.exercises.key] = '{"version":1,"exercises":[]}'
+    saveStore(STORES.exercises, exercises, storage)
+    expect(data[STORES.exercises.key]).toBe(EXERCISES_TEXT)
   })
 
   it('writes a store read at an older version in the current one', () => {

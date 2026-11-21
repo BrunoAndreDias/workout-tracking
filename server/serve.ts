@@ -63,6 +63,6 @@ server.listen(port, host, () => {
   if (host !== '0.0.0.0' && host !== '::') return
   console.log('Open on the iPhone (same Wi-Fi):')
   for (const url of phoneUrls(networkInterfaces(), localHostName(), port)) console.log(`  ${url}`)
-  console.log('Install the Shortcut from the .local address. It survives a new Wi-Fi IP.')
+  console.log('Prefer the .local address. It survives a new Wi-Fi IP.')
   console.log('Warning: there is no login. Anyone on this Wi-Fi can read and change everything.')
 })

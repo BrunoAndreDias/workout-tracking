@@ -3,8 +3,6 @@ import type { Dispatch } from 'react'
 import type { EquipmentAction, EquipmentState } from '../domain/equipment.ts'
 import { newId } from '../domain/ids.ts'
 import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
-import { watchWorkoutsOn } from '../domain/watchWorkouts.ts'
-import type { WatchWorkoutLog } from '../domain/watchWorkouts.ts'
 import { blockChanges, currentBlock, exerciseRuns, findDay, nextDay } from '../domain/blocks.ts'
 import { sessionsBefore, sessionsOn } from '../domain/sessions.ts'
 import type { BlockPosition } from '../domain/blocks.ts'
@@ -16,7 +14,6 @@ import { EquipmentView } from './EquipmentView.tsx'
 import { ExerciseRunsNotice } from './ExerciseRunsNotice.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
 import { formatRange, sessionTitle } from './format.ts'
-import { WatchWorkoutLine } from './WorkoutLines.tsx'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
 import { WorkoutSessionCard } from './WorkoutSessionCard.tsx'
 
@@ -26,7 +23,6 @@ interface Props {
   date: IsoDate
   today: IsoDate
   onDate: (date: IsoDate) => void
-  watch: WatchWorkoutLog
   equipment: EquipmentState
   dispatchEquipment: Dispatch<EquipmentAction>
 }
@@ -54,12 +50,11 @@ const TABS = [
   { id: 'material', label: 'Material' },
 ] as const
 
-export function WorkoutView({ state, dispatch, date, today, onDate, watch, equipment, dispatchEquipment }: Props) {
+export function WorkoutView({ state, dispatch, date, today, onDate, equipment, dispatchEquipment }: Props) {
   const equipmentStore = useMemo(() => ({ state: equipment, dispatch: dispatchEquipment }), [equipment, dispatchEquipment])
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('registo')
   const [adding, setAdding] = useState(false)
   const sessions = sessionsOn(state.sessions, date)
-  const watched = watchWorkoutsOn(watch, date)
   const activePlan = state.plans.find((p) => p.id === state.activePlanId)
   const { block, position } = activePlan ? currentBlock(activePlan, state.sessions, date) : { block: undefined, position: null }
   const next = activePlan && nextDay(activePlan, state.sessions, date)
@@ -95,16 +90,6 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch, equip
           <DateStepper date={date} today={today} onDate={goTo} label="Data do treino" />
           {date <= today && <RecentSessions state={state} date={date} dispatch={dispatch} />}
 
-          {watched.length > 0 && (
-            <ul className="watch-workouts" aria-label="Treinos do relógio">
-              {watched.map((w) => (
-                <li key={w.id} className="workout-line">
-                  <WatchWorkoutLine workout={w} />
-                </li>
-              ))}
-            </ul>
-          )}
-
           {sessions.map((s) => {
             const day = s.workoutDayId === null ? undefined : findDay(state.plans, s.workoutDayId)
             return <WorkoutSessionCard key={s.id} session={s} before={sessionsBefore(state.sessions, s)} day={day} title={sessionTitle(s, state.plans)} exercises={state.exercises} dispatch={dispatch} />
@@ -129,7 +114,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, watch, equip
               )}
               {date <= today && block && <p className="block-line">{blockLine(block, position)}</p>}
               <h2 id="comecar-treino" className="session-title">
-                {sessions.length > 0 ? 'Outro treino' : watched.length > 0 ? 'Registar as séries' : 'Sem treino registado'}
+                {sessions.length > 0 ? 'Outro treino' : 'Sem treino registado'}
               </h2>
               {date > today ? (
                 <p className="muted">Dia futuro. Só podes registar até hoje.</p>

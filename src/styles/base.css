@@ -17,7 +17,7 @@ small { font-size: 0.85em; color: var(--muted); }
 
 /* header */
 .top { display: flex; flex-direction: column; gap: 14px; }
-.top-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; }
+.top-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px 16px; }
 
 /* Fixed so it is seen wherever the page is scrolled to; below the side panels. */
 .sync-line { position: fixed; z-index: 40; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-segment); font-size: 14px; color: var(--muted); }
@@ -39,7 +39,6 @@ small { font-size: 0.85em; color: var(--muted); }
 
 /* notes and dictation */
 .changed-tag { flex: none; align-self: flex-start; justify-self: start; padding: 1px 8px; border-radius: 999px; background: var(--under-bg); font-size: 12px; font-weight: 500; color: var(--under-fg); }
-.sos-tag { flex: none; align-self: flex-start; padding: 1px 8px; border-radius: 999px; background: var(--track); font-size: 12px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
 .text-btn.quiet { color: var(--ink-2); font-weight: 400; }
 .text-btn.quiet:hover { background: var(--rule); color: var(--ink); }
 .notes-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }

@@ -141,9 +141,6 @@
 .muscle-days { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .muscle-gap .muscle-name, .muscle-gap .muscle-sets { color: var(--muted); font-weight: 400; }
 .muscles-note { font-size: 14px; }
-.workout-line { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 32px; color: var(--muted); font-size: 14px; text-decoration: none; }
-.workout-line:hover .workout-line-name { text-decoration: underline; text-underline-offset: 3px; }
-.workout-line-name { font-weight: 600; color: var(--ink); }
 
 /* the 1–5 rating scale */
 .rating-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: 520px; }
@@ -151,27 +148,7 @@
 .rating-pick:hover { border-color: var(--muted); }
 .rating-pick[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
 
-/* rating rows and the Apple Watch import */
+/* rating rows */
 .rating-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 6px 12px; }
 .rating-label { display: flex; flex-direction: column; font-size: 14px; font-weight: 600; color: var(--ink); }
 .backup-done { margin: 0; font-size: 14px; color: var(--ink-2); flex: 1 1 100%; }
-.health-import { display: flex; flex-direction: column; gap: 12px; padding-inline: 16px; }
-.health-import > .secondary { align-self: flex-start; }
-.health-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
-.health-latest { margin: 0; font: 500 20px/1.3 var(--font-serif); }
-.health-install { display: inline-flex; align-items: center; align-self: flex-start; text-decoration: none; }
-.health-url { display: grid; gap: 6px; }
-.health-url-label { font-size: 13px; font-weight: 500; color: var(--ink-2); }
-.health-url-row { display: flex; gap: 8px; }
-.health-url-field { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--input-border); border-radius: 10px; background: var(--surface); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; color: var(--ink); }
-.health-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
-.health-steps strong { font-weight: 600; color: var(--ink); }
-.health-manual { border-top: 1px solid var(--rule); }
-.health-workouts { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--rule); }
-.health-workouts > .secondary, .health-workouts > .primary { align-self: flex-start; }
-.health-workouts-title { margin: 0; font: 500 20px/1.3 var(--font-serif); }
-.watch-workouts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.health-manual summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; font-weight: 500; color: var(--ink); }
-.health-manual summary:hover { color: var(--accent); }
-.health-manual .health-import { padding: 0 0 16px; }
-.health-manual .primary { align-self: flex-start; }

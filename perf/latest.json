@@ -1,76 +1,69 @@
 {
-  "at": "2026-11-15T15:59:41.835Z",
-  "commit": "ffac6d2",
-  "label": "mondayOf cache + per-session JSON",
+  "at": "2026-11-21T15:12:57.384Z",
+  "commit": "3487d01+dirty",
+  "label": "remove Apple Watch",
   "cpuSlowdown": 4,
   "work": {
     "sessions": 208,
-    "sets": 4992,
-    "samples": 2555,
-    "watch": 208
+    "sets": 4992
   },
   "errors": [],
   "runs": 7,
   "metrics": {
     "coldLoadMs": {
-      "median": 157.8,
-      "min": 156.1,
-      "max": 162.4
+      "median": 145.5,
+      "min": 141.6,
+      "max": 151.1
     },
     "warmLoadMs": {
-      "median": 61,
-      "min": 59.8,
-      "max": 68.4
+      "median": 52.6,
+      "min": 51.9,
+      "max": 54
     },
     "fcpMs": {
-      "median": 168,
-      "min": 164,
-      "max": 172
+      "median": 152,
+      "min": 148,
+      "max": 160
     },
     "lcpMs": {
-      "median": 168,
-      "min": 164,
-      "max": 172
+      "median": 152,
+      "min": 148,
+      "max": 160
     },
     "startSessionMs": {
-      "median": 37.9,
-      "min": 36.9,
-      "max": 42.2
+      "median": 38.2,
+      "min": 37.1,
+      "max": 42.1
     },
     "tickMs": {
-      "median": 5.2,
-      "min": 4.6,
-      "max": 5.8
+      "median": 4.9,
+      "min": 4.2,
+      "max": 5.2
     },
     "typeKgMs": {
-      "median": 3.2,
-      "min": 2.8,
-      "max": 3.9
+      "median": 3.1,
+      "min": 2.6,
+      "max": 4.2
     },
     "planTabMs": {
-      "median": 29.3,
-      "min": 28,
-      "max": 36.5
+      "median": 29.2,
+      "min": 27.3,
+      "max": 31.8
     },
     "registoTabMs": {
-      "median": 12.6,
-      "min": 12.4,
-      "max": 16.5
-    },
-    "relogioMs": {
-      "median": 9.2,
-      "min": 8.6,
-      "max": 9.6
+      "median": 13.4,
+      "min": 11.8,
+      "max": 14.3
     },
     "jsKB": {
-      "median": 104.6,
-      "min": 104.6,
-      "max": 104.6
+      "median": 102.4,
+      "min": 102.4,
+      "max": 102.4
     },
     "cssKB": {
-      "median": 6.9,
-      "min": 6.9,
-      "max": 6.9
+      "median": 7.3,
+      "min": 7.3,
+      "max": 7.3
     },
     "fontKB": {
       "median": 155.4,
@@ -78,9 +71,9 @@
       "max": 155.4
     },
     "apiKB": {
-      "median": 27.6,
-      "min": 27.6,
-      "max": 27.6
+      "median": 17.1,
+      "min": 17.1,
+      "max": 17.1
     }
   }
 }

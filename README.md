@@ -1,12 +1,10 @@
 # Treino
 
-A private, single-user workout log in European Portuguese, for the gym and the Apple Watch.
+A private, single-user workout log in European Portuguese, for the gym.
 
 The app opens on `Treino`. Its `Plano de treino` tab holds your workout plan: a 3-day split (Push, Pull, Full body) or a 4-day one (Upper and Lower twice), which starts filled with exercises from a catalog you swap and add to, each with its sets and rep range. The plan names the muscle groups each day trains and adds up the block's sets a week per muscle group, so a group left untrained shows. It is written as training blocks, such as 6 weeks from 4–5 to 0–1 reps in reserve. The app counts the weeks you trained, starts the next day of the rotation from the current block, and on the week a new block starts says which exercises come in and go. `Registo` logs the sets of one date: each set comes with a suggested weight and reps worked out from the last time, and one tap marks it done; the session names the muscle groups its done sets trained. It also keeps how each session felt at its end and, on the following days, how it still feels, for the whole session or one exercise, so an injury that shows a day or two late can be followed. `Material` says what each exercise needs and what each place you train has, so the exercise picker lists first what you can do there.
 
-The `Relógio` tab shows the Apple Watch values of a date, its week and its month, which an iOS Shortcut sends to the app (see [Apple Watch import](#apple-watch-import)). The workouts the watch records come from the Health app's export instead, and show on `Treino` (see [Workouts from the Health export](#workouts-from-the-health-export)).
-
-This app was split from a meal-planning app. A Backup that app exported imports here: its workouts, material and watch data come in, and its food data is left out (see [Moving data over from the meal app](#moving-data-over-from-the-meal-app)).
+This app was split from a meal-planning app. A Backup that app exported imports here: its workouts and material come in, and its food and Apple Watch data are left out (see [Moving data over from the meal app](#moving-data-over-from-the-meal-app)).
 
 ## Run
 
@@ -17,7 +15,7 @@ npm run dev            # http://localhost:5180
 
 ## Where the data lives
 
-Exercises, workout plans, sessions, material, watch values and watch workouts live in a SQLite file on this machine, `~/.workout-tracking/workout.sqlite`. Set `WORKOUT_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. It is not the meal app's file, so the two apps never write into each other's data. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`, and take the watch's values at `/api/health`.
+Exercises, workout plans, sessions and material live in a SQLite file on this machine, `~/.workout-tracking/workout.sqlite`. Set `WORKOUT_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. It is not the meal app's file, so the two apps never write into each other's data. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
 
 The browser keeps a working copy in localStorage, under `workout-tracking:` keys. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
@@ -44,10 +42,10 @@ Tests never open this file. `npm run e2e` and the verify-treino skill give each 
 ## Moving data over from the meal app
 
 1. In the meal app, `Exportar dados` downloads `plano-alimentar-<date>.json`.
-2. Here, `Importar dados` and pick that file. The panel says what comes in, such as `1 plano de treino, 12 treinos, 340 valores do relógio, 25 treinos do relógio, 2 locais de treino`.
+2. Here, `Importar dados` and pick that file. The panel says what comes in, such as `1 plano de treino, 12 treinos, 2 locais de treino`.
 3. Tap `Juntar aos meus dados`, or `Substituir tudo` on an empty app.
 
-Only the stores this app keeps are read: exercises, workout plans and sessions, material, watch values and watch workouts. The plans, foods, units, day logs, sleep, Feelings and Mood Notes in the file are ignored, and the file is still rejected whole when one of the stores this app reads is damaged. `src/domain/mealAppBackup.test.ts` and `e2e/backup.mjs` import a full Backup the meal app exported.
+Only the stores this app keeps are read: exercises, workout plans and sessions, and material. The plans, foods, units, day logs, sleep, Feelings, Mood Notes and Apple Watch data in the file are ignored, and the file is still rejected whole when one of the stores this app reads is damaged. `src/domain/mealAppBackup.test.ts` and `e2e/backup.mjs` import a full Backup the meal app exported.
 
 ## On the iPhone
 
@@ -56,9 +54,9 @@ The app installs on the iPhone home screen as a web app, with its own icon and n
 1. Open the app in Safari on the iPhone (see below for the address).
 2. Tap `Partilhar`, then `Adicionar ao ecrã principal`.
 
-The phone must reach the server, the same as for the [Apple Watch import](#apple-watch-import):
+The phone must reach the server. `npm run dev` and `npm run serve` listen on this machine only, so:
 
-- **Same Wi-Fi.** `pnpm dev-read` (or `npm run dev-read`, the same as `HOST=0.0.0.0 npm run serve`) builds, serves on port 4173 and prints the addresses to open on the iPhone. Open the `http://<Mac name>.local:4173/` one. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
+- **Same Wi-Fi.** `pnpm dev-read` (or `npm run dev-read`, the same as `HOST=0.0.0.0 npm run serve`) builds, serves on port 4173 and prints the addresses to open on the iPhone. Open the `http://<Mac name>.local:4173/` one: it stays the same when the Mac gets a new IP. The printed IPs skip VPN tunnels such as `utun`, which the phone cannot reach. The API has no login, so everyone on that Wi-Fi can read and change everything. Use a network you trust.
 - **Tailscale.** Install it on the Mac and the iPhone. `tailscale serve --bg 4173` gives an HTTPS address on your tailnet, and the server keeps listening on `127.0.0.1` only.
 
 The microphone needs HTTPS, so dictation works on the phone only through the Tailscale address. Over plain `http://` on the Wi-Fi, the rest of the app works and the mic button does not.
@@ -67,91 +65,9 @@ There is no service worker. The app needs the Mac's server for its data anyway, 
 
 **Untested on a device.** The manifest, the icons and the head tags are checked in `e2e/pwa.mjs`. Adding to the home screen has not been tried on an iPhone.
 
-## Apple Watch import
-
-A web page cannot read HealthKit, so an iOS Shortcut does: each run posts the last 14 days and today to the app's server, by hand or from an optional Personal Automation. `Ligar Apple Watch`, on the `Relógio` tab, leads with `Instalar atalho`, which downloads that Shortcut ready-made (see [Atalho iOS](#atalho-ios)), and shows the address it posts to (`<the address you opened the app at>/api/health`) with a `Copiar` button, the latest date the app has a watch value for (`Último valor do relógio: 5 out`), and the install steps in short.
-
-**Untested on a device.** The endpoint, the signing, the panel and the merge are tested here (`server/storeApi.test.ts`, `server/healthShortcut.test.ts`, `e2e/watch.mjs`); the Shortcut and the automation have not run on an iPhone.
-
-The phone must reach the server. `npm run dev` and `npm run serve` listen on this machine only, so:
-
-- **Same Wi-Fi.** `pnpm dev-read` (or `npm run dev-read`) prints the addresses to open. Open the app on the iPhone at the `http://<Mac name>.local:4173/` one and install the Shortcut from `Ligar Apple Watch` there. Prefer the `.local` name over the IP, because it stays the same when the Mac gets a new IP and the Shortcut keeps working. Untested on a device: that the iPhone's Shortcuts resolves `.local` names (iOS supports mDNS, and the Mac resolves its own name). The printed IPs skip VPN tunnels such as `utun`, which the phone cannot reach. A `localhost` address works only on the Mac, and the panel says so. Everyone else on that Wi-Fi can then reach the app too, so do this only on a network you trust.
-- **Anywhere.** A private VPN such as Tailscale, with the iPhone and the Mac on it, and the Mac's VPN address in place of the local IP.
-
-The API has no login: anyone who reaches it reads and changes everything. Keep it on your own network or VPN, and never expose it to the internet.
-
-### The endpoint
-
-`POST /api/health` takes the same text the paste takes, as the request body:
-
-```json
-{ "samples": [
-  { "date": "2026-10-05", "metric": "standHours", "value": 9 },
-  { "date": "2026-10-05", "metric": "steps", "value": 8123 }
-] }
-```
-
-It answers `200 { "count": 2, "from": "2026-10-05", "to": "2026-10-05" }`. A body the paste would reject answers `400 { "error": "<the same message>" }` and stores nothing. The server merges the values into the health store itself, so this is the one store whose contents it reads. If the stored health document cannot be read, it answers `409` and leaves it alone; open the app, which keeps an unreadable copy aside before it starts again. An open tab picks the new values up when you come back to it.
-
-A bare list of the same objects works too, and so does one object on its own, which is what the installed Shortcut posts. `date` is `YYYY-MM-DD`, `value` is a number of at least 0, and `metric` is one of:
-
-| `metric` | Unit | Row in the Relógio card |
-|---|---|---|
-| `standHours` | h | Horas em pé (h) 9 |
-| `standMinutes` | min | Tempo em pé (min) 42 |
-| `steps` | steps | Passos 8 123 |
-| `activeEnergy` | kcal | Energia ativa (kcal) 412 |
-| `exerciseMinutes` | min | Exercício (min) 31 |
-| `sleepMinutes` | min | Sono 7 h 11 min |
-| `restingHeartRate` | bpm | FC em repouso (bpm) 54 |
-
-A date and metric already stored is overwritten, so sending the same values twice changes nothing. Any bad row (unknown metric, bad date, negative or non-number value, or a date and metric repeated in the paste) rejects the whole request or paste with a message naming the row, and nothing is stored. `sleepMinutes` belongs to the date you woke up.
-
-### Atalho iOS
-
-**Untested on a device.** The Shortcut is built from Shortcuts' own action definitions and from shortcuts other people run, not run on an iPhone here. `docs/research/ios-shortcut-plist.md` lists each action, its source, and what is still a guess.
-
-`Ligar Apple Watch` → `Instalar atalho` downloads `Treino - Saude.shortcut`, a Shortcut already set up for this app. The server builds it for the address you opened the app at (`server/healthShortcut.ts`) and signs it with the Mac's `shortcuts sign --mode anyone`, so any iPhone can add it. Only a Mac can sign: elsewhere the panel says so, and you build the Shortcut by hand (below) or use `Colar manualmente`.
-
-On the iPhone:
-
-1. Open the app at the Mac's network or VPN address (not `localhost`) and tap `Ligar Apple Watch` → `Instalar atalho`. Safari downloads the file; open it from the downloads.
-2. Tap **Add Shortcut** (`Adicionar atalho`).
-3. Run it once in Shortcuts and tap **Allow** (`Permitir`) on the Health sheet, for every type it asks for. The phone may also ask to reach devices on the local network: allow that too.
-4. Optional: run it by hand now and then, or in Shortcuts → Automation add a **Time of Day** (`Hora do dia`) automation, at any frequency (daily or weekly), set to **Run Immediately** (`Executar imediatamente`), running `Treino - Saude`. Health is locked while the iPhone is, so a run in the night can find nothing.
-
-It sends the last 14 days and today each time it runs. For each metric below it finds the last 15 days grouped by day and skips the window's first day, which can be partial, so it sends today plus the 14 days before. Then it posts one `{ "date", "metric", "value" }` to `/api/health` per day and metric (up to 75 per run). A day with no samples sends nothing. Posting a day again replaces its value, so today's partial value is replaced by a fuller one on a later run. Values come in the unit the Health app shows, so Active Energy must show kcal there.
-
-| `metric` | Find Health Samples type | Day value |
-|---|---|---|
-| `standMinutes` | Stand Time | Sum |
-| `steps` | Steps | Sum |
-| `activeEnergy` | Active Calories | Sum |
-| `exerciseMinutes` | Exercise Time | Sum |
-| `restingHeartRate` | Resting Heart Rate | Average |
-
-It cannot send `sleepMinutes` or `standHours`. Their Health samples are categories (asleep or awake, stood or idle), and Shortcuts gives their value only as a word in the phone's language, so no filter in the Shortcut works on every phone. To send them, add your own blocks to the Shortcut: **Find Health Samples** of type `Sleep` or `Stand Hour` with the value filter your phone offers, then a sum of durations in minutes or a count, and a **Get Contents of URL** like the others.
-
-When the phone cannot reach the server yet, a hand-built Shortcut can end with **Copy to Clipboard**, then in the app tap `Ligar Apple Watch` → `Colar manualmente` → `Colar da área de transferência`, check the preview and tap `Importar`. A day with no rows at all is rejected as "Não há valores para importar."
-
-### Workouts from the Health export
-
-Shortcuts cannot read workouts: `Find Health Samples` has no workout type, and the only workout action logs one. The Health app's own export has them all, free and with no other app.
-
-1. On the iPhone, open Saúde, tap your profile picture, then `Exportar todos os dados de saúde`. It takes a while and gives `export.zip`.
-2. Save it to Ficheiros, or AirDrop it to the Mac.
-3. In the app, `Ligar Apple Watch` → `Treinos do relógio` → `Escolher ficheiro`, and pick `export.zip` (or the `export.xml` inside it).
-4. Check the preview (`132 treinos do relógio, de 3/1 a 6/10`) and tap `Importar treinos`.
-
-The file is read in the browser and never sent anywhere; only the workouts are kept, in the `watch-workouts` store, which syncs and goes into the Backup like the others. The app streams `export.xml` out of the zip (`src/zip.ts`, Zip64 too) and through a parser that keeps only the current element (`src/domain/watchWorkouts.ts`), so a multi-GB export never sits in memory. A Workout it cannot read is skipped, and the preview says how many. Importing the same export twice changes nothing.
-
-Each workout shows on `Treino` → `Registo` for its date, as `Relógio · Força tradicional · 18:02 · 52 min · 311 kcal` (and km when the watch has a distance). It is not a Workout Session, so it counts for no training week.
-
-**Untested on a device.** No real Health export was read here. The parser and the zip reader are tested on files built in the tests (`src/domain/watchWorkouts.test.ts`, `src/zip.test.ts`, `src/healthExport.test.ts`, `e2e/watch-workouts.mjs`).
-
 ## Backup
 
-`Exportar dados`, at the bottom of both tabs, downloads every store as one `treino-<date>.json`. `Importar dados` reads such a file, or one from the meal app. `Juntar aos meus dados` adds what you do not have yet, by id (an exercise named like one you have becomes that one), and keeps what you have. `Substituir tudo` replaces everything, after a confirm that says what you lose. A file with any damaged store changes nothing.
+`Exportar dados`, at the bottom of `Treino`, downloads every store as one `treino-<date>.json`. `Importar dados` reads such a file, or one from the meal app. `Juntar aos meus dados` adds what you do not have yet, by id (an exercise named like one you have becomes that one), and keeps what you have. `Substituir tudo` replaces everything, after a confirm that says what you lose. A file with any damaged store changes nothing. The Apple Watch stores of a file from an older version are ignored.
 
 ## Dictation
 
@@ -174,7 +90,7 @@ npm run check            # all of the above plus vite build: run before every co
 
 ## Performance
 
-`npm run perf` builds the app, serves it with `server/serve.ts` on a free port and a temp database, and seeds a year of history: about 200 sessions on a 4-day plan, a year of watch values and Watch Workouts. It then times load and the main interactions in headless Chromium at phone size with 4× CPU slowdown, as the median of 7 runs. It writes `perf/STATUS.md` (baseline, previous run and now for each metric), `perf/latest.json` and `perf/history.jsonl`. Commit those three with the change they measure.
+`npm run perf` builds the app, serves it with `server/serve.ts` on a free port and a temp database, and seeds a year of history: about 200 sessions on a 4-day plan. It then times load and the main interactions in headless Chromium at phone size with 4× CPU slowdown, as the median of 7 runs. It writes `perf/STATUS.md` (baseline, previous run and now for each metric), `perf/latest.json` and `perf/history.jsonl`. Commit those three with the change they measure.
 
 ```sh
 npm run perf -- --label "after X"      # record a run

@@ -10,10 +10,10 @@ function memoryStorage() {
 
 /** The fixture is a full Backup the meal app exported with its own code, before this app was split from it. */
 describe('a Backup from the meal app', () => {
-  it('brings in the workout, material and watch stores and ignores its food, day, sleep and mood stores', () => {
+  it('brings in the workout and material stores and ignores its food, day, sleep, mood and Apple Watch stores', () => {
     const r = parseBackup(MEAL_APP_BACKUP)
     if (!r.ok) throw new Error(r.error)
-    expect(describeBackup(r.data)).toBe('1 plano de treino, 1 treino, 3 valores do relógio, 1 treino do relógio, 1 local de treino')
+    expect(describeBackup(r.data)).toBe('1 plano de treino, 1 treino, 1 local de treino')
     expect(r.data.exercises).toEqual([{ id: 'ex-supino', name: 'Supino' }])
     const [session] = r.data.workoutSessions
     expect([session.feel, session.note?.text, session.after?.map((a) => a.note.text)]).toEqual([4, 'Bom treino', ['Peito dorido']])

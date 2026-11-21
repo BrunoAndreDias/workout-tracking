@@ -1,7 +1,7 @@
 // The one way scripts drive shared flows. e2e/*.mjs and the verify-treino session import it,
 // so a UI change is fixed here once instead of in every script's copy.
 
-const STORAGE_KEYS = ['exercises', 'workout-plans', 'workout-sessions', 'health', 'watch-workouts', 'equipment']
+const STORAGE_KEYS = ['exercises', 'workout-plans', 'workout-sessions', 'equipment']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -67,7 +67,7 @@ export const todayIso = () => new Date().toLocaleDateString('sv-SE')
 /** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
 export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
-/** The ARIA snapshot of the named region (a Workout Day card, `Relógio`, …), or of `main`. */
+/** The ARIA snapshot of the named region (a Workout Day card, a session card, …), or of `main`. */
 export async function regionAria(page, region) {
   if (region === undefined) return page.locator('main').ariaSnapshot()
   const target = page.getByRole('region', { name: region, exact: true })
@@ -79,19 +79,6 @@ export async function regionAria(page, region) {
   }
   return target.ariaSnapshot()
 }
-
-/** The `Relógio` card of the Relógio tab, its Dia column as `<row> <value>` for each metric the date has, joined by ` · `. */
-export const watchDay = (page) =>
-  page
-    .getByRole('region', { name: 'Relógio', exact: true })
-    .locator('tbody tr')
-    .evaluateAll((rows) =>
-      rows
-        .map((tr) => [tr.querySelector('th').textContent, tr.querySelector('td .ov-value').textContent].map((t) => t.replace(/\s/g, ' ')))
-        .filter(([, value]) => value !== '—')
-        .map(([row, value]) => `${row} ${value}`)
-        .join(' · '),
-    )
 
 const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
 
@@ -133,9 +120,8 @@ export async function createWorkoutPlan(page, { name, days = 3 } = {}) {
   await page.getByRole('region', { name: 'Blocos' }).waitFor()
 }
 
-/** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') through the header link and the tab bar. */
+/** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') through the tab bar. */
 export async function openWorkoutTab(page, name) {
-  await page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name: 'Treino', exact: true }).click()
   const tab = page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name, exact: true })
   await tab.click()
   await tab.and(page.locator('[aria-current="page"]')).waitFor()

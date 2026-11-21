@@ -3,12 +3,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { importSpan, parseHealthImport, upsertSamples } from '../src/domain/health.ts'
 import { endCompressed } from './compress.ts'
-import { signedShortcut } from './healthShortcut.ts'
-import { isStoreKey, STORE_KEY, STORE_KEYS } from '../src/domain/storeKeys.ts'
+import { isStoreKey, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
-import { serializeStore, STORES } from '../src/domain/stores.ts'
 
 /** A store's document as the app wrote it, opaque here, and how many writes it has had. */
 export interface Stored {
@@ -155,72 +152,17 @@ function parsePut(text: string): { doc: string; baseRev: number | null } | null 
   }
 }
 
-/** The address the Shortcut posts to, as `href`, when `raw` is an http(s) address of `/api/health` and nothing else. */
-function healthPostUrl(raw: string | null): string | null {
-  if (!raw || !URL.canParse(raw)) return null
-  const url = new URL(raw)
-  const ok = (url.protocol === 'http:' || url.protocol === 'https:') && url.pathname === '/api/health' && !url.search && !url.hash && !url.username && !url.password
-  return ok ? url.href : null
-}
-
-function readStoredHealth(doc: string) {
-  try {
-    return STORES.health.parse(JSON.parse(doc))
-  } catch {
-    return null
-  }
-}
-
-/**
- * Merges the Shortcut's text into the health store, the one store the server reads. A doc it cannot read is left for
- * the browser, which keeps an unreadable copy aside before replacing it; overwriting it here would lose it.
- */
-function receiveHealth(stores: Stores, text: string): { status: number; body: unknown } {
-  const parsed = parseHealthImport(text)
-  if (!parsed.ok) return { status: 400, body: { error: parsed.error } }
-  let current = stores.get(STORE_KEY.health)
-  // Another process on the same database (a second server) can write between the read and the put.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const log = current ? readStoredHealth(current.doc) : {}
-    if (!log) return { status: 409, body: { error: 'Os valores do relógio guardados no servidor não se conseguem ler. Abre a app para os recuperar. Não foi alterado nada.' } }
-    const result = stores.put(STORE_KEY.health, serializeStore(STORES.health, upsertSamples(log, parsed.samples)), current?.rev ?? null)
-    if (result.ok) return { status: 200, body: importSpan(parsed.samples) }
-    current = result.current
-  }
-  return { status: 503, body: { error: 'O servidor estava ocupado. Tenta outra vez. Não foi alterado nada.' } }
-}
-
 /**
  * The store API, for any request under `/api/`:
  * `GET /api/stores` → `{ [key]: { doc, rev } }`; `GET /api/stores/:key` → `{ doc, rev }` (null and 0 for a store never
  * written); `PUT /api/stores/:key` with `{ doc, baseRev }` → `{ rev }`, or 409
  * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first. `DELETE /api/stores` empties
- * the database only when `allowReset`, which only the test server sets. `POST /api/health` with the Apple Watch
- * Shortcut's text → `{ count, from, to }`, or 400 `{ error }` for text the paste would reject.
- * `GET /api/health/shortcut?url=<http(s) address ending in /api/health>` → the signed Shortcut that posts there, 400
- * for any other `url`, or 503 `{ error }` where it cannot be signed.
+ * the database only when `allowReset`, which only the test server sets.
  */
-export function storeHandler(stores: () => Stores, { allowReset = false, shortcut = signedShortcut } = {}) {
+export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = url.pathname
-    if (path === '/api/health/shortcut') {
-      if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' })
-      const postUrl = healthPostUrl(url.searchParams.get('url'))
-      if (!postUrl) return send(res, 400, { error: 'url tem de ser um endereço http(s) que acaba em /api/health' })
-      let file: Buffer
-      try {
-        file = await shortcut(postUrl)
-      } catch {
-        return send(res, 503, { error: 'Este servidor não consegue assinar o atalho: só um Mac com a app Atalhos o consegue. Usa o Colar manualmente.' })
-      }
-      res.writeHead(200, {
-        'content-type': 'application/octet-stream',
-        'content-disposition': 'attachment; filename="Treino - Saude.shortcut"',
-        'cache-control': 'no-store',
-      })
-      return void res.end(file)
-    }
     if (path === '/api/stores') {
       if (req.method === 'GET') return send(res, 200, unchangedWithoutDoc(stores().all(), url.searchParams.get('have')))
       if (req.method === 'DELETE' && allowReset) {
@@ -228,13 +170,6 @@ export function storeHandler(stores: () => Stores, { allowReset = false, shortcu
         return send(res, 200, {})
       }
       return send(res, 405, { error: 'method not allowed' })
-    }
-    if (path === '/api/health') {
-      if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' })
-      const text = await readBody(req)
-      if (text === null) return send(res, 413, { error: 'too large' })
-      const { status, body } = receiveHealth(stores(), text)
-      return send(res, status, body)
     }
     const match = /^\/api\/stores\/([^/]+)$/.exec(path)
     if (!match) return send(res, 404, { error: 'not found' })

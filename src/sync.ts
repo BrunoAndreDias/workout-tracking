@@ -31,12 +31,6 @@ export interface Sync {
   readonly flush: () => Promise<void>
   /** Forgets this browser's changes to the conflicting stores, so the next start takes the server's copies. */
   readonly dropConflicts: () => void
-  /**
-   * Takes the server's newer copy of each of `keys` that has no change waiting here, and resolves to the keys whose
-   * local copy changed. Only for stores whose caller then re-reads them: an app state still holding the old copy would
-   * save it back over the new one.
-   */
-  readonly refresh: (keys: readonly StoreKey[]) => Promise<StoreKey[]>
 }
 
 export interface SyncOptions {
@@ -66,7 +60,7 @@ function readMeta(storage: BrowserStorage): SyncMeta {
 }
 
 /** `unchanged` gives the doc of a store the server left out because this browser already has it at that rev. */
-function parseRemote(raw: unknown, unchanged: (key: StoreKey, rev: number) => string | null = () => null): Remote | null {
+function parseRemote(raw: unknown, unchanged: (key: StoreKey, rev: number) => string | null): Remote | null {
   if (typeof raw !== 'object' || raw === null) return null
   const remote: Remote = {}
   for (const [key, value] of Object.entries(raw)) {
@@ -182,32 +176,6 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     }
   }
 
-  async function fetchOne(key: StoreKey): Promise<{ doc: string; rev: number } | null> {
-    try {
-      const res = await request(`${base}/${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(timeoutMs) })
-      return res.ok ? (parseRemote({ [key]: await res.json() })?.[key] ?? null) : null
-    } catch {
-      return null
-    }
-  }
-
-  /** Fetches only `keys`, so a refresh on focus never downloads the whole history. */
-  async function pull(keys: readonly StoreKey[]): Promise<StoreKey[]> {
-    const remote = await Promise.all(keys.map(fetchOne))
-    const changed: StoreKey[] = []
-    for (const [i, key] of keys.entries()) {
-      const server = remote[i]
-      const rev = meta.revs[key]
-      // Checked after the request: a change made here while it was in flight must win over the server's older view.
-      if (!server || meta.pending.includes(key) || conflicts.has(key) || (rev !== undefined && server.rev <= rev)) continue
-      const before = storage.getItem(key)
-      take(key, server)
-      if (storage.getItem(key) !== before) changed.push(key)
-    }
-    saveMeta()
-    return changed
-  }
-
   const remote = await fetchRemote()
   if (remote) {
     for (const key of STORE_KEYS) {
@@ -262,11 +230,6 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
         delete meta.revs[key]
       }
       saveMeta()
-    },
-    refresh(keys) {
-      const pulled = queue.then(() => pull(keys))
-      queue = pulled.then(() => undefined)
-      return pulled
     },
   }
 }

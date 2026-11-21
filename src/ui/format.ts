@@ -1,50 +1,21 @@
 import { daysBetween, fromIsoDate } from '../domain/dates.ts'
 import { equipmentLabel } from '../domain/equipment.ts'
 import type { EquipmentId, EquipmentState } from '../domain/equipment.ts'
-import type { HealthMetric } from '../domain/health.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
 import { AFTER_EFFECT_DAYS } from '../domain/sessions.ts'
 import { findDay } from '../domain/blocks.ts'
-import type { WatchWorkout } from '../domain/watchWorkouts.ts'
 import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
 
-// pt-PT only groups from 10 000; the design groups thousands too, with a narrow no-break space.
-const grouped = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 0, useGrouping: 'always' })
 const one = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
-const two = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
-/** A whole number, thousands grouped: "1 234". */
-export const formatCount = (v: number) => grouped.format(v).replace(/\s/g, '\u202F')
 /** Up to one decimal, comma separated: "42,5". */
 export const formatDecimal = (v: number) => one.format(v)
 
-/** 452 -> "7 h 32 min", 52.3 -> "52 min"; a whole hour drops the minutes. */
-export function formatDuration(minutes: number): string {
-  const total = Math.round(minutes)
-  const h = Math.floor(total / 60)
-  const m = total % 60
-  if (h === 0) return `${m} min`
-  return m === 0 ? `${h} h` : `${h} h ${m} min`
-}
-
-/** "18:02 · 52 min · 311 kcal · 4,99 km", leaving out what the watch did not record. */
-export const formatWatchWorkout = ({ start, minutes, kcal, km }: WatchWorkout) =>
-  [start, formatDuration(minutes), kcal === undefined ? null : `${formatCount(kcal)} kcal`, km === undefined ? null : `${two.format(km)} km`].filter(Boolean).join(' · ')
-
-/** A watch value as a number to show: sleep minutes as `7 h 32 min`, every other metric as a whole count. */
-export const formatWatchValue = (metric: HealthMetric, value: number) => (metric === 'sleepMinutes' ? formatDuration(value) : formatCount(value))
-
 const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
-const shortDate = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'short' })
 
 /** "segunda-feira, 5 de outubro" */
 export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(date))
-/** "5/10" */
-export const formatShortDate = (date: IsoDate) => shortDate.format(fromIsoDate(date))
-const monthName = new Intl.DateTimeFormat('pt-PT', { month: 'long' })
-/** "outubro" */
-export const formatMonthName = (date: IsoDate) => monthName.format(fromIsoDate(date))
 
 export const formatRange = ({ min, max }: { min: number; max: number }) => (min === max ? `${min}` : `${min}–${max}`)
 
@@ -54,10 +25,6 @@ export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: numbe
 /** "1 noite", "3 noites" */
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** "1 exercício, 3 séries" */
-export const formatLoggedCounts = ({ exercises, sets }: { exercises: number; sets: number }) =>
-  `${plural(exercises, 'exercício', 'exercícios')}, ${plural(sets, 'série', 'séries')}`
-
 /** The Workout Day a session started from, by its current name. */
 export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {
   if (session.workoutDayId === null) return 'Treino livre'
@@ -66,11 +33,6 @@ export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPla
 
 const MONTHS_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] as const
 const dayMonth = (at: IsoDate | LocalDateTime) => `${Number(at.slice(8, 10))} ${MONTHS_SHORT[Number(at.slice(5, 7)) - 1]}`
-/** "6 out" */
-export const formatDayMonth = (date: IsoDate) => dayMonth(date)
-/** "5–11 out", or "28 set – 4 out" across two months. */
-export const formatDayRange = (from: IsoDate, to: IsoDate) =>
-  from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${dayMonth(to)}` : `${dayMonth(from)} – ${dayMonth(to)}`
 const clock = (at: LocalDateTime) => at.slice(11, 16)
 
 /** When an After-effect was felt, from its session: "Dia seguinte", "2 dias depois", or the date further on. */

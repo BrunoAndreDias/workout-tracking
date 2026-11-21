@@ -94,7 +94,7 @@ export function BackupSection() {
           <div className="panel-body backup-body">
             <p className="backup-summary">{describeBackup(incoming)}</p>
             <p className="hint-text">
-              “Juntar” mantém os teus planos de treino, treinos, material e valores do relógio; do ficheiro só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
+              “Juntar” mantém os teus planos de treino, treinos e material; do ficheiro só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.
             </p>
           </div>
           <div className="panel-foot form-actions">

@@ -1,6 +1,6 @@
 # Theme
 
-A button in the header, next to the `Secções` links, switches between the light and dark themes. The choice is remembered in the browser. Without a stored choice, the app follows the system colour scheme.
+A button in the header switches between the light and dark themes. The choice is remembered in the browser. Without a stored choice, the app follows the system colour scheme.
 
 ## Sub-features
 
@@ -9,7 +9,7 @@ A button in the header, next to the `Secções` links, switches between the ligh
 
 ## How to get to it (user POV)
 
-- The icon button (☾ in light, ☀ in dark) at the right of the header, in every view.
+- The icon button (☾ in light, ☀ in dark) at the right of the header.
 
 ## Driving it with session.mjs
 

@@ -1,4 +1,3 @@
-import { countSamples, fillMissing } from './health.ts'
 import { isRecord } from './persistence.ts'
 import type { RemovableStorage, StorageLike } from './persistence.ts'
 import { saveStore, STORE_NAMES, STORES } from './stores.ts'
@@ -11,7 +10,7 @@ import { mapPlanDays } from './workoutReducer.ts'
 export const BACKUP_APP = 'workout-tracking'
 /**
  * The meal-planning app this one was split from wrote its Backups under this name, with the same file shape and the
- * same names for the stores both kept. Its food, plan, day, sleep and mood stores are not read.
+ * same names for the stores both kept. Its food, plan, day, sleep, mood and Apple Watch stores are not read.
  */
 const MEAL_APP = 'plano-alimentar'
 export const BACKUP_VERSION = 1
@@ -120,15 +119,10 @@ function mergeWorkouts(current: AppData, incoming: AppData): Pick<AppData, 'exer
   }
 }
 
-/**
- * Watch Workouts are added by id and Health Samples by date and metric; what is already there wins.
- * Material merges as `mergeEquipment` says.
- */
+/** Material merges as `mergeEquipment` says. */
 export function mergeBackup(current: AppData, incoming: AppData): AppData {
   return {
     ...mergeWorkouts(current, incoming),
-    health: fillMissing(current.health, incoming.health),
-    watchWorkouts: { ...incoming.watchWorkouts, ...current.watchWorkouts },
     equipment: mergeEquipment(current.equipment, incoming.equipment),
   }
 }
@@ -157,14 +151,12 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
   return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
 }
 
-/** "1 plano de treino, 3 treinos, 14 valores do relógio, 6 treinos do relógio, 2 locais de treino" */
-export function describeBackup({ workoutPlans, workoutSessions, health, watchWorkouts, equipment }: AppData): string {
+/** "1 plano de treino, 3 treinos, 2 locais de treino" */
+export function describeBackup({ workoutPlans, workoutSessions, equipment }: AppData): string {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   return [
     count(workoutPlans.plans.length, 'plano de treino', 'planos de treino'),
     count(workoutSessions.length, 'treino', 'treinos'),
-    count(countSamples(health), 'valor do relógio', 'valores do relógio'),
-    count(Object.keys(watchWorkouts).length, 'treino do relógio', 'treinos do relógio'),
     count(equipment.gyms.length, 'local de treino', 'locais de treino'),
   ].join(', ')
 }

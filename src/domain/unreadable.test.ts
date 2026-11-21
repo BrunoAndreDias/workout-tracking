@@ -21,7 +21,7 @@ describe('an unreadable stored document', () => {
     ['exercises', STORES.exercises.key, '{"version":99,"exercises":[]}', STORES.exercises],
     ['workout plans', STORES.workoutPlans.key, '{"version":99,"plans":[]}', STORES.workoutPlans],
     ['workout sessions', STORES.workoutSessions.key, '{"version":99,"sessions":[]}', STORES.workoutSessions],
-    ['health', STORES.health.key, '{"version":99,"samples":[]}', STORES.health],
+    ['material', STORES.equipment.key, '{"version":99}', STORES.equipment],
     ['workout sessions, corrupt JSON', STORES.workoutSessions.key, '{nope', STORES.workoutSessions],
   ])('is preserved under an unreadable key for %s, once across reloads', (_label, key, raw, def) => {
     const storage = enumerableStorage({ [key]: raw })

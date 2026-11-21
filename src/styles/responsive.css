@@ -30,9 +30,6 @@
 }
 
 @media (max-width: 480px) {
-  /* The tabs and the theme toggle share one row on a phone. */
-  .top-row { column-gap: 8px; }
-  .view-link { padding: 0 8px; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

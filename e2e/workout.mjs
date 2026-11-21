@@ -9,12 +9,11 @@ const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
-await openFresh(page, URL + '#relogio')
+await openFresh(page, URL)
 
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const daysAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - n); return d }
-const view = (name) => page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name })
 const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const region = (name) => page.getByRole('region', { name, exact: true })
 const noScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -23,8 +22,6 @@ const ticks = (lift) => lift.locator('.set-tick').evaluateAll((els) => els.map((
 const BENCH = 'Flat Dumbbell Bench Press'
 const OHP = 'Standing Overhead Barbell Press'
 
-await view('Treino').click()
-assert(page.url().endsWith('#treino'), 'Treino view is in the URL hash')
 await tab('Plano de treino').click()
 assert((await page.locator('.split-tile').allTextContents()).join('|') === '3 diasPush · Pull · Full body|4 diasUpper A · Lower A · Upper B · Lower B', 'a new plan offers the 3-day and the 4-day split')
 await createWorkoutPlan(page, { name: 'Força', days: 3 })

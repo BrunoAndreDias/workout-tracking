@@ -41,7 +41,7 @@ async function startServer(dir) {
   return { dir, url, stop }
 }
 
-/** A year of a 4-day Upper/Lower plan, four sessions a week, with watch values and Watch Workouts, built on the server. */
+/** A year of a 4-day Upper/Lower plan, four sessions a week, built on the server. */
 async function seed(browser, url) {
   const page = await browser.newPage()
   await page.goto(url + '#treino')
@@ -57,7 +57,6 @@ async function seed(browser, url) {
   const start = daysAgo(HISTORY_WEEKS * 7 + ((daysAgo(0).getDay() + 6) % 7))
   plan.start = { ...plan.start, since: iso(start) }
   const sessions = []
-  const watch = []
   let n = 0
   for (let week = 0; week < HISTORY_WEEKS; week++) {
     const block = plan.blocks[Math.floor(week / plan.blocks[0].rir.length) % plan.blocks.length]
@@ -77,18 +76,12 @@ async function seed(browser, url) {
         feel: 1 + (n % 5),
         ...(n % 3 === 0 && { note: { text: `Treino ${n}: correu bem, um pouco cansado no fim.`, createdAt: `${date}T19:00:00`, updatedAt: `${date}T19:05:00` } }),
       })
-      watch.push({ id: `ww-${id}`, date, start: '18:02', activity: 'TraditionalStrengthTraining', minutes: 52, kcal: 311 })
     }
   }
-  const samples = []
-  const metricValues = { standHours: 11, standMinutes: 95, steps: 8400, activeEnergy: 520, exerciseMinutes: 45, sleepMinutes: 432, restingHeartRate: 58 }
-  for (let i = 1; i <= 365; i++) for (const [metric, v] of Object.entries(metricValues)) samples.push({ date: iso(daysAgo(i)), metric, value: v + (i % 7) })
   await putStore(page, url, 'workout-plans', plans)
   await putStore(page, url, 'workout-sessions', { version: 3, sessions })
-  await putStore(page, url, 'health', { version: 1, samples })
-  await putStore(page, url, 'watch-workouts', { version: 1, workouts: watch })
   await page.close()
-  return { sessions: sessions.length, sets: sessions.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.length, 0), 0), samples: samples.length, watch: watch.length }
+  return { sessions: sessions.length, sets: sessions.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.length, 0), 0) }
 }
 
 const PAINT_OBSERVER = () => {
@@ -161,14 +154,13 @@ async function measureOnce(browser, url, expected) {
   const tab = (name) => `() => [...document.querySelectorAll('nav[aria-label="Treino"] button')].find((b) => b.textContent.trim() === '${name}').click()`
   const planTab = await timed(page, new Function(`return ${tab('Plano de treino')}`)(), () => !!document.querySelector('.block-card'))
   const registoTab = await timed(page, new Function(`return ${tab('Registo')}`)(), () => document.querySelectorAll('.set-row, .lift-summary').length > 0)
-  const relogio = await timed(page, () => [...document.querySelectorAll('a')].find((a) => a.textContent.trim() === 'Relógio').click(), () => location.hash.startsWith('#relogio') && !!document.querySelector('table'))
   const doneSets = await page.evaluate(() => JSON.parse(localStorage.getItem('workout-tracking:workout-sessions')).sessions.filter((s) => s.date === new Date().toLocaleDateString('sv-SE')).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length)
   if (doneSets < 6) errors.push(`expected 6 sets ticked today, the store has ${doneSets}`)
   await context.close()
   return {
     values: {
       coldLoadMs: cold.ready, warmLoadMs: warm.ready, fcpMs: cold.fcp, lcpMs: cold.lcp,
-      startSessionMs: startSession, tickMs: median(ticks), typeKgMs: median(types), planTabMs: planTab, registoTabMs: registoTab, relogioMs: relogio,
+      startSessionMs: startSession, tickMs: median(ticks), typeKgMs: median(types), planTabMs: planTab, registoTabMs: registoTab,
       jsKB: cold.js / 1024, cssKB: cold.css / 1024, fontKB: cold.font / 1024, apiKB: cold.api / 1024,
     },
     errors,
@@ -228,7 +220,7 @@ async function measureAll(sides) {
 }
 
 const print = (label, r) => {
-  console.log(`\n${label}: ${r.work.sessions} sessions, ${r.work.sets} sets, ${r.work.samples} watch values, ${r.work.watch} Watch Workouts; ${r.runs} runs; errors ${r.errors.length}`)
+  console.log(`\n${label}: ${r.work.sessions} sessions, ${r.work.sets} sets; ${r.runs} runs; errors ${r.errors.length}`)
   for (const { key, label: name, unit } of METRICS) { const m = r.metrics[key]; console.log(`  ${name.padEnd(30)} ${String(m.median).padStart(8)} ${unit}  (${m.min}–${m.max})`) }
   if (r.errors.length) console.log('  errors:', [...new Set(r.errors)].join(' / '))
 }

@@ -7,8 +7,6 @@ export const STORE_KEY = {
   exercises: 'workout-tracking:exercises',
   workoutPlans: 'workout-tracking:workout-plans',
   workoutSessions: 'workout-tracking:workout-sessions',
-  health: 'workout-tracking:health',
-  watchWorkouts: 'workout-tracking:watch-workouts',
   equipment: 'workout-tracking:equipment',
 } as const
 

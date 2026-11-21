@@ -11,7 +11,6 @@ export const METRICS = [
   { key: 'typeKgMs', label: 'Type in a kg field', unit: 'ms', group: 'interaction' },
   { key: 'planTabMs', label: 'Open Plano de treino', unit: 'ms', group: 'interaction' },
   { key: 'registoTabMs', label: 'Back to Registo', unit: 'ms', group: 'interaction' },
-  { key: 'relogioMs', label: 'Open Relógio', unit: 'ms', group: 'interaction' },
   { key: 'jsKB', label: 'JS sent, first visit', unit: 'KB', group: 'bytes' },
   { key: 'cssKB', label: 'CSS sent, first visit', unit: 'KB', group: 'bytes' },
   { key: 'fontKB', label: 'Fonts sent, first visit', unit: 'KB', group: 'bytes' },
@@ -34,7 +33,7 @@ Written by \`npm run perf\` (\`scripts/perf.mjs\`). Do not edit by hand; rerun i
 
 Last run ${latest.at.slice(0, 16).replace('T', ' ')} UTC on \`${latest.commit}\`${latest.label ? ` (${latest.label})` : ''}. Median of ${latest.runs} runs, range in brackets, ${latest.errors.length} errors.
 
-**Workload.** The production build (\`server/serve.ts\`) at 390 × 844 with ${latest.cpuSlowdown}× CPU slowdown, holding a year of history: ${latest.work.sessions} sessions (${latest.work.sets} sets) on a 4-day plan of 6 blocks, ${latest.work.samples} watch values and ${latest.work.watch} Watch Workouts. "First visit" is an empty browser; "Reopen" is a reload with the stores and assets already cached. Interactions are the main-thread time from the event until the change is in the DOM and laid out.
+**Workload.** The production build (\`server/serve.ts\`) at 390 × 844 with ${latest.cpuSlowdown}× CPU slowdown, holding a year of history: ${latest.work.sessions} sessions (${latest.work.sets} sets) on a 4-day plan of 6 blocks. "First visit" is an empty browser; "Reopen" is a reload with the stores and assets already cached. Interactions are the main-thread time from the event until the change is in the DOM and laid out.
 
 | Metric | Baseline | Previous | Now | Unit | vs previous | vs baseline |
 |---|---|---|---|---|---|---|

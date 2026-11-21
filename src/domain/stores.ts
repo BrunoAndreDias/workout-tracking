@@ -1,16 +1,10 @@
 import { freshEquipment } from './equipment.ts'
 import type { EquipmentState } from './equipment.ts'
 import { EQUIPMENT_SCHEMA_VERSION, parseEquipment } from './equipmentStorage.ts'
-import { logSamples } from './health.ts'
-import type { HealthLog } from './health.ts'
-import { HEALTH_SCHEMA_VERSION, parseHealth } from './healthStorage.ts'
 import { defaultStorage, isRecord, preserveCopy } from './persistence.ts'
 import type { StorageLike } from './persistence.ts'
 import { STORE_KEY } from './storeKeys.ts'
 import type { StoreKey } from './storeKeys.ts'
-import { byStart } from './watchWorkouts.ts'
-import type { WatchWorkoutLog } from './watchWorkouts.ts'
-import { parseWatchWorkouts, WATCH_WORKOUTS_SCHEMA_VERSION } from './watchWorkoutsStorage.ts'
 import { EXERCISES_SCHEMA_VERSION, parseExercises, parseWorkoutPlans, parseWorkoutSessions, WORKOUT_PLANS_SCHEMA_VERSION, WORKOUT_SESSIONS_SCHEMA_VERSION } from './workoutStorage.ts'
 import type { Exercise, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
@@ -67,15 +61,6 @@ export const STORES = {
     toDoc: (sessions) => ({ sessions }),
     fresh: () => [],
     serialize: (sessions) => `{"version":${WORKOUT_SESSIONS_SCHEMA_VERSION},"sessions":[${sessions.map(sessionJson).join(',')}]}`,
-  }),
-  health: store<HealthLog>({ key: STORE_KEY.health, label: 'valores do relógio', version: HEALTH_SCHEMA_VERSION, parse: parseHealth, toDoc: (log) => ({ samples: logSamples(log) }), fresh: () => ({}) }),
-  watchWorkouts: store<WatchWorkoutLog>({
-    key: STORE_KEY.watchWorkouts,
-    label: 'treinos do relógio',
-    version: WATCH_WORKOUTS_SCHEMA_VERSION,
-    parse: parseWatchWorkouts,
-    toDoc: (log) => ({ workouts: Object.values(log).sort(byStart) }),
-    fresh: () => ({}),
   }),
   equipment: store<EquipmentState>({
     key: STORE_KEY.equipment,

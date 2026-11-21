@@ -1,11 +1,11 @@
 ---
 name: verify-treino
-description: Drive the Treino workout app (React + Vite, data in a local SQLite store with localStorage as the working copy) in headless Chromium the way a user does, and capture screenshots, ARIA snapshots and stored state as proof. Use to verify any UI or behavior change in this repo — Workout Plans, Training Blocks, sessions and sets, After-effects, Material, the Relógio tab and the Apple Watch import, backup, sync, theme — before calling it done.
+description: Drive the Treino workout app (React + Vite, data in a local SQLite store with localStorage as the working copy) in headless Chromium the way a user does, and capture screenshots, ARIA snapshots and stored state as proof. Use to verify any UI or behavior change in this repo — Workout Plans, Training Blocks, sessions and sets, After-effects, Material, backup, sync, theme — before calling it done.
 ---
 
 # Verify Treino
 
-The app is one page at `/` with two views in the header `nav` named `Secções`: `#treino` (the home: the Workout Plans, the sessions of a date and the Material, on three tabs in a `nav` named `Treino`, `Registo`, `Plano de treino` and `Material`; `#treino/YYYY-MM-DD` opens `Registo` on that date) and `#relogio` (the Apple Watch values of a date, its week and its month, and `Ligar Apple Watch`; `#relogio/YYYY-MM-DD` for another date). Any other hash opens `Treino`. The UI is in European Portuguese. Each store (`workout-tracking:exercises`, `:workout-plans`, `:workout-sessions`, `:equipment`, `:health`, `:watch-workouts`) lives in a SQLite file served by the dev server at `/api/stores`, and the browser keeps a working copy in localStorage under the same keys. `launch.sh` gives its server a database of its own in `$RUN_DIR/workout.sqlite`, and `openApp` empties it, so a drive starts with no data. `openApp` opens `#treino`.
+The app is one page at `/` with one view, `#treino`: the Workout Plans, the sessions of a date and the Material, on three tabs in a `nav` named `Treino`, `Registo`, `Plano de treino` and `Material`; `#treino/YYYY-MM-DD` opens `Registo` on that date. Any other hash opens `Treino`. The header holds only the theme toggle and the sync line. The UI is in European Portuguese. Each store (`workout-tracking:exercises`, `:workout-plans`, `:workout-sessions`, `:equipment`) lives in a SQLite file served by the dev server at `/api/stores`, and the browser keeps a working copy in localStorage under the same keys. `launch.sh` gives its server a database of its own in `$RUN_DIR/workout.sqlite`, and `openApp` empties it, so a drive starts with no data. `openApp` opens `#treino`.
 
 Read [`features/README.md`](features/README.md) before driving, then the feature file that matches the change.
 
@@ -54,15 +54,15 @@ await app.close()                                              // fails on any c
 APP_URL=$APP_URL RUN_DIR=$RUN_DIR node "$RUN_DIR/workouts.mjs"
 ```
 
-The helper gives you `page`, `dialog`, `region(name)`, `view(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, and `close()`. `window.confirm` prompts are accepted automatically and recorded in `confirms`. `view('Relógio')` clicks the header link and waits until that view is current, and `workoutTab('Material')` does the same for a Treino tab. The other helpers don't navigate.
+The helper gives you `page`, `dialog`, `region(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, and `close()`. `window.confirm` prompts are accepted automatically and recorded in `confirms`. `workoutTab('Material')` clicks a Treino tab and waits until it is current. The other helpers don't navigate.
 
-The shared flows live once in `e2e/_driver.mjs`: `createWorkoutPlan`, `workoutDay`, `addExercise`, `swapExercise`, `pickExercise`, `addGym`, `openWorkoutTab`, `watchDay` (the Relógio card's `Dia` column as text), `reloadApp`, `synced`, `putStore`, `seedStored` and `fakeWhisper`. Import them instead of copying them.
+The shared flows live once in `e2e/_driver.mjs`: `createWorkoutPlan`, `workoutDay`, `addExercise`, `swapExercise`, `pickExercise`, `addGym`, `openWorkoutTab`, `reloadApp`, `synced`, `putStore`, `seedStored` and `fakeWhisper`. Import them instead of copying them.
 
 Handles. Use accessible names, not CSS position:
 
 - A Workout Day card or a session card: `page.getByRole('region', { name: 'Push', exact: true })`.
 - An Exercise in a session: `getByRole('group', { name: '<exercise>' })`, its fields `Kg da série <n>` and `Repetições da série <n>`, and its tick `Série <n> de <exercise> feita`.
-- Panels (exercise picker, `Ligar Apple Watch`, backup import): `page.getByRole('dialog')`. Close one with `Fechar` or Escape.
+- Panels (exercise picker, backup import): `page.getByRole('dialog')`. Close one with `Fechar` or Escape.
 - The exercise search box: `getByLabel('Pesquisar exercício')`. Result rows are `.result` buttons.
 
 Each feature file lists the exact names its flow uses.
@@ -85,7 +85,7 @@ Everything goes to `$RUN_DIR/<feature>/`, which is gitignored under `e2e/shots/`
 - **Real user path.** Click the real buttons and type into the real fields. The behaviour under test goes through the UI: never dispatch reducer actions, never use `page.evaluate` to change state. The one exception is setup, and only through `seedStored` or `putStore` (the app boots from the server), never by writing localStorage yourself. `page.evaluate` is only for reading, through `stored()`.
 - **Action and result.** Capture the state before and after: the sets before and after a tick, a screenshot of the open panel and of the view after confirming.
 - **Side effects.** A change that persists is proven by `reloadApp(page)` from `e2e/_driver.mjs` (a reload that waits for the app to render, which happens after it fetches the stores) followed by the same assertions, plus `saveStored()` showing the stored value. A status line on screen alone is not proof.
-- **Numbers.** Assert exact rendered values: kg, reps, set counts, watch values. "Something changed" is not an assertion. Numbers use pt-PT formatting: a decimal comma, and a narrow no-break space as the thousands separator.
+- **Numbers.** Assert exact rendered values: kg, reps, set counts. "Something changed" is not an assertion. Numbers use pt-PT formatting: a decimal comma, and a narrow no-break space as the thousands separator.
 - **Phone layout.** A layout change also needs `{ mobile: true }`, a screenshot, and `page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)`.
 - **Console.** `close()` must pass, which means no console errors.
 

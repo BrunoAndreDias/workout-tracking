@@ -44,15 +44,8 @@ export async function openApp({ feature, mobile = false, fresh = true, url = pro
     confirms,
     errors,
     log,
-    /** A region by its exact accessible name: a Workout Day card, a session card, `Relógio`, … */
+    /** A region by its exact accessible name: a Workout Day card, a session card, … */
     region: (name) => page.getByRole('region', { name, exact: true }),
-    /** Opens a top-level view ('Treino', 'Relógio') through the header links and waits until it is current. */
-    async view(name) {
-      const link = page.getByRole('navigation', { name: 'Secções' }).getByRole('link', { name, exact: true })
-      await link.click()
-      await link.and(page.locator('[aria-current="page"]')).waitFor()
-      log(`view ${name}`)
-    },
     /** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') and waits until it is current. */
     async workoutTab(name) {
       await openWorkoutTab(page, name)

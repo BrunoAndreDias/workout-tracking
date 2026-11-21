@@ -4,8 +4,7 @@ import { equipmentReducer, freshEquipment, needsOf } from './equipment.ts'
 import type { EquipmentAction } from './equipment.ts'
 import type { TimedNote } from './notes.ts'
 import type { AppData } from './stores.ts'
-import type { CustomEquipmentId, ExerciseId, GymId, IsoDate, LocalDateTime, WatchWorkoutId, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import type { WatchWorkout } from './watchWorkouts.ts'
+import type { CustomEquipmentId, ExerciseId, GymId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { loadAll, saveStore, STORES } from './stores.ts'
 
@@ -44,21 +43,17 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   exercises: [{ exerciseId, sets: [{ done: true, reps: 8, kg: 60, rir: null }] }],
 })
 const note = (text: string, at = '2026-05-01T21:00:00'): TimedNote => ({ text, createdAt: at as LocalDateTime, updatedAt: at as LocalDateTime })
-const watchWorkout = (id: string, date: string, minutes: number): WatchWorkout => ({ id: id as WatchWorkoutId, date: date as IsoDate, start: '07:30', activity: 'Running', minutes })
-const RUN = watchWorkout('2026-05-01T06:30:00Z Running', '2026-05-01', 31.5)
 const CASA = 'gym-casa' as GymId
 const ELASTICOS = 'mat:elasticos' as CustomEquipmentId
 const material = (...actions: EquipmentAction[]) => actions.reduce(equipmentReducer, freshEquipment())
 const casaWith = (...actions: EquipmentAction[]) => material({ type: 'addGym', gymId: CASA, name: 'Casa' }, { type: 'addCustom', id: ELASTICOS, name: 'Elásticos' }, ...actions)
-const EMPTY: AppData = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], health: {}, watchWorkouts: {}, equipment: freshEquipment() }
+const EMPTY: AppData = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], equipment: freshEquipment() }
 
 function filled() {
   const storage = memoryStorage()
   saveStore(STORES.exercises, [SUPINO], storage)
   saveStore(STORES.workoutPlans, { plans: [PEITO], activePlanId: PEITO.id }, storage)
   saveStore(STORES.workoutSessions, [workout('ws-1', SUPINO.id)], storage)
-  saveStore(STORES.health, { ['2026-05-01' as IsoDate]: { steps: 8123, standHours: 9 } }, storage)
-  saveStore(STORES.watchWorkouts, { [RUN.id]: RUN }, storage)
   saveStore(STORES.equipment, casaWith({ type: 'toggleHas', gymId: CASA, equipmentId: ELASTICOS }), storage)
   return storage
 }
@@ -78,13 +73,21 @@ describe('backup', () => {
     expect(file.stores.workoutSessions).toEqual(JSON.parse(storage.data[STORES.workoutSessions.key]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
-    expect(describeBackup(data)).toBe('1 plano de treino, 1 treino, 2 valores do relógio, 1 treino do relógio, 1 local de treino')
+    expect(describeBackup(data)).toBe('1 plano de treino, 1 treino, 1 local de treino')
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
-    expect(describeBackup(parsed(file))).toBe('0 planos de treino, 0 treinos, 0 valores do relógio, 0 treinos do relógio, 0 locais de treino')
+    expect(describeBackup(parsed(file))).toBe('0 planos de treino, 0 treinos, 0 locais de treino')
+  })
+
+  it('imports a Backup from before the Apple Watch was removed, ignoring its watch stores', () => {
+    const { file } = exportBackup(filled())
+    const old = { ...file, stores: { ...file.stores, health: { version: 1, samples: [{ date: '2026-05-01', metric: 'steps', value: 8123 }] }, watchWorkouts: { version: 1, workouts: [] } } }
+    const data = parsed(old)
+    expect(Object.keys(data)).toEqual(['exercises', 'workoutPlans', 'workoutSessions', 'equipment'])
+    expect(data).toEqual(loadAll(filled()))
   })
 
   it.each([
@@ -135,24 +138,6 @@ describe('backup', () => {
     ])
   })
 
-  it('merges health samples so incoming only fills a missing date and metric', () => {
-    const incoming: AppData = { ...EMPTY, health: { ['2026-05-01' as IsoDate]: { steps: 1, activeEnergy: 400 }, ['2026-05-02' as IsoDate]: { steps: 5000 } } }
-    expect(mergeBackup(loadAll(filled()), incoming).health).toEqual({
-      '2026-05-01': { steps: 8123, standHours: 9, activeEnergy: 400 },
-      '2026-05-02': { steps: 5000 },
-    })
-  })
-
-  it('merges watch workouts by id: the user’s copy wins, a new id is added, and merging twice changes nothing', () => {
-    const incoming: AppData = { ...EMPTY, watchWorkouts: { [RUN.id]: { ...RUN, minutes: 99 }, ['2026-05-02T17:00:00Z Yoga' as WatchWorkoutId]: watchWorkout('2026-05-02T17:00:00Z Yoga', '2026-05-02', 45) } }
-    const once = mergeBackup(loadAll(filled()), incoming)
-    expect(Object.values(once.watchWorkouts).map((w) => [w.id, w.minutes])).toEqual([
-      ['2026-05-01T06:30:00Z Running', 31.5],
-      ['2026-05-02T17:00:00Z Yoga', 45],
-    ])
-    expect(mergeBackup(once, incoming).watchWorkouts).toEqual(once.watchWorkouts)
-  })
-
   it('merges material: new Gyms and own material by id, corrections only for Exercises the user has not corrected, and keeps the active Gym', () => {
     const GINASIO = 'gym-ginasio' as GymId
     const current = { ...loadAll(filled()), equipment: casaWith({ type: 'setNeeds', name: 'Planks', needs: [ELASTICOS] }) }
@@ -178,13 +163,13 @@ describe('backup', () => {
 
   describe('applying is all or nothing', () => {
     const FAILED = { ok: false, error: 'Não foi possível guardar os dados: o armazenamento do navegador não tem espaço. Não foi alterado nada.' }
-    // Watch workouts are absent, so the failed import must also remove the key it had already created.
+    // Exercises are absent, so the failed import must also remove the key it had already created.
     const before = () => {
       const storage = filled()
-      delete storage.data[STORES.watchWorkouts.key]
+      delete storage.data[STORES.exercises.key]
       return { ...storage.data }
     }
-    const incoming = (): AppData => ({ ...EMPTY, exercises: [SUPINO], watchWorkouts: { [RUN.id]: RUN } })
+    const incoming = (): AppData => ({ ...EMPTY, exercises: [SUPINO] })
 
     it('replace restores every key when a write throws', () => {
       const initial = before()
@@ -195,27 +180,27 @@ describe('backup', () => {
 
     it('merge restores every key when the last write throws', () => {
       const initial = before()
-      const storage = quotaStorage(initial, 6)
+      const storage = quotaStorage(initial, 4)
       expect(writeAll(mergeBackup(loadAll(storage), incoming()), storage)).toEqual(FAILED)
       expect(storage.data).toEqual(initial)
-      expect(storage.data[STORES.watchWorkouts.key]).toBeUndefined()
+      expect(storage.data[STORES.exercises.key]).toBeUndefined()
     })
 
     it('reports success and writes every store when nothing throws', () => {
       const storage = quotaStorage(before(), 99)
       expect(writeAll(incoming(), storage)).toEqual({ ok: true })
       expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 3, sessions: [] })
-      expect(STORES.watchWorkouts.key in storage.data).toBe(true)
+      expect(STORES.exercises.key in storage.data).toBe(true)
     })
   })
 
   describe('export reports what it left out', () => {
     it('lists a store whose document does not parse, and keeps the others', () => {
       const storage = filled()
-      storage.data[STORES.health.key] = JSON.stringify({ version: 99, samples: [] })
+      storage.data[STORES.workoutPlans.key] = JSON.stringify({ version: 99, plans: [] })
       const { file, skipped } = exportBackup(storage)
-      expect(skipped).toEqual(['health'])
-      expect(Object.keys(file.stores)).toEqual(['exercises', 'workoutPlans', 'workoutSessions', 'watchWorkouts', 'equipment'])
+      expect(skipped).toEqual(['workoutPlans'])
+      expect(Object.keys(file.stores)).toEqual(['exercises', 'workoutSessions', 'equipment'])
     })
 
     it('lists corrupt JSON too, but not a store that was never saved', () => {

@@ -1,7 +1,7 @@
 {
-  "at": "2026-11-21T15:12:57.384Z",
-  "commit": "3487d01+dirty",
-  "label": "remove Apple Watch",
+  "at": "2026-11-21T16:23:58.578Z",
+  "commit": "701622d+dirty",
+  "label": "",
   "cpuSlowdown": 4,
   "work": {
     "sessions": 208,
@@ -11,59 +11,59 @@
   "runs": 7,
   "metrics": {
     "coldLoadMs": {
-      "median": 145.5,
-      "min": 141.6,
-      "max": 151.1
+      "median": 145.1,
+      "min": 143.7,
+      "max": 149.4
     },
     "warmLoadMs": {
-      "median": 52.6,
-      "min": 51.9,
-      "max": 54
+      "median": 52.8,
+      "min": 51.7,
+      "max": 54.5
     },
     "fcpMs": {
       "median": 152,
-      "min": 148,
-      "max": 160
+      "min": 152,
+      "max": 156
     },
     "lcpMs": {
       "median": 152,
-      "min": 148,
-      "max": 160
+      "min": 152,
+      "max": 156
     },
     "startSessionMs": {
-      "median": 38.2,
-      "min": 37.1,
-      "max": 42.1
+      "median": 37.3,
+      "min": 36.8,
+      "max": 42.7
     },
     "tickMs": {
-      "median": 4.9,
-      "min": 4.2,
-      "max": 5.2
+      "median": 5.1,
+      "min": 4.8,
+      "max": 6
     },
     "typeKgMs": {
-      "median": 3.1,
-      "min": 2.6,
-      "max": 4.2
+      "median": 2.8,
+      "min": 2.4,
+      "max": 3.4
     },
     "planTabMs": {
-      "median": 29.2,
-      "min": 27.3,
-      "max": 31.8
+      "median": 33.2,
+      "min": 32.1,
+      "max": 36.5
     },
     "registoTabMs": {
-      "median": 13.4,
-      "min": 11.8,
-      "max": 14.3
+      "median": 13.8,
+      "min": 12.6,
+      "max": 14.7
     },
     "jsKB": {
-      "median": 102.4,
-      "min": 102.4,
-      "max": 102.4
+      "median": 104.1,
+      "min": 104.1,
+      "max": 104.1
     },
     "cssKB": {
-      "median": 7.3,
-      "min": 7.3,
-      "max": 7.3
+      "median": 8,
+      "min": 8,
+      "max": 8
     },
     "fontKB": {
       "median": 155.4,

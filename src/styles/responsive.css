@@ -18,9 +18,9 @@
   .planned { grid-template-columns: minmax(0, 1fr) 36px 36px; }
   .planned-fields { grid-row: 2; grid-column: 1 / -1; }
   .block-muscles { padding: 16px; gap: 12px; }
-  .muscle-row { grid-template-columns: 88px minmax(0, 1fr) 68px; gap: 2px 8px; font-size: 13px; }
-  .muscle-days { grid-column: 2 / -1; font-size: 12px; }
-  .muscle-days:empty { display: none; }
+  .volume-figure .bm { height: 260px; }
+  .volume-row { grid-template-columns: minmax(0, 1fr) auto 64px; }
+  .volume-track { grid-row: 2; grid-column: 1 / -1; }
   .day-trains { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'muscles' 'plan'; gap: 12px; }
   .day-planned { gap: 12px; }
   .day-muscle-sets { padding: 0; border-left: 0; gap: 6px; }
@@ -35,4 +35,5 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .result, .filter-chip { transition: background-color 0.15s ease, border-color 0.15s ease; }
+  .volume-region, .volume-row { transition: opacity 0.15s ease; }
 }

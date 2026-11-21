@@ -136,15 +136,48 @@
 .day-muscle { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 3px 8px; font-size: 14px; }
 .day-muscle .muscle-track { grid-column: 1 / -1; height: 6px; border-radius: 3px; }
 .block-muscles { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
-.muscle-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-.muscle-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 72px minmax(0, 1fr); align-items: center; gap: 4px 12px; font-size: 14px; }
 .muscle-name { color: var(--ink-2); }
 .muscle-track { height: 8px; border-radius: 4px; }
 .muscle-track > span { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 .muscle-sets { text-align: right; font-weight: 500; white-space: nowrap; }
-.muscle-days { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
-.muscle-gap .muscle-name, .muscle-gap .muscle-sets { color: var(--muted); font-weight: 400; }
 .muscles-note { font-size: 14px; }
+/* Músculos por semana: the body heat map beside the ranked list; a tap on either picks a group in both. */
+.volume-layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+.volume-body { flex: none; display: grid; justify-items: center; gap: 8px; margin: 0 auto; }
+.volume-figures { display: flex; gap: 8px; }
+.volume-figure { margin: 0; display: grid; justify-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.volume-figure .bm { height: 320px; width: auto; }
+.volume-region { cursor: pointer; fill: color-mix(in srgb, var(--accent) var(--volume), var(--bm-idle)); }
+.volume-region[data-untrained] { fill: var(--bm-idle); stroke: var(--under); stroke-dasharray: 2 1.5; stroke-width: 1.2; }
+.bm[data-picked] .bm-region:not([data-selected]) { opacity: 0.25; }
+.volume-region[data-selected] { stroke: var(--ink); stroke-width: 1.4; }
+.volume-legend { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; }
+.volume-scale { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(to right, color-mix(in srgb, var(--accent) 22%, var(--border)), var(--accent)); }
+.volume-untrained-key { width: 14px; height: 10px; margin-left: 8px; border-radius: 3px; border: 1.5px dashed var(--under); }
+.volume-hint { margin: 0; font-size: 13px; }
+.volume-lists { flex: 1 1 340px; min-width: 0; display: grid; gap: 8px; }
+.volume-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.volume-gaps { padding: 4px; border: 1px dashed var(--border); border-radius: 10px; }
+.volume-row { width: 100%; display: grid; grid-template-columns: 96px minmax(0, 1fr) 76px 64px; align-items: center; gap: 4px 10px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14px; text-align: left; color: inherit; cursor: pointer; }
+.volume-row:hover { background: var(--rule); }
+.volume-row[data-top] { font-weight: 600; }
+.volume-row[data-top] .muscle-name { color: var(--ink); }
+.volume-row[aria-pressed='true'] { background: var(--accent-tint); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+.volume-row[data-dim] { opacity: 0.45; }
+.volume-track { position: relative; height: 10px; border-radius: 5px; background: var(--track); }
+.volume-track::before { content: ''; position: absolute; inset: 0 auto 0 var(--low); width: calc(var(--high) - var(--low)); background: color-mix(in srgb, var(--accent) 12%, transparent); border-inline: 1px dashed var(--accent); }
+.volume-bar { position: absolute; top: 2px; bottom: 2px; left: 0; border-radius: 3px; background: color-mix(in srgb, var(--accent) 65%, var(--surface)); }
+.volume-row[data-top] .volume-bar, .volume-row[aria-pressed='true'] .volume-bar { background: var(--accent); }
+.volume-sets { text-align: right; white-space: nowrap; }
+.volume-gaps .volume-sets { color: var(--muted); }
+.volume-zone { justify-self: start; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+.zone-below { background: var(--under-bg); color: var(--under-fg); }
+.zone-within { background: var(--accent-tint); color: var(--accent); }
+.zone-above { background: var(--over-bg); color: var(--over-fg); }
+.volume-detail { grid-column: 1 / -1; font-size: 13px; font-weight: 400; color: var(--muted); }
+.volume-notes { display: grid; gap: 6px; font-size: 14px; }
+.volume-notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); }
+.volume-notes p { margin: 0; font-size: 13px; }
 
 /* the 1–5 rating scale */
 .rating-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: 520px; }

@@ -2,7 +2,7 @@ import { useContext, useState } from 'react'
 import type { Dispatch } from 'react'
 import { missingAt } from '../domain/equipment.ts'
 import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
-import { blockMuscles, dayMuscleSets } from '../domain/muscles.ts'
+import { dayMuscleSets } from '../domain/muscles.ts'
 import type { DayMuscle } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
 import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
@@ -11,6 +11,7 @@ import { blockExercises, currentBlock, isRunDue, isRunWeeks, weeksRun } from '..
 import { nameLookup, parseRepRange, parseRir } from '../domain/workouts.ts'
 import type { RepRange, RirTarget, Role, Split, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import type { WorkoutAction } from '../domain/workoutReducer.ts'
+import { BlockMuscles } from './BlockMuscles.tsx'
 import { CountField } from './CountField.tsx'
 import { EquipmentContext } from './equipmentContext.ts'
 import { ExercisePicker } from './ExercisePicker.tsx'
@@ -277,34 +278,6 @@ function BlockEditor({ plan, block, isCurrent, today, exercises, sessions, dispa
       <DayEditor key={day.id} planId={planId} blockId={blockId} day={day} before={before} exercises={exercises} runs={isCurrent ? sessions : null} today={today} dispatch={dispatch} />
       <BlockMuscles days={days} exercises={exercises} />
     </>
-  )
-}
-
-function BlockMuscles({ days, exercises }: { days: readonly WorkoutDay[]; exercises: WorkoutState['exercises'] }) {
-  const { muscles, ungrouped } = blockMuscles(days, nameLookup(exercises))
-  const most = Math.max(...muscles.map((m) => m.sets)) || 1
-  return (
-    <section className="card block-muscles" aria-labelledby="musculos-semana">
-      <h3 id="musculos-semana" className="blocks-title">
-        Músculos por semana
-      </h3>
-      <ul className="muscle-rows">
-        {muscles.map((m) => (
-          <li key={m.muscle} className={m.sets === 0 ? 'muscle-row muscle-gap' : 'muscle-row'}>
-            <span className="muscle-name">{MUSCLE_LABEL[m.muscle]}</span>
-            <span className="track muscle-track" aria-hidden="true">
-              <span style={{ width: `${(m.sets / most) * 100}%` }} />
-            </span>
-            <span className="muscle-sets">{m.sets === 0 ? '—' : plural(m.sets, 'série', 'séries')}</span>
-            <span className="muscle-days">{m.days.join(' · ')}</span>
-          </li>
-        ))}
-      </ul>
-      {ungrouped.length > 0 && (
-        <p className="muted muscles-note">Sem grupo muscular: {ungrouped.map((u) => `${u.name} (${plural(u.sets, 'série', 'séries')})`).join(' · ')}</p>
-      )}
-      <p className="muted muscles-note">Séries planeadas por semana, contando cada dia uma vez.</p>
-    </section>
   )
 }
 

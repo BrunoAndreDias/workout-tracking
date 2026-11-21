@@ -3,6 +3,7 @@
   .page { padding: 20px var(--gutter) 64px; gap: 20px; }
   .main { gap: 16px; }
   .plan-bar { flex-direction: column; align-items: stretch; }
+  .view-bar { flex-direction: row; align-items: flex-end; }
   .plan-actions { padding: 4px 0 6px; margin-left: -12px; }
   .summary { padding: 20px 16px 24px; gap: 20px; border-radius: 16px; }
   .day-empty { padding: 20px 16px; }

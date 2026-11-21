@@ -17,6 +17,7 @@ import { ExercisePicker } from './ExercisePicker.tsx'
 import { formatRange, materialText, plural } from './format.ts'
 import { CloseIcon, PlusIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
+import { PlanTitle } from './PlanTitle.tsx'
 
 function RangeField<T extends RepRange | RirTarget>({ value, label, parse, onCommit, optional = false }: { value: T | null; label: string; parse: (text: string) => T | null; onCommit: (value: T | null) => void; optional?: boolean }) {
   const [text, setText] = useState<string | null>(null)
@@ -145,9 +146,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
         <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={() => setCreating(false)} />
       ) : (
         <>
-          <h2 className="workout-plan-title">
-            <InlineName name={plan.name} label="Nome do plano de treino" onRename={(name) => dispatch({ type: 'renamePlan', planId, name })} />
-          </h2>
+          <PlanTitle name={plan.name} onRename={(name) => dispatch({ type: 'renamePlan', planId, name })} />
           <p className="muted workout-plan-note">
             {SPLITS[plan.split].label}: {(SPLITS[plan.split].days as readonly { name: string }[]).map((d) => d.name).join(' · ')}. O plano ativo é o que aparece ao começar um treino.
           </p>

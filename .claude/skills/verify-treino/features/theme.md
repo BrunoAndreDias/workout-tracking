@@ -1,6 +1,6 @@
 # Theme
 
-A button in the header switches between the light and dark themes. The choice is remembered in the browser. Without a stored choice, the app follows the system colour scheme.
+A button at the end of the `Treino` tab row (`Registo`, `Plano de treino`, `Material`) switches between the light and dark themes. The choice is remembered in the browser. Without a stored choice, the app follows the system colour scheme.
 
 ## Sub-features
 

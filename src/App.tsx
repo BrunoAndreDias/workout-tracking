@@ -5,7 +5,6 @@ import { loadAll, saveStore, STORES } from './domain/stores.ts'
 import type { IsoDate } from './domain/types.ts'
 import { workoutReducer } from './domain/workoutReducer.ts'
 import { BackupSection } from './ui/BackupSection.tsx'
-import { ThemeToggle } from './ui/ThemeToggle.tsx'
 import { SyncLine } from './ui/SyncLine.tsx'
 import { WorkoutView } from './ui/WorkoutView.tsx'
 import type { Sync } from './sync.ts'
@@ -72,12 +71,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   return (
     <div className="app">
       <div className="page">
-        <header className="top">
-          <div className="top-row">
-            <ThemeToggle />
-          </div>
-          {sync && <SyncLine sync={sync} />}
-        </header>
+        {sync && <SyncLine sync={sync} />}
 
         <main className="main">
           <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={date} today={today} onDate={onDate} equipment={equipment} dispatchEquipment={dispatchEquipment} />

@@ -20,7 +20,7 @@ Preconditions: `openApp` launches chromium without these flags, so a dictation d
 
 - **Dictate.** Click `Treino livre`, fill `Notas do treino` with `Bom treino.`, click the `Ditar nota` beside it, wait 11 s (the clip is 8 s of speech plus 5 s of silence), click `Parar ditado`. Within about 10 s the note starts with `Bom treino. ` and holds the clip's words (`supino`). `readStored(page)['workout-sessions'].sessions[0].note.text` (`readStored` from `e2e/_driver.mjs`) equals the field.
 - **Mic on the other notes.** An opened Exercise note has one too (`e2e/workout.mjs`).
-- **Proof.** Screenshots at 390 px and 1280 px, light and dark (switch the theme with the header button, not `emulateMedia`).
+- **Proof.** Screenshots at 390 px and 1280 px, light and dark (switch the theme with the toggle on the `Treino` tab row, not `emulateMedia`).
 
 ## Gotchas
 

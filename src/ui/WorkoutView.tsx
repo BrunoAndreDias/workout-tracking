@@ -13,6 +13,7 @@ import { EquipmentContext } from './equipmentContext.ts'
 import { EquipmentView } from './EquipmentView.tsx'
 import { ExerciseRunsNotice } from './ExerciseRunsNotice.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
+import { ThemeToggle } from './ThemeToggle.tsx'
 import { formatRange, sessionTitle } from './format.ts'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
 import { WorkoutSessionCard } from './WorkoutSessionCard.tsx'
@@ -71,7 +72,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, equipment, d
   return (
     <EquipmentContext value={equipmentStore}>
       <h1 className="sr-only">Treino</h1>
-      <div className="plan-bar">
+      <div className="plan-bar view-bar">
         <nav className="tabs" aria-label="Treino">
           {TABS.map((t) => (
             <button key={t.id} type="button" className="tab" aria-current={t.id === tab ? 'page' : undefined} onClick={() => setTab(t.id)}>
@@ -79,6 +80,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, equipment, d
             </button>
           ))}
         </nav>
+        <ThemeToggle />
       </div>
 
       {tab === 'material' ? (

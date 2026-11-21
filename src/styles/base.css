@@ -16,8 +16,6 @@ small { font-size: 0.85em; color: var(--muted); }
 /* buttons */
 
 /* header */
-.top { display: flex; flex-direction: column; gap: 14px; }
-.top-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px 16px; }
 
 /* Fixed so it is seen wherever the page is scrolled to; below the side panels. */
 .sync-line { position: fixed; z-index: 40; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-segment); font-size: 14px; color: var(--muted); }
@@ -64,6 +62,9 @@ small { font-size: 0.85em; color: var(--muted); }
 .own-main { display: grid; flex: 1; min-width: 0; }
 .own-row .link-btn { flex: none; min-height: 44px; }
 .theme-toggle { margin-left: auto; }
+.view-bar { flex-wrap: nowrap; }
+.view-bar .tabs { flex: 1 1 auto; width: auto; }
+.view-bar .theme-toggle { align-self: center; flex: none; }
 .backup { display: grid; gap: 10px; }
 .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .backup-error { margin: 0; font-size: 14px; color: var(--danger); }

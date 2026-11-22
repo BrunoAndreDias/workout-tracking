@@ -7,18 +7,14 @@ import { endCompressed } from './compress.ts'
 import { toIsoDate } from '../src/domain/dates.ts'
 import { isStoreKey, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
-
-/** A store's document as the app wrote it, opaque here, and how many writes it has had. */
-export interface Stored {
-  readonly doc: string
-  readonly rev: number
-}
+import { parsePut } from '../src/domain/storeProtocol.ts'
+import type { CurrentReply, PutReply, Stored, StoreList, StoreListReply } from '../src/domain/storeProtocol.ts'
 
 /** `current` is null when the store has never been written. */
 export type PutResult = { readonly ok: true; readonly rev: number } | { readonly ok: false; readonly current: Stored | null }
 
 export interface Stores {
-  all(): Partial<Record<StoreKey, Stored>>
+  all(): StoreList
   get(key: StoreKey): Stored | null
   /** Writes when `baseRev` is the current rev (null for a store never written), or when `doc` is already the current doc. */
   put(key: StoreKey, doc: string, baseRev: number | null): PutResult
@@ -66,7 +62,7 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
 
   return {
     all() {
-      const out: Partial<Record<StoreKey, Stored>> = {}
+      const out: StoreList = {}
       for (const row of (existing()?.selectAll.all() ?? []) as { key: string; doc: string; rev: number }[]) {
         if (isStoreKey(row.key)) out[row.key] = { doc: row.doc, rev: row.rev }
       }
@@ -115,9 +111,9 @@ const MAX_BODY_BYTES = 64 * 1024 * 1024
  * `have` lists the client's copies as `key:rev,…`. A store still at that rev goes back as `{ rev }` alone, so a reopen
  * with nothing new downloads none of the year of stores it already holds.
  */
-function unchangedWithoutDoc(all: Partial<Record<StoreKey, Stored>>, have: string | null): Record<string, Stored | { rev: number }> {
+function unchangedWithoutDoc(all: StoreList, have: string | null): StoreListReply {
   const revs = new Map((have ?? '').split(',').map((pair) => [pair.slice(0, pair.lastIndexOf(':')), Number(pair.slice(pair.lastIndexOf(':') + 1))]))
-  return Object.fromEntries(Object.entries(all).map(([key, stored]) => [key, revs.get(key) === stored.rev ? { rev: stored.rev } : stored]))
+  return Object.fromEntries(Object.entries(all).map(([key, stored]) => [key, revs.get(key) === stored.rev ? ({ rev: stored.rev } satisfies PutReply) : stored]))
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
@@ -135,20 +131,6 @@ async function readBody(req: IncomingMessage): Promise<string | null> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-/** `{ doc, baseRev }` where `doc` is JSON text; null for anything else. */
-function parsePut(text: string): { doc: string; baseRev: number | null } | null {
-  try {
-    const body: unknown = JSON.parse(text)
-    if (typeof body !== 'object' || body === null) return null
-    const { doc, baseRev } = body as Record<string, unknown>
-    if (typeof doc !== 'string' || (baseRev !== null && !(typeof baseRev === 'number' && Number.isInteger(baseRev) && baseRev > 0))) return null
-    JSON.parse(doc)
-    return { doc, baseRev }
-  } catch {
-    return null
-  }
-}
-
 /**
  * The store API, for any request under `/api/`:
  * `GET /api/stores` → `{ [key]: { doc, rev } }`; `GET /api/stores/:key` → `{ doc, rev }` (null and 0 for a store never
@@ -157,7 +139,7 @@ function parsePut(text: string): { doc: string; baseRev: number | null } | null 
  * the database only when `allowReset`, which only the test server sets.
  */
 export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = url.pathname
     if (path === '/api/stores') {
@@ -170,15 +152,33 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
     }
     const match = /^\/api\/stores\/([^/]+)$/.exec(path)
     if (!match) return send(res, 404, { error: 'not found' })
-    const key = decodeURIComponent(match[1])
+    const key = decodeKey(match[1])
+    if (key === null) return send(res, 400, { error: 'bad store key' })
     if (!isStoreKey(key)) return send(res, 404, { error: `unknown store ${key}`, stores: STORE_KEYS })
-    if (req.method === 'GET') return send(res, 200, stores().get(key) ?? { doc: null, rev: 0 })
+    if (req.method === 'GET') return send(res, 200, (stores().get(key) ?? { doc: null, rev: 0 }) satisfies CurrentReply)
     if (req.method !== 'PUT') return send(res, 405, { error: 'method not allowed' })
     const text = await readBody(req)
     const body = text === null ? null : parsePut(text)
     if (!body) return send(res, 400, { error: 'expected { doc: <JSON text>, baseRev: <rev> | null }' })
     const result = stores().put(key, body.doc, body.baseRev)
-    if (result.ok) return send(res, 200, { rev: result.rev })
-    return send(res, 409, { doc: result.current?.doc ?? null, rev: result.current?.rev ?? 0 })
+    if (result.ok) return send(res, 200, { rev: result.rev } satisfies PutReply)
+    return send(res, 409, { doc: result.current?.doc ?? null, rev: result.current?.rev ?? 0 } satisfies CurrentReply)
+  }
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      await handle(req, res)
+    } catch (e) {
+      console.error(e)
+      if (!res.headersSent) send(res, 500, { error: 'internal' })
+      else res.end()
+    }
+  }
+}
+
+function decodeKey(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return null
   }
 }

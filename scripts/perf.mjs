@@ -49,7 +49,7 @@ async function seed(browser, url) {
   await page.getByRole('button', { name: 'Começar aqui' }).click()
   await synced(page)
   const stored = await readStored(page)
-  const plans = structuredClone(stored['workout-plans'])
+  const plans = structuredClone(stored.workoutPlans)
   const plan = plans.plans[0]
   const start = daysAgo(HISTORY_WEEKS * 7 + ((daysAgo(0).getDay() + 6) % 7))
   plan.start = { ...plan.start, since: toIsoDate(start) }
@@ -75,8 +75,8 @@ async function seed(browser, url) {
       })
     }
   }
-  await putStore(page, url, 'workout-plans', plans)
-  await putStore(page, url, 'workout-sessions', { version: 4, sessions })
+  await putStore(page, url, 'workoutPlans', plans)
+  await putStore(page, url, 'workoutSessions', { version: 4, sessions })
   await page.close()
   return { sessions: sessions.length, sets: sessions.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.length, 0), 0) }
 }
@@ -130,7 +130,7 @@ async function measureOnce(browser, url, expected) {
   const cold = await load()
   await page.reload()
   const warm = await load()
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('workout-tracking:workout-sessions')).sessions.length)
+  const stored = (await readStored(page)).workoutSessions.sessions.length
   if (stored !== expected.sessions) errors.push(`expected ${expected.sessions} sessions in the page, got ${stored}`)
 
   const startSession = await timed(page, () => document.querySelector('#comecar-treino').closest('section').querySelector('button.primary, button').click(), () => document.querySelectorAll('.set-row').length > 0)
@@ -151,7 +151,8 @@ async function measureOnce(browser, url, expected) {
   const tab = (name) => `() => [...document.querySelectorAll('nav[aria-label="Treino"] button')].find((b) => b.textContent.trim() === '${name}').click()`
   const planTab = await timed(page, new Function(`return ${tab('Plano de treino')}`)(), () => !!document.querySelector('.block-card'))
   const registoTab = await timed(page, new Function(`return ${tab('Registo')}`)(), () => document.querySelectorAll('.set-row, .lift-summary').length > 0)
-  const doneSets = await page.evaluate((today) => JSON.parse(localStorage.getItem('workout-tracking:workout-sessions')).sessions.filter((s) => s.date === today).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length, todayIso())
+  const today = todayIso()
+  const doneSets = (await readStored(page)).workoutSessions.sessions.filter((s) => s.date === today).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length
   if (doneSets < 6) errors.push(`expected 6 sets ticked today, the store has ${doneSets}`)
   await context.close()
   return {

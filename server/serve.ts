@@ -27,8 +27,22 @@ const file = dbPath()
 const stores = openStores(file)
 const api = storeHandler(() => stores)
 
+const decodePath = (url: string | undefined): string | null => {
+  try {
+    return decodeURIComponent(new URL(url ?? '/', 'http://localhost').pathname)
+  } catch {
+    return null
+  }
+}
+
+const isMissing = (e: unknown) => ['ENOENT', 'EISDIR', 'ENOTDIR'].includes((e as NodeJS.ErrnoException | undefined)?.code ?? '')
+
 const server = createServer(async (req, res) => {
-  const pathname = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname)
+  const pathname = decodePath(req.url)
+  if (pathname === null) {
+    res.writeHead(400).end()
+    return
+  }
   if (pathname.startsWith('/api/')) return api(req, res)
   const path = normalize(join(DIST, pathname === '/' ? 'index.html' : pathname))
   if (!path.startsWith(DIST)) {
@@ -41,8 +55,14 @@ const server = createServer(async (req, res) => {
     // Vite names each built asset by its content hash, so a new build is a new URL.
     if (pathname.startsWith('/assets/')) headers['cache-control'] = 'public, max-age=31536000, immutable'
     endCompressed(req, res, 200, headers, body)
-  } catch {
-    res.writeHead(404).end()
+  } catch (e) {
+    if (isMissing(e)) {
+      res.writeHead(404).end()
+      return
+    }
+    console.error(e)
+    if (!res.headersSent) res.writeHead(500)
+    res.end()
   }
 })
 

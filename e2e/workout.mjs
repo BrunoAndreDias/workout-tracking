@@ -143,11 +143,11 @@ assert(await session.getByLabel('Notas do treino').inputValue() === 'Ombro bem',
 assert(await endFeel.getByRole('button', { pressed: true }).textContent() === 'Bem', 'the end feel persisted across reload')
 assert(await supinoNote.inputValue() === 'Ombro esq. a picar na 2.ª série', 'the exercise note persisted and opens by itself')
 const stored = await readStored(page)
-assert(stored['workout-sessions'].version === 4 && stored['workout-sessions'].sessions.length === 1, 'one session stored under its own key, version 4')
-assert(stored['workout-sessions'].sessions[0].feel === 4 && !('after' in stored['workout-sessions'].sessions[0]), 'the end feel is stored as 4, and no After-effects key yet')
-const supinoSets = stored['workout-sessions'].sessions[0].exercises.find((e) => e.note).sets
+assert(stored.workoutSessions.version === 4 && stored.workoutSessions.sessions.length === 1, 'one session stored under its own key, version 4')
+assert(stored.workoutSessions.sessions[0].feel === 4 && !('after' in stored.workoutSessions.sessions[0]), 'the end feel is stored as 4, and no After-effects key yet')
+const supinoSets = stored.workoutSessions.sessions[0].exercises.find((e) => e.note).sets
 assert(JSON.stringify(supinoSets.map((s) => [s.done, s.kg, s.reps, s.rir])) === '[[true,60,8,null],[true,61.25,7,null]]', `stored sets are done, with kg in decimals (got ${JSON.stringify(supinoSets)})`)
-assert(stored['workout-plans'].version === 4 && stored['workout-plans'].plans[0].split === 'ppf', 'the plan is stored as version 4 with its split')
+assert(stored.workoutPlans.version === 4 && stored.workoutPlans.plans[0].split === 'ppf', 'the plan is stored as version 4 with its split')
 assert(stored.exercises.exercises.some((e) => e.name === 'Supino') && stored.exercises.exercises.some((e) => e.name === BENCH), 'the user’s and the catalog’s exercises are stored by name')
 
 await page.goto(`${URL}#treino/${yesterday}`)
@@ -164,7 +164,7 @@ await recent.getByRole('textbox', { name: 'Nota de Supino' }).fill('Ombro esq. d
 await reloadApp(page)
 assert(await recent.getByRole('textbox', { name: 'Como está o corpo' }).inputValue() === 'Peito dorido', 'the session note of the day after persisted across reload')
 assert(await recent.getByRole('textbox', { name: 'Nota de Supino' }).inputValue() === 'Ombro esq. dói ao levantar o braço', 'and the Supino one, open by itself')
-const after = (await readStored(page))['workout-sessions'].sessions[0].after.map((a) => [a.date, a.exerciseId === null ? null : 'supino', a.note.text])
+const after = (await readStored(page)).workoutSessions.sessions[0].after.map((a) => [a.date, a.exerciseId === null ? null : 'supino', a.note.text])
 assert(JSON.stringify(after) === JSON.stringify([[toIsoDate(daysAgo(0)), null, 'Peito dorido'], [toIsoDate(daysAgo(0)), 'supino', 'Ombro esq. dói ao levantar o braço']]), `two After-effects stored on yesterday's session, dated today (got ${JSON.stringify(after)})`)
 await page.getByRole('button', { name: 'Dia anterior' }).click()
 await page.locator('.date-stepper h2', { hasText: longDate.format(daysAgo(1)) }).waitFor()

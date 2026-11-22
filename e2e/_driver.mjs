@@ -2,10 +2,11 @@
 // so a UI change is fixed here once instead of in every script's copy.
 
 import { addDays, mondayOf, toIsoDate } from '../src/domain/dates.ts'
+import { DEVICE_KEY, STORE_KEY } from '../src/domain/storeKeys.ts'
 
 export { toIsoDate }
 
-const STORAGE_KEYS = ['exercises', 'workout-plans', 'workout-sessions', 'equipment']
+const STORE_NAMES = Object.keys(STORE_KEY)
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -15,11 +16,11 @@ export class FlowError extends Error {
   }
 }
 
-/** The localStorage documents, parsed (null when absent), by key without the `workout-tracking:` prefix. */
+/** The localStorage documents, parsed (null when absent), by STORE_KEY name: `workoutPlans`, `workoutSessions`, `exercises`, `equipment`. */
 export const readStored = (page) =>
-  page.evaluate((keys) => Object.fromEntries(keys.map((k) => [k, JSON.parse(localStorage.getItem(`workout-tracking:${k}`) ?? 'null')])), STORAGE_KEYS)
+  page.evaluate((keys) => Object.fromEntries(keys.map(([name, key]) => [name, JSON.parse(localStorage.getItem(key) ?? 'null')])), Object.entries(STORE_KEY))
 
-const storesUrl = (url, key) => new URL(key ? `api/stores/${encodeURIComponent(`workout-tracking:${key}`)}` : 'api/stores', url).href
+const storesUrl = (url, name) => new URL(name ? `api/stores/${encodeURIComponent(STORE_KEY[name])}` : 'api/stores', url).href
 
 /** Empties the server's database. Only a test server (WORKOUT_TEST=1: scripts/e2e.mjs, verify-treino launch.sh) allows it. */
 export async function resetServer(page, url) {
@@ -45,23 +46,23 @@ export async function reloadApp(page) {
 
 /** Resolves once every change this page made has reached the server. */
 export const synced = (page) =>
-  page.waitForFunction(() => (JSON.parse(localStorage.getItem('workout-tracking:sync') ?? 'null')?.pending ?? []).length === 0)
+  page.waitForFunction((key) => (JSON.parse(localStorage.getItem(key) ?? 'null')?.pending ?? []).length === 0, DEVICE_KEY.sync)
 
 /** Writes one store on the server as another device would; the page sees it on its next load. */
-export async function putStore(page, url, key, doc) {
+export async function putStore(page, url, name, doc) {
   await synced(page)
-  const current = (await (await page.request.get(storesUrl(url))).json())[`workout-tracking:${key}`]
-  const res = await page.request.put(storesUrl(url, key), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
-  if (!res.ok()) throw new FlowError(`the server refused ${key} (${res.status()})`, 'check the server log')
+  const current = (await (await page.request.get(storesUrl(url))).json())[STORE_KEY[name]]
+  const res = await page.request.put(storesUrl(url, name), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
+  if (!res.ok()) throw new FlowError(`the server refused ${name} (${res.status()})`, 'check the server log')
 }
 
 /** Puts `state` (the readStored shape) on an emptied server, so the next page load boots from it. Call before page.goto. */
 export async function seedStored(page, url, state) {
   await resetServer(page, url)
-  for (const key of STORAGE_KEYS) {
-    if (state[key] == null) continue
-    const res = await page.request.put(storesUrl(url, key), { data: { doc: JSON.stringify(state[key]), baseRev: null } })
-    if (!res.ok()) throw new FlowError(`the server refused ${key} (${res.status()})`, 'check the server log')
+  for (const name of STORE_NAMES) {
+    if (state[name] == null) continue
+    const res = await page.request.put(storesUrl(url, name), { data: { doc: JSON.stringify(state[name]), baseRev: null } })
+    if (!res.ok()) throw new FlowError(`the server refused ${name} (${res.status()})`, 'check the server log')
   }
 }
 

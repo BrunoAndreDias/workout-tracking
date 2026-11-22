@@ -1,7 +1,9 @@
-import { isRecord, preserveCopy } from './domain/persistence.ts'
+import { preserveCopy } from './domain/persistence.ts'
 import type { BrowserStorage } from './domain/persistence.ts'
-import { isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
+import { DEVICE_KEY, isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
+import { parsePutReply, parseStoreList } from './domain/storeProtocol.ts'
+import type { PutBody, Stored, StoreList } from './domain/storeProtocol.ts'
 
 /**
  * `ligado`: every change made here has reached the server or is on its way. `offline`: the server did not answer, and
@@ -19,8 +21,6 @@ interface SyncMeta {
   pending: StoreKey[]
   fresh: StoreKey[]
 }
-
-const SYNC_META_KEY = 'workout-tracking:sync'
 
 export interface Sync {
   /** localStorage, plus: each change to a store is sent to the server shortly after. */
@@ -43,8 +43,6 @@ export interface SyncOptions {
   readonly pushTimeoutMs?: number
 }
 
-type Remote = Partial<Record<StoreKey, { doc: string; rev: number }>>
-
 type Answer<T> = { kind: 'ok'; body: T } | { kind: 'conflict' } | { kind: 'offline' }
 
 async function requestJson<T>(request: typeof fetch, url: string, init: RequestInit, check: (body: unknown) => T | null, timeoutMs: number): Promise<Answer<T>> {
@@ -58,14 +56,9 @@ async function requestJson<T>(request: typeof fetch, url: string, init: RequestI
   }
 }
 
-function parseRev(body: unknown): number | null {
-  const rev = isRecord(body) ? body.rev : undefined
-  return typeof rev === 'number' && Number.isInteger(rev) && rev >= 0 ? rev : null
-}
-
 function readMeta(storage: BrowserStorage): SyncMeta {
   try {
-    const raw: unknown = JSON.parse(storage.getItem(SYNC_META_KEY) ?? 'null')
+    const raw: unknown = JSON.parse(storage.getItem(DEVICE_KEY.sync) ?? 'null')
     if (typeof raw !== 'object' || raw === null) return { revs: {}, pending: [], fresh: [] }
     const { revs, pending, fresh } = raw as Record<string, unknown>
     const keys = (list: unknown) => (Array.isArray(list) ? list.filter(isStoreKey) : [])
@@ -77,20 +70,6 @@ function readMeta(storage: BrowserStorage): SyncMeta {
   } catch {
     return { revs: {}, pending: [], fresh: [] }
   }
-}
-
-/** `unchanged` gives the doc of a store the server left out because this browser already has it at that rev. */
-function parseRemote(raw: unknown, unchanged: (key: StoreKey, rev: number) => string | null): Remote | null {
-  if (typeof raw !== 'object' || raw === null) return null
-  const remote: Remote = {}
-  for (const [key, value] of Object.entries(raw)) {
-    if (!isStoreKey(key) || typeof value !== 'object' || value === null) continue
-    const { doc, rev } = value as Record<string, unknown>
-    if (!Number.isInteger(rev)) continue
-    const known = typeof doc === 'string' ? doc : doc === undefined ? unchanged(key, rev as number) : null
-    if (known !== null) remote[key] = { doc: known, rev: rev as number }
-  }
-  return remote
 }
 
 /**
@@ -112,7 +91,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
 
   const saveMeta = () => {
     try {
-      storage.setItem(SYNC_META_KEY, JSON.stringify(meta))
+      storage.setItem(DEVICE_KEY.sync, JSON.stringify(meta))
     } catch {
       // a full storage loses only the bookkeeping: the next start pulls or re-sends
     }
@@ -135,11 +114,11 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
       unpend(key)
       return 'sent'
     }
-    const init = { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ doc, baseRev: meta.revs[key] ?? null }) }
-    const answer = await requestJson(request, `${base}/${encodeURIComponent(key)}`, init, parseRev, pushTimeoutMs)
+    const init = { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ doc, baseRev: meta.revs[key] ?? null } satisfies PutBody) }
+    const answer = await requestJson(request, `${base}/${encodeURIComponent(key)}`, init, parsePutReply, pushTimeoutMs)
     if (answer.kind === 'conflict') conflicts.add(key)
     if (answer.kind !== 'ok') return answer.kind
-    meta.revs[key] = answer.body
+    meta.revs[key] = answer.body.rev
     if (storage.getItem(key) === doc) unpend(key)
     return 'sent'
   }
@@ -168,14 +147,14 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     timer = setTimeout(() => void flush(), debounceMs)
   }
 
-  async function fetchRemote(): Promise<Remote | null> {
+  async function fetchRemote(): Promise<StoreList | null> {
     const held = STORE_KEYS.filter((key) => meta.revs[key] !== undefined && storage.getItem(key) !== null)
     const url = held.length === 0 ? base : `${base}?have=${encodeURIComponent(held.map((key) => `${key}:${meta.revs[key]}`).join(','))}`
-    const answer = await requestJson(request, url, {}, (body) => parseRemote(body, (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)), pullTimeoutMs)
+    const answer = await requestJson(request, url, {}, (body) => parseStoreList(body, (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)), pullTimeoutMs)
     return answer.kind === 'ok' ? answer.body : null
   }
 
-  function take(key: StoreKey, server: { doc: string; rev: number }) {
+  function take(key: StoreKey, server: Stored) {
     const local = storage.getItem(key)
     if (local !== null && local !== server.doc && meta.revs[key] === undefined && !meta.fresh.includes(key)) preserveCopy(storage, key, local, 'unsynced')
     try {

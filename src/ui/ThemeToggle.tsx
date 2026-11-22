@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DEVICE_KEY } from '../domain/storeKeys.ts'
 
 type Theme = 'light' | 'dark'
 
@@ -8,7 +9,7 @@ export function ThemeToggle() {
 
   function toggle() {
     document.documentElement.dataset.theme = next
-    try { localStorage.setItem('workout-tracking:theme', next) } catch {}
+    try { localStorage.setItem(DEVICE_KEY.theme, next) } catch {}
     setTheme(next)
   }
 

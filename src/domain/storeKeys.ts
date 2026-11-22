@@ -15,3 +15,8 @@ export type StoreKey = (typeof STORE_KEY)[keyof typeof STORE_KEY]
 export const STORE_KEYS: readonly StoreKey[] = Object.values(STORE_KEY)
 
 export const isStoreKey = (key: string): key is StoreKey => (STORE_KEYS as readonly string[]).includes(key)
+
+export const DEVICE_KEY = {
+  theme: 'workout-tracking:theme',
+  sync: 'workout-tracking:sync',
+} as const

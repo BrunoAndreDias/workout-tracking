@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
+import { STORE_KEY } from '../src/domain/storeKeys.ts'
 import { addGym, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
@@ -8,7 +9,7 @@ const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.
 if (!DB) throw new Error('set WORKOUT_DB to the test server database (npm run e2e does)')
 
 const OFFLINE = 'Sem ligação ao servidor. As alterações ficam neste navegador até voltar.'
-const row = (key) => new DatabaseSync(DB, { readOnly: true }).prepare('SELECT doc, rev FROM stores WHERE key = ?').get(`workout-tracking:${key}`)
+const row = (name) => new DatabaseSync(DB, { readOnly: true }).prepare('SELECT doc, rev FROM stores WHERE key = ?').get(STORE_KEY[name])
 const gyms = () => JSON.parse(row('equipment').doc).gyms.map((g) => g.name).join('|')
 
 const browser = await chromium.launch()
@@ -29,7 +30,7 @@ await openFresh(a.page, URL + '#treino')
 await openWorkoutTab(a.page, 'Plano de treino')
 await createWorkoutPlan(a.page, { name: 'Força' })
 await synced(a.page)
-assert(JSON.parse(row('workout-plans').doc).plans[0].name === 'Força', `device A's workout plan is on disk (rev ${row('workout-plans').rev})`)
+assert(JSON.parse(row('workoutPlans').doc).plans[0].name === 'Força', `device A's workout plan is on disk (rev ${row('workoutPlans').rev})`)
 
 const b = await device(390)
 await b.open()
@@ -75,15 +76,15 @@ const empty = await device()
 await empty.open()
 await synced(empty.page)
 await empty.page.waitForTimeout(1000)
-assert(row('workout-plans') === undefined, 'an empty browser on an empty server does not upload its empty stores')
+assert(row('workoutPlans') === undefined, 'an empty browser on an empty server does not upload its empty stores')
 const old = await device()
 const v1Plans = { version: 1, plans: [{ id: 'wp1', name: 'Plano antigo', days: ['wd1', 'wd2', 'wd3'].map((id) => ({ id, name: id, exercises: [{ exerciseId: 'x1', sets: 3, reps: { min: 8, max: 12 } }] })) }], activePlanId: 'wp1' }
-await old.page.addInitScript((doc) => localStorage.getItem('workout-tracking:workout-plans') ?? localStorage.setItem('workout-tracking:workout-plans', doc), JSON.stringify(v1Plans))
+await old.page.addInitScript(([key, doc]) => localStorage.getItem(key) ?? localStorage.setItem(key, doc), [STORE_KEY.workoutPlans, JSON.stringify(v1Plans)])
 await old.open()
 await openWorkoutTab(old.page, 'Plano de treino')
 assert((await planTabs(old.page)).includes('Plano antigo'), 'a browser holding a version 1 workout plans doc opens it')
 await synced(old.page)
-const uploaded = JSON.parse(row('workout-plans').doc)
+const uploaded = JSON.parse(row('workoutPlans').doc)
 assert(uploaded.version === 4 && uploaded.plans[0].name === 'Plano antigo', 'the browser’s plans reach an empty server, saved as version 4')
 
 const [download] = await Promise.all([old.page.waitForEvent('download'), old.page.getByRole('button', { name: 'Exportar dados' }).click()])

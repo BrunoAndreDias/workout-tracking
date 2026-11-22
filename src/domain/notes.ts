@@ -1,4 +1,4 @@
-import { parseIsoDate } from './dates.ts'
+import { parseIsoDate, toIsoDate } from './dates.ts'
 import { isRecord } from './persistence.ts'
 import type { IsoDate, LocalDateTime } from './types.ts'
 
@@ -11,10 +11,8 @@ export interface TimedNote {
   readonly updatedAt: LocalDateTime
 }
 
-const pad = (n: number) => String(n).padStart(2, '0')
-
 export function toLocalDateTime(d: Date): LocalDateTime {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` as LocalDateTime
+  return `${toIsoDate(d)}T${d.toTimeString().slice(0, 8)}` as LocalDateTime
 }
 
 /** `time` is 'HH:MM'. */

@@ -11,6 +11,7 @@ const [sync, { default: App }] = await Promise.all([storage && startSync({ stora
 if (sync) {
   installStorage(sync.storage)
   window.addEventListener('online', () => void sync.flush())
+  document.addEventListener('visibilitychange', () => void sync.flush())
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addExercise, createWorkoutPlan, longDate, openFresh, readStored, reloadApp, swapExercise, workoutDay } from './_driver.mjs'
+import { addExercise, createWorkoutPlan, daysAgo, longDate, openFresh, readStored, reloadApp, swapExercise, toIsoDate, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -11,9 +11,6 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
 await openFresh(page, URL)
 
-const pad = (n) => String(n).padStart(2, '0')
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const daysAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - n); return d }
 const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const region = (name) => page.getByRole('region', { name, exact: true })
 const noScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -76,7 +73,7 @@ await page.screenshot({ path: `${S}/workout-plan-desktop.png`, fullPage: true })
 
 await tab('Registo').click()
 await page.getByRole('button', { name: 'Dia anterior' }).click()
-const yesterday = iso(daysAgo(1))
+const yesterday = toIsoDate(daysAgo(1))
 assert(page.url().endsWith(`#treino/${yesterday}`), 'the logged date is in the URL hash')
 await page.locator('.date-stepper h2', { hasText: longDate.format(daysAgo(1)) }).waitFor()
 const starts = () => page.locator('.day-start button').allTextContents()
@@ -165,7 +162,7 @@ await reloadApp(page)
 assert(await recent.getByRole('textbox', { name: 'Como está o corpo' }).inputValue() === 'Peito dorido', 'the session note of the day after persisted across reload')
 assert(await recent.getByRole('textbox', { name: 'Nota de Supino' }).inputValue() === 'Ombro esq. dói ao levantar o braço', 'and the Supino one, open by itself')
 const after = (await readStored(page))['workout-sessions'].sessions[0].after.map((a) => [a.date, a.exerciseId === null ? null : 'supino', a.note.text])
-assert(JSON.stringify(after) === JSON.stringify([[iso(daysAgo(0)), null, 'Peito dorido'], [iso(daysAgo(0)), 'supino', 'Ombro esq. dói ao levantar o braço']]), `two After-effects stored on yesterday's session, dated today (got ${JSON.stringify(after)})`)
+assert(JSON.stringify(after) === JSON.stringify([[toIsoDate(daysAgo(0)), null, 'Peito dorido'], [toIsoDate(daysAgo(0)), 'supino', 'Ombro esq. dói ao levantar o braço']]), `two After-effects stored on yesterday's session, dated today (got ${JSON.stringify(after)})`)
 await page.getByRole('button', { name: 'Dia anterior' }).click()
 await page.locator('.date-stepper h2', { hasText: longDate.format(daysAgo(1)) }).waitFor()
 const afterList = region('Push').getByRole('group', { name: 'Depois do treino' })

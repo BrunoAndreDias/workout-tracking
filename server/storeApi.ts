@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { endCompressed } from './compress.ts'
+import { toIsoDate } from '../src/domain/dates.ts'
 import { isStoreKey, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
 
@@ -25,9 +26,6 @@ export interface Stores {
   reset(): void
   close(): void
 }
-
-const pad = (n: number) => String(n).padStart(2, '0')
-const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 /**
  * The database the app keeps: `WORKOUT_DB`, else a file in the home directory, outside every checkout.
@@ -92,7 +90,7 @@ export function openStores(path: string, now: () => Date = () => new Date()): St
           return { ok: false, current }
         }
         const at = now()
-        if (current) snapshot.run(localDay(at), key, current.doc)
+        if (current) snapshot.run(toIsoDate(at), key, current.doc)
         const rev = (current?.rev ?? 0) + 1
         upsert.run(key, doc, rev, at.toISOString())
         db.exec('COMMIT')

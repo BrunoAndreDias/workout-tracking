@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addExercise, createWorkoutPlan, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
+import { addExercise, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -11,9 +11,6 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
 await openFresh(page, URL + '#treino')
 
-const pad = (n) => String(n).padStart(2, '0')
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const mondayWeeksAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7 * n); return iso(d) }
 const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const blocks = page.getByRole('region', { name: 'Blocos' })
 const card = (name) => blocks.locator('.block-card', { has: page.locator('.block-card-name', { hasText: new RegExp(`^${name}$`) }) })

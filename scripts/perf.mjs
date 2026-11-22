@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { createWorkoutPlan, putStore, readStored, synced } from '../e2e/_driver.mjs'
+import { createWorkoutPlan, daysAgo, putStore, readStored, synced, todayIso, toIsoDate } from '../e2e/_driver.mjs'
 import { freePort } from './testServer.mjs'
 import { METRICS, writeStatus } from './perfStatus.mjs'
 
@@ -20,9 +20,6 @@ const HISTORY_WEEKS = Number(arg('weeks', 52))
 const here = process.cwd()
 const against = arg('against') && resolve(arg('against'))
 
-const pad = (n) => String(n).padStart(2, '0')
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const daysAgo = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - n); return d }
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2 }
 
 async function startServer(dir) {
@@ -55,16 +52,16 @@ async function seed(browser, url) {
   const plans = structuredClone(stored['workout-plans'])
   const plan = plans.plans[0]
   const start = daysAgo(HISTORY_WEEKS * 7 + ((daysAgo(0).getDay() + 6) % 7))
-  plan.start = { ...plan.start, since: iso(start) }
+  plan.start = { ...plan.start, since: toIsoDate(start) }
   const sessions = []
   let n = 0
   for (let week = 0; week < HISTORY_WEEKS; week++) {
     const block = plan.blocks[Math.floor(week / plan.blocks[0].rir.length) % plan.blocks.length]
     for (const [k, offset] of [0, 1, 3, 4].entries()) {
       const d = new Date(start); d.setDate(d.getDate() + week * 7 + offset)
-      if (iso(d) >= iso(daysAgo(0))) continue
+      if (toIsoDate(d) >= todayIso()) continue
       const day = block.days[k]
-      const date = iso(d)
+      const date = toIsoDate(d)
       const id = `perf-${n++}`
       sessions.push({
         id, date, workoutDayId: day.id,
@@ -154,7 +151,7 @@ async function measureOnce(browser, url, expected) {
   const tab = (name) => `() => [...document.querySelectorAll('nav[aria-label="Treino"] button')].find((b) => b.textContent.trim() === '${name}').click()`
   const planTab = await timed(page, new Function(`return ${tab('Plano de treino')}`)(), () => !!document.querySelector('.block-card'))
   const registoTab = await timed(page, new Function(`return ${tab('Registo')}`)(), () => document.querySelectorAll('.set-row, .lift-summary').length > 0)
-  const doneSets = await page.evaluate(() => JSON.parse(localStorage.getItem('workout-tracking:workout-sessions')).sessions.filter((s) => s.date === new Date().toLocaleDateString('sv-SE')).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length)
+  const doneSets = await page.evaluate((today) => JSON.parse(localStorage.getItem('workout-tracking:workout-sessions')).sessions.filter((s) => s.date === today).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length, todayIso())
   if (doneSets < 6) errors.push(`expected 6 sets ticked today, the store has ${doneSets}`)
   await context.close()
   return {

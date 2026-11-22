@@ -1,4 +1,4 @@
-import { preserveCopy } from './domain/persistence.ts'
+import { isRecord, preserveCopy } from './domain/persistence.ts'
 import type { BrowserStorage } from './domain/persistence.ts'
 import { isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
@@ -27,7 +27,7 @@ export interface Sync {
   readonly storage: BrowserStorage
   readonly status: () => SyncStatus
   readonly subscribe: (listener: () => void) => () => void
-  /** Sends every changed store now; for the browser's `online` event. */
+  /** Sends every changed store now, or while offline with none to send asks the server whether it answers again. */
   readonly flush: () => Promise<void>
   /** Forgets this browser's changes to the conflicting stores, so the next start takes the server's copies. */
   readonly dropConflicts: () => void
@@ -38,10 +38,30 @@ export interface SyncOptions {
   readonly fetch?: typeof fetch
   readonly base?: string
   readonly debounceMs?: number
-  readonly timeoutMs?: number
+  readonly retryMs?: number
+  readonly pullTimeoutMs?: number
+  readonly pushTimeoutMs?: number
 }
 
 type Remote = Partial<Record<StoreKey, { doc: string; rev: number }>>
+
+type Answer<T> = { kind: 'ok'; body: T } | { kind: 'conflict' } | { kind: 'offline' }
+
+async function requestJson<T>(request: typeof fetch, url: string, init: RequestInit, check: (body: unknown) => T | null, timeoutMs: number): Promise<Answer<T>> {
+  try {
+    const res = await request(url, { ...init, signal: AbortSignal.timeout(timeoutMs) })
+    if (res.status === 409) return { kind: 'conflict' }
+    const body = res.ok ? check(await res.json()) : null
+    return body === null ? { kind: 'offline' } : { kind: 'ok', body }
+  } catch {
+    return { kind: 'offline' }
+  }
+}
+
+function parseRev(body: unknown): number | null {
+  const rev = isRecord(body) ? body.rev : undefined
+  return typeof rev === 'number' && Number.isInteger(rev) && rev >= 0 ? rev : null
+}
 
 function readMeta(storage: BrowserStorage): SyncMeta {
   try {
@@ -78,15 +98,17 @@ function parseRemote(raw: unknown, unchanged: (key: StoreKey, rev: number) => st
  * (it may conflict), any other store the server has replaces the local one (a local one this browser never synced is
  * first kept under `<key>:unsynced:<ISO time>`), and a store only this browser has is
  * uploaded, which is how data from before the server arrives there. With no server it changes nothing and starts
- * `offline`. Then every change to a store through `storage` is sent after `debounceMs`, except the first write of a
- * store this browser did not have: that is the app saving its default, and uploading it could replace another
- * browser's real data. Such a store is sent once a later write changes it.
+ * `offline`, and while `offline` it tries again every `retryMs` until the server answers. Then every change to a store
+ * through `storage` is sent after `debounceMs`, except the first write of a store this browser did not have: that is
+ * the app saving its default, and uploading it could replace another browser's real data. Such a store is sent once a
+ * later write changes it.
  */
-export async function startSync({ storage, fetch: request = globalThis.fetch, base = '/api/stores', debounceMs = 300, timeoutMs = 4000 }: SyncOptions): Promise<Sync> {
+export async function startSync({ storage, fetch: request = globalThis.fetch, base = '/api/stores', debounceMs = 300, retryMs = 15_000, pullTimeoutMs = 4000, pushTimeoutMs = 20_000 }: SyncOptions): Promise<Sync> {
   const meta = readMeta(storage)
   const conflicts = new Set<StoreKey>()
   const listeners = new Set<() => void>()
   let status: SyncStatus = 'ligado'
+  let retry: ReturnType<typeof setTimeout> | undefined
 
   const saveMeta = () => {
     try {
@@ -96,7 +118,10 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     }
   }
   const setStatus = (next: SyncStatus) => {
-    if (status === 'conflito' || status === next) return
+    if (status === 'conflito') return
+    clearTimeout(retry)
+    if (next === 'offline') retry = setTimeout(() => void flush(), retryMs)
+    if (status === next) return
     status = next
     for (const listener of listeners) listener()
   }
@@ -110,30 +135,21 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
       unpend(key)
       return 'sent'
     }
-    let res: Response
-    try {
-      res = await request(`${base}/${encodeURIComponent(key)}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ doc, baseRev: meta.revs[key] ?? null }),
-      })
-    } catch {
-      return 'offline'
-    }
-    if (res.status === 409) {
-      conflicts.add(key)
-      return 'conflict'
-    }
-    if (!res.ok) return 'offline'
-    const { rev } = (await res.json()) as { rev: number }
-    meta.revs[key] = rev
+    const init = { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ doc, baseRev: meta.revs[key] ?? null }) }
+    const answer = await requestJson(request, `${base}/${encodeURIComponent(key)}`, init, parseRev, pushTimeoutMs)
+    if (answer.kind === 'conflict') conflicts.add(key)
+    if (answer.kind !== 'ok') return answer.kind
+    meta.revs[key] = answer.body
     if (storage.getItem(key) === doc) unpend(key)
     return 'sent'
   }
 
   async function pushPending() {
     const keys = meta.pending.filter((k) => !conflicts.has(k))
-    if (keys.length === 0) return
+    if (keys.length === 0) {
+      if (status === 'offline') setStatus((await fetchRemote()) ? 'ligado' : 'offline')
+      return
+    }
     const outcomes = []
     for (const key of keys) outcomes.push(await push(key))
     saveMeta()
@@ -141,7 +157,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
   }
 
   let queue = Promise.resolve()
-  const flush = () => (queue = queue.then(pushPending))
+  const flush = () => (queue = queue.then(pushPending).catch(() => setStatus('offline')))
   let timer: ReturnType<typeof setTimeout> | undefined
   const markPending = (key: StoreKey) => {
     if (!meta.pending.includes(key)) {
@@ -153,14 +169,10 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
   }
 
   async function fetchRemote(): Promise<Remote | null> {
-    try {
-      const held = STORE_KEYS.filter((key) => meta.revs[key] !== undefined && storage.getItem(key) !== null)
-      const url = held.length === 0 ? base : `${base}?have=${encodeURIComponent(held.map((key) => `${key}:${meta.revs[key]}`).join(','))}`
-      const res = await request(url, { signal: AbortSignal.timeout(timeoutMs) })
-      return res.ok ? parseRemote(await res.json(), (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)) : null
-    } catch {
-      return null
-    }
+    const held = STORE_KEYS.filter((key) => meta.revs[key] !== undefined && storage.getItem(key) !== null)
+    const url = held.length === 0 ? base : `${base}?have=${encodeURIComponent(held.map((key) => `${key}:${meta.revs[key]}`).join(','))}`
+    const answer = await requestJson(request, url, {}, (body) => parseRemote(body, (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)), pullTimeoutMs)
+    return answer.kind === 'ok' ? answer.body : null
   }
 
   function take(key: StoreKey, server: { doc: string; rev: number }) {
@@ -189,7 +201,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
       }
     }
   } else {
-    status = 'offline'
+    setStatus('offline')
   }
   for (const key of STORE_KEYS) if (storage.getItem(key) === null && !meta.fresh.includes(key)) meta.fresh = [...meta.fresh, key]
   saveMeta()

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { startSync } from './sync.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
@@ -47,6 +47,20 @@ function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) 
   return server
 }
 
+const hang = (_url: string | URL | Request, init?: RequestInit) =>
+  new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason)))
+
+const revs = (storage: { data: Record<string, string> }) => JSON.parse(storage.data['workout-tracking:sync']).revs
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+})
+
+afterEach(() => {
+  vi.clearAllTimers()
+  vi.useRealTimers()
+})
+
 describe('startSync', () => {
   it('replaces a local store with the server copy, which wins', async () => {
     const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 } })
@@ -58,13 +72,11 @@ describe('startSync', () => {
   })
 
   it('keeps a never-synced browser’s own copy aside, unsent, before taking the server’s', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-06T08:00:00.000Z'))
     const server = fakeServer({ [PLANS]: { doc: '{"v":"server"}', rev: 3 }, [SLEEP]: { doc: '"same"', rev: 1 } })
     const storage = memoryStorage({ [PLANS]: '{"v":"local"}', [SLEEP]: '"same"' })
     await startSync({ storage, fetch: server.fetch })
     await startSync({ storage, fetch: server.fetch })
-    vi.useRealTimers()
     const { 'workout-tracking:sync': _meta, ...docs } = storage.data
     expect(docs).toEqual({
       [PLANS]: '{"v":"server"}',
@@ -172,5 +184,83 @@ describe('startSync', () => {
     expect(body).toEqual({ [PLANS]: { rev: 1 }, [SLEEP]: { doc: '{"s":2}', rev: 2 } })
     expect(storage.data[PLANS]).toBe('{"v":"one"}')
     expect(storage.data[SLEEP]).toBe('{"s":2}')
+  })
+
+  it('goes offline on a 200 answer that is not JSON, and still starts and sends later', async () => {
+    const server = fakeServer()
+    let broken = true
+    const request = (url: string | URL | Request, init?: RequestInit) => (broken && init?.method === 'PUT' ? Promise.resolve(new Response('<html>', { status: 200 })) : server.fetch(url, init))
+    const storage = memoryStorage({ [SLEEP]: '"local"' })
+    const sync = await startSync({ storage, fetch: request, debounceMs: 60_000 })
+    expect(sync.status()).toBe('offline')
+    await sync.flush()
+    expect(sync.status()).toBe('offline')
+    broken = false
+    await sync.flush()
+    expect(sync.status()).toBe('ligado')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"local"', rev: 1 })
+  })
+
+  it('goes offline on a 200 answer without a valid rev, and keeps the last good rev', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    let answer: unknown = { rev: -1 }
+    const request = (url: string | URL | Request, init?: RequestInit) => (answer !== undefined && init?.method === 'PUT' ? Promise.resolve(Response.json(answer)) : server.fetch(url, init))
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: request, debounceMs: 60_000 })
+    sync.storage.setItem(SLEEP, '"b"')
+    for (const bad of [{ rev: -1 }, { rev: 1.5 }, { rev: '2' }, {}, null]) {
+      answer = bad
+      await sync.flush()
+      expect(sync.status()).toBe('offline')
+      expect(revs(storage)).toEqual({ [SLEEP]: 1 })
+    }
+    answer = undefined
+    await sync.flush()
+    expect(sync.status()).toBe('ligado')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"b"', rev: 2 })
+  })
+
+  it('goes offline when a request never answers, after its timeout', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    const stuck = await startSync({ storage: memoryStorage(), fetch: hang, pullTimeoutMs: 20 })
+    expect(stuck.status()).toBe('offline')
+    let hanging = false
+    const request = (url: string | URL | Request, init?: RequestInit) => (hanging ? hang(url, init) : server.fetch(url, init))
+    const sync = await startSync({ storage: memoryStorage(), fetch: request, debounceMs: 60_000, pushTimeoutMs: 20 })
+    hanging = true
+    sync.storage.setItem(SLEEP, '"b"')
+    await sync.flush()
+    expect(sync.status()).toBe('offline')
+  })
+
+  it('retries while offline, sends the waiting change once the server answers, and stops retrying', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    const sync = await startSync({ storage: memoryStorage(), fetch: server.fetch, debounceMs: 10, retryMs: 1000 })
+    server.up = false
+    sync.storage.setItem(SLEEP, '"b"')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(sync.status()).toBe('offline')
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(sync.status()).toBe('offline')
+    server.up = true
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(sync.status()).toBe('ligado')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"b"', rev: 2 })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('after a failed start, retries until the server answers, then says ligado', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    server.up = false
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: server.fetch, retryMs: 1000 })
+    expect(sync.status()).toBe('offline')
+    const seen: string[] = []
+    sync.subscribe(() => seen.push(sync.status()))
+    server.up = true
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(seen).toEqual(['ligado'])
+    expect(storage.data[SLEEP]).toBeUndefined()
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

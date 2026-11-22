@@ -1,6 +1,10 @@
 // The one way scripts drive shared flows. e2e/*.mjs and the verify-treino session import it,
 // so a UI change is fixed here once instead of in every script's copy.
 
+import { addDays, mondayOf, toIsoDate } from '../src/domain/dates.ts'
+
+export { toIsoDate }
+
 const STORAGE_KEYS = ['exercises', 'workout-plans', 'workout-sessions', 'equipment']
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
@@ -62,7 +66,11 @@ export async function seedStored(page, url, state) {
 }
 
 /** The local calendar date as YYYY-MM-DD, which is the date the app calls today. */
-export const todayIso = () => new Date().toLocaleDateString('sv-SE')
+export const todayIso = () => toIsoDate(new Date())
+
+export const daysAgo = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - n); return d }
+
+export const mondayWeeksAgo = (n) => addDays(mondayOf(todayIso()), -7 * n)
 
 /** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
 export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { createWorkoutPlan, openFresh, putStore, readStored, reloadApp, swapExercise, todayIso, workoutDay } from './_driver.mjs'
+import { createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, swapExercise, todayIso, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = process.env.APP_URL ?? 'http://localhost:5180/'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
@@ -10,9 +10,6 @@ page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await openFresh(page, URL + '#treino')
 
-const pad = (n) => String(n).padStart(2, '0')
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const mondayWeeksAgo = (n) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7 * n); return iso(d) }
 const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const notice = page.getByRole('region', { name: 'Exercícios a rever' })
 const noticeRows = () => notice.locator('.run-row > span:first-child').allTextContents()

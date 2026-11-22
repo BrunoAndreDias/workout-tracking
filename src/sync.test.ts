@@ -263,4 +263,66 @@ describe('startSync', () => {
     expect(storage.data[SLEEP]).toBeUndefined()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it.each([400, 404])('says recusado on a %i to a change and never sends that store again until the next start', async (code) => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 }, [PLANS]: { doc: '"p"', rev: 1 } })
+    const puts: string[] = []
+    const request = (url: string | URL | Request, init?: RequestInit) => {
+      if (init?.method !== 'PUT') return server.fetch(url, init)
+      puts.push(String(url))
+      return String(url).endsWith(encodeURIComponent(SLEEP)) ? Promise.resolve(Response.json({ error: 'no' }, { status: code })) : server.fetch(url, init)
+    }
+    const storage = memoryStorage()
+    const sync = await startSync({ storage, fetch: request, debounceMs: 10, retryMs: 1000 })
+    sync.storage.setItem(SLEEP, '"b"')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(sync.status()).toBe('recusado')
+    expect(puts).toHaveLength(1)
+    sync.storage.setItem(SLEEP, '"c"')
+    await vi.advanceTimersByTimeAsync(5000)
+    await sync.flush()
+    expect(puts).toHaveLength(1)
+    expect(JSON.parse(storage.data['workout-tracking:sync']).pending).toEqual([SLEEP])
+    sync.storage.setItem(PLANS, '"q"')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(server.stores.get(PLANS)).toEqual({ doc: '"q"', rev: 2 })
+    expect(sync.status()).toBe('recusado')
+    server.up = false
+    sync.storage.setItem(PLANS, '"r"')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(sync.status()).toBe('recusado')
+    expect(vi.getTimerCount()).toBe(0)
+    server.up = true
+    const again = await startSync({ storage, fetch: request })
+    expect(puts.filter((url) => url.endsWith(encodeURIComponent(SLEEP)))).toHaveLength(2)
+    expect(again.status()).toBe('recusado')
+  })
+
+  it('goes offline on a 503 and retries until the server takes the change', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 } })
+    let failing = true
+    const request = (url: string | URL | Request, init?: RequestInit) => (failing && init?.method === 'PUT' ? Promise.resolve(new Response('busy', { status: 503 })) : server.fetch(url, init))
+    const sync = await startSync({ storage: memoryStorage(), fetch: request, debounceMs: 10, retryMs: 1000 })
+    sync.storage.setItem(SLEEP, '"b"')
+    await vi.advanceTimersByTimeAsync(10)
+    expect(sync.status()).toBe('offline')
+    failing = false
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(sync.status()).toBe('ligado')
+    expect(server.stores.get(SLEEP)).toEqual({ doc: '"b"', rev: 2 })
+  })
+
+  it('shows a conflict over a refused change, and either over offline', async () => {
+    const server = fakeServer({ [SLEEP]: { doc: '"a"', rev: 1 }, [PLANS]: { doc: '"p"', rev: 1 } })
+    const request = (url: string | URL | Request, init?: RequestInit) =>
+      init?.method === 'PUT' && String(url).endsWith(encodeURIComponent(PLANS)) ? Promise.resolve(new Response(null, { status: 413 })) : server.fetch(url, init)
+    const sync = await startSync({ storage: memoryStorage(), fetch: request, debounceMs: 60_000 })
+    sync.storage.setItem(PLANS, '"q"')
+    await sync.flush()
+    expect(sync.status()).toBe('recusado')
+    server.stores.set(SLEEP, { doc: '"other device"', rev: 2 })
+    sync.storage.setItem(SLEEP, '"here"')
+    await sync.flush()
+    expect(sync.status()).toBe('conflito')
+  })
 })

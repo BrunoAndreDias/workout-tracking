@@ -45,7 +45,8 @@ Each feature file starts with an H1 and one paragraph describing what the user s
 - [Exercise picker](./picker.md): `Adicionar exercício` and `Trocar exercício`, with the search, the muscle-group filter, `+ Criar`, and each catalog Exercise's body map of where it is felt (`Alvo`, `Apoio`).
 - [Material](./equipment.md): `Treino` → `Material`, with the Locais and their material, the user's own material, each Exercise's material with `Alterado` and `Repor`, and the picker's `Falta:` flags and order.
 - [Backup](./backup.md): export all data to a JSON file, import it with merge or replace, and reject corrupt files.
-- [Server store](./sync.md): the stores on disk, a second browser on the same server, the offline line, the conflict line with `Recarregar`, and the upload of a browser's data to an empty server.
+- [Server store](./sync.md): the stores on disk, a second browser on the same server, the offline line, the conflict line with `Recarregar`, the refused line, the storage-full line, and the upload of a browser's data to an empty server.
 - [Dictation](./dictation.md): the mic button on the exercise, workout and After-effect notes, on-device Whisper small, with the status line and the appended text.
+- [Crash page](./crash.md): what shows instead of a blank page when the app fails to start or a render throws, with `Exportar dados` read straight from the browser and `Recarregar`.
 - [Theme](./theme.md): the light and dark toggle at the end of the `Treino` tab row.
 - [Home screen app](./pwa.md): the manifest, the icons and the head tags that let the iPhone add the app to its home screen.

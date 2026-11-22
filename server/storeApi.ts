@@ -120,25 +120,25 @@ function send(res: ServerResponse, status: number, body: unknown) {
   endCompressed(res.req, res, status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }, JSON.stringify(body))
 }
 
-async function readBody(req: IncomingMessage): Promise<string | null> {
+async function readBody(req: IncomingMessage, maxBytes: number): Promise<string | null> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length
-    if (size > MAX_BODY_BYTES) return null
-    chunks.push(chunk)
+    if (size <= maxBytes) chunks.push(chunk)
   }
-  return Buffer.concat(chunks).toString('utf8')
+  return size > maxBytes ? null : Buffer.concat(chunks).toString('utf8')
 }
 
 /**
  * The store API, for any request under `/api/`:
  * `GET /api/stores` → `{ [key]: { doc, rev } }`; `GET /api/stores/:key` → `{ doc, rev }` (null and 0 for a store never
  * written); `PUT /api/stores/:key` with `{ doc, baseRev }` → `{ rev }`, or 409
- * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first. `DELETE /api/stores` empties
+ * `{ doc, rev }` (null and 0 for a store never written) when another device wrote first, 413 for a body over
+ * `maxBodyBytes` (read to its end, so the client gets the answer) and 400 for a malformed one. `DELETE /api/stores` empties
  * the database only when `allowReset`, which only the test server sets.
  */
-export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
+export function storeHandler(stores: () => Stores, { allowReset = false, maxBodyBytes = MAX_BODY_BYTES } = {}) {
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = url.pathname
@@ -157,8 +157,9 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
     if (!isStoreKey(key)) return send(res, 404, { error: `unknown store ${key}`, stores: STORE_KEYS })
     if (req.method === 'GET') return send(res, 200, (stores().get(key) ?? { doc: null, rev: 0 }) satisfies CurrentReply)
     if (req.method !== 'PUT') return send(res, 405, { error: 'method not allowed' })
-    const text = await readBody(req)
-    const body = text === null ? null : parsePut(text)
+    const text = await readBody(req, maxBodyBytes)
+    if (text === null) return send(res, 413, { error: `body over ${maxBodyBytes} bytes` })
+    const body = parsePut(text)
     if (!body) return send(res, 400, { error: 'expected { doc: <JSON text>, baseRev: <rev> | null }' })
     const result = stores().put(key, body.doc, body.baseRev)
     if (result.ok) return send(res, 200, { rev: result.rev } satisfies PutReply)

@@ -3,6 +3,7 @@ import type { EquipmentState } from './equipment.ts'
 import { EQUIPMENT_SCHEMA_VERSION, parseEquipment } from './equipmentStorage.ts'
 import { defaultStorage, isRecord, preserveCopy } from './persistence.ts'
 import type { StorageLike } from './persistence.ts'
+import { reportSave } from './storageHealth.ts'
 import { STORE_KEY } from './storeKeys.ts'
 import type { StoreKey } from './storeKeys.ts'
 import { EXERCISES_SCHEMA_VERSION, parseExercises, parseWorkoutPlans, parseWorkoutSessions, WORKOUT_PLANS_SCHEMA_VERSION, WORKOUT_SESSIONS_SCHEMA_VERSION } from './workoutStorage.ts'
@@ -119,15 +120,19 @@ export const serializeStore = <T>(def: StoreDef<T>, value: T): string => def.ser
 const leavesRefusedInPlace = <T>(def: StoreDef<T>, value: T, storage: StorageLike | null): boolean =>
   refused.has(def.key) && storage?.getItem(def.key) === refused.get(def.key) && serializeStore(def, value) === serializeStore(def, def.fresh())
 
-/** False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is. */
+/**
+ * False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is.
+ * A write the storage refuses, such as a full one, is reported to `storageFull` until a later save of the store succeeds.
+ */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
+  if (!storage) return false
   try {
     const text = typeof value === 'object' && value !== null ? readFrom.get(value) : undefined
-    if (text !== undefined && storage?.getItem(def.key) === text) return true
-    if (leavesRefusedInPlace(def, value, storage)) return true
-    storage?.setItem(def.key, serializeStore(def, value))
-    return storage !== null
+    if (!(text !== undefined && storage.getItem(def.key) === text) && !leavesRefusedInPlace(def, value, storage)) storage.setItem(def.key, serializeStore(def, value))
+    reportSave(def.key, true)
+    return true
   } catch {
+    reportSave(def.key, false)
     return false
   }
 }

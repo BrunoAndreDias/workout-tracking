@@ -10,7 +10,7 @@ const ISOLATION: RepRange = { min: 10, max: 15 }
 function next(role: PlannedExercise['role'], range: RepRange, sets: LoggedSet[], aimed?: SetTarget) {
   const day = { id: 'd' as WorkoutDayId, name: 'Dia', exercises: [planned(SUPINO, role, 3, range)] }
   const last = session('s0', '2026-10-01', [{ exerciseId: SUPINO, sets, ...(aimed && { target: aimed }) }])
-  const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day }], { ...created, sessions: [last] })
+  const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day, light: false }], { ...created, sessions: [last] })
   const exercise = s.sessions[1].exercises[0]
   const set = exercise.sets[0]
   expect(exercise.sets.every((s) => s.kg === set.kg && s.reps === set.reps && !s.done)).toBe(true)

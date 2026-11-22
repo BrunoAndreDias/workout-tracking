@@ -33,7 +33,7 @@ const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,
   name: 'Força',
   split: 'ppf',
-  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, rir: [{ min: 5, max: 6 }], days: [PEITO_DAY, restDay('wd-1b'), restDay('wd-1c')] }],
+  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, light: false, days: [PEITO_DAY, restDay('wd-1b'), restDay('wd-1c')] }],
   start: { blockId: 'wb-1' as WorkoutBlockId, since: '2026-05-04' as IsoDate },
 }
 const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({

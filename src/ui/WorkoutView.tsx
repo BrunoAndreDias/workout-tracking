@@ -14,7 +14,7 @@ import { EquipmentView } from './EquipmentView.tsx'
 import { ExerciseRunsNotice } from './ExerciseRunsNotice.tsx'
 import { RecentSessions } from './RecentSessions.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
-import { formatRange, sessionTitle } from './format.ts'
+import { sessionTitle } from './format.ts'
 import { WorkoutPlanEditor } from './WorkoutPlanEditor.tsx'
 import { WorkoutSessionCard } from './WorkoutSessionCard.tsx'
 
@@ -29,8 +29,7 @@ interface Props {
 }
 
 function blockLine(block: WorkoutBlock, position: BlockPosition | null): string {
-  if (!position) return block.name
-  return [block.name, `semana ${position.week} de ${block.weeks}`, ...(position.rir ? [`RIR ${formatRange(position.rir)}`] : [])].join(' · ')
+  return [block.name, ...(position ? [`semana ${position.week} de ${block.weeks}`] : []), ...(block.light ? ['leve'] : [])].join(' · ')
 }
 
 function BlockNotice({ block, previous, exercises }: { block: WorkoutBlock; previous: WorkoutBlock; exercises: readonly Exercise[] }) {
@@ -65,7 +64,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, equipment, d
     onDate(next)
   }
   const start = (day: WorkoutDay | null) => {
-    dispatch({ type: 'startSession', sessionId: newId<WorkoutSessionId>(), date, day })
+    dispatch({ type: 'startSession', sessionId: newId<WorkoutSessionId>(), date, day, light: block?.light ?? false })
     setAdding(false)
   }
 

@@ -148,15 +148,23 @@ export const ROLE_RIR: { readonly [R in Role]: RirTarget } = {
   abs: { min: 1, max: 3 },
 }
 
-/** A 6-week block from 4–5 reps in reserve down to 0–1. */
-export const DEFAULT_RIR_RAMP: readonly RirTarget[] = [
-  { min: 4, max: 5 },
-  { min: 3, max: 3 },
-  { min: 2, max: 3 },
-  { min: 2, max: 2 },
-  { min: 1, max: 2 },
-  { min: 0, max: 1 },
-]
+/** How much further from failure every Role aims in a light block, such as a deload. */
+export const LIGHT_RIR_EXTRA = 2
+
+/** The RIR Target of a Role, in a light block or not. */
+export function roleRir(role: Role, light: boolean): RirTarget {
+  const { min, max } = ROLE_RIR[role]
+  return light ? { min: min + LIGHT_RIR_EXTRA, max: max + LIGHT_RIR_EXTRA } : { min, max }
+}
+
+/** Whether `target` is a Role's RIR Target in a light block. */
+export const isLightTarget = (target: RirTarget): boolean => ROLES.some((role) => {
+  const light = roleRir(role, true)
+  return light.min === target.min && light.max === target.max
+})
+
+/** A new plan's block length, inside the 4 to 8 weeks between deloads that docs/research/block-length-and-progression.md finds. */
+export const DEFAULT_BLOCK_WEEKS = 6
 
 /** The role an Exercise added by hand starts with: core work is abs, a catalog compound secondary, anything else isolation. */
 export function defaultRole(name: string): Role {
@@ -199,5 +207,5 @@ export function templateBlock<S extends Split>(
     name: spec.name,
     exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role], weeks: ROLE_WEEKS[slot.role], since })),
   }))
-  return { block: { id: blockId, name, weeks: DEFAULT_RIR_RAMP.length, rir: DEFAULT_RIR_RAMP, days: days as unknown as DaysOf<S> }, exercises: known }
+  return { block: { id: blockId, name, weeks: DEFAULT_BLOCK_WEEKS, light: false, days: days as unknown as DaysOf<S> }, exercises: known }
 }

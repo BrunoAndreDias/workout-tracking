@@ -68,7 +68,7 @@ describe('Workout Plans', () => {
     const s = run(
       [
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
-        { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 5, max: 6 } },
+        { type: 'setBlockLight', planId: P, blockId: B, light: true },
         { type: 'addBlock', planId: P, blockId: 'b2' as WorkoutBlockId, copyOf: B },
         { type: 'renameBlock', planId: P, blockId: 'b2' as WorkoutBlockId, name: 'Bloco C' },
         { type: 'addBlock', planId: P, blockId: 'b3' as WorkoutBlockId, copyOf: 'gone' as WorkoutBlockId },
@@ -80,24 +80,26 @@ describe('Workout Plans', () => {
       ['b1', 'Bloco A', 3],
       ['b2', 'Bloco C', 3],
     ])
-    expect(c.rir).toEqual([{ min: 5, max: 6 }, { min: 3, max: 3 }, { min: 2, max: 3 }])
+    expect(c.light).toBe(true)
     expect(c.days.map((d) => d.id)).toEqual(['b2-d1', 'b2-d2', 'b2-d3'])
     expect(c.days.map((d) => d.exercises)).toEqual(a.days.map((d) => d.exercises))
     expect(findDay(s.plans, 'b2-d1' as WorkoutDayId)?.name).toBe('Push')
   })
 
-  it('more weeks pad the RIR targets with none, fewer drop the last ones, and a week out of range is not set', () => {
-    const s = run(
+  it('a new plan’s block is not light; Semana leve turns it light and back, and its weeks change nothing else', () => {
+    expect(created.plans[0].blocks[0].light).toBe(false)
+    const light = run([{ type: 'setBlockLight', planId: P, blockId: B, light: true }], created)
+    expect(light.plans[0].blocks[0].light).toBe(true)
+    expect(run([{ type: 'setBlockLight', planId: P, blockId: B, light: false }], light).plans[0].blocks[0].light).toBe(false)
+    const resized = run(
       [
-        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 2 },
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 3 },
-        { type: 'setBlockRir', planId: P, blockId: B, week: 4, rir: { min: 1, max: 1 } },
-        { type: 'setBlockRir', planId: P, blockId: B, week: 1, rir: { min: 3, max: 11 } },
         { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 0 },
+        { type: 'setBlockWeeks', planId: P, blockId: B, weeks: 53 },
       ],
-      created,
+      light,
     )
-    expect(s.plans[0].blocks[0].rir).toEqual([{ min: 4, max: 5 }, { min: 3, max: 3 }, null])
+    expect(resized.plans[0].blocks[0]).toEqual({ ...light.plans[0].blocks[0], weeks: 3 })
   })
 
   it('removing the block the cycle started on moves the start to the first block left, keeping its date, and the last block stays', () => {
@@ -164,7 +166,7 @@ describe('logging sets', () => {
       { exerciseId: raise, sets: [done(12, 10, 1)] },
       { exerciseId: crunch, sets: [done(12, 20)] },
     ]
-    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH }], { ...created, sessions: [session('s0', '2026-10-01', last)] })
+    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, light: false }], { ...created, sessions: [session('s0', '2026-10-01', last)] })
     expect(s.sessions[1].exercises.map((e) => e.target)).toEqual([
       { kg: 60, reps: 8, rir: 2 },
       { kg: 40, reps: 9, rir: 2 },
@@ -173,6 +175,22 @@ describe('logging sets', () => {
       { kg: 20, reps: 13, rir: 1, rirMax: 3 },
     ])
     expect(s.sessions[1].exercises[0].sets).toEqual(Array(3).fill(pending(8, 60)))
+  })
+
+  it('in a light block every Exercise aims 2 RIR further from failure, and back in a normal block the reps rise by at most 2', () => {
+    const benchAt = (reps: number, rir: number) => session('s0', '2026-10-01', [{ exerciseId: BENCH, sets: [done(reps, 60, rir)], target: { kg: 60, reps, rir: 2 } }])
+    const start = (light: boolean, history: WorkoutState['sessions']) =>
+      run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, light }], { ...created, sessions: history }).sessions.at(-1)!.exercises[0]
+    const light = start(true, [benchAt(7, 2)])
+    expect(light).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(6, 60)), target: { kg: 60, reps: 6, rir: 4 } })
+    const deload = session('s0', '2026-10-01', [{ ...light, sets: [done(6, 60, 4)] }])
+    expect(start(false, [deload])).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(8, 60)), target: { kg: 60, reps: 8, rir: 2 } })
+  })
+
+  it('in a light block, a session that kept no target is read as aiming at the Role’s normal RIR Target', () => {
+    const unaimed = session('s0', '2026-10-01', [{ exerciseId: BENCH, sets: [done(7, 60, 2)] }])
+    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, light: true }], { ...created, sessions: [unaimed] })
+    expect(s.sessions[1].exercises[0].sets[0]).toEqual(pending(6, 60))
   })
 })
 

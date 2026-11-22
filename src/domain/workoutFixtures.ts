@@ -63,7 +63,7 @@ export const block = (id: string, weeks: number, days: BlockOf<'ppf'>['days']): 
   id: id as WorkoutBlockId,
   name: `Bloco ${id}`,
   weeks,
-  rir: Array.from({ length: weeks }, (_, i) => ({ min: weeks - 1 - i, max: weeks - i })),
+  light: false,
   days,
 })
 
@@ -83,7 +83,7 @@ export const trained = (on: string, dayId: string | null = null) => session(`s-$
 
 export const where = (plan: WorkoutPlan, sessions: WorkoutSession[], on: string) => {
   const p = blockPosition(plan, sessions, date(on))
-  return p && { block: p.block.name, week: p.week, rir: p.rir, movedFrom: p.movedFrom?.name ?? null }
+  return p && { block: p.block.name, week: p.week, movedFrom: p.movedFrom?.name ?? null }
 }
 
 export const MONDAY = '2026-10-05'

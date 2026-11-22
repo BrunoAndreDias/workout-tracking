@@ -27,6 +27,18 @@ describe('the Suggested Target’s reason line', () => {
     expect(note(sets(80, [6, 5], 0), TWO, MAIN)).toBe('Última: 80 kg × 6/5 · RIR 0, alvo 2. Com este esforço ficarias abaixo de 6–8, por isso desce para 77,5 kg e faz 6.')
   })
 
+  it('names a light week’s target on the way in and the normal target on the way back', () => {
+    const LIGHT_MAIN: RirTarget = { min: 4, max: 4 }
+    expect(note(sets(60, [7], 2), TWO, MAIN, LIGHT_MAIN)).toBe('Última: 60 kg × 7 · RIR 2, alvo 2. Semana leve: alvo RIR 4. Faz 6 com 60 kg.')
+    expect(note(sets(12, [11], 4), { min: 3, max: 5 }, ISOLATION, ONE_TO_THREE)).toBe('Última: 12 kg × 11 · RIR 4, alvo 3–5. Volta ao alvo RIR 1–3. Faz 13 com 12 kg.')
+  })
+
+  it('calls any other change of target a new target, such as a session from before RIR Targets that aimed at its single old RIR', () => {
+    expect(note(sets(60, [7], 0), { min: 0, max: 0 }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 0, alvo 0. Novo alvo: RIR 2. Faz 6 com 60 kg.')
+    expect(note(sets(60, [7], 3), { min: 3, max: 3 }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 3, alvo 3. Novo alvo: RIR 2. Sobram repetições acima de 6–8, por isso sobe para 62,5 kg e faz 6.')
+    expect(note(sets(60, [7], 2), ONE_TO_THREE, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 2, alvo 1–3. Novo alvo: RIR 2. Mantém 60 kg × 7.')
+  })
+
   it('suggests nothing without done sets', () => {
     expect(suggestTarget({ sets: [], previous: TWO, next: TWO, range: MAIN })).toBe(null)
   })

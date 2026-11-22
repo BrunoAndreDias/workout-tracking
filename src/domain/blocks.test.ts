@@ -10,13 +10,13 @@ describe('blockPosition', () => {
     expect(where(cycle('2026-10-07'), [], '2026-10-04')).toBe(null)
   })
 
-  it('counts the week the cycle started from its Monday, with that week’s RIR and nothing before it', () => {
-    expect(where(cycle('2026-10-07'), [], MONDAY)).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+  it('counts the week the cycle started from its Monday, and nothing before it', () => {
+    expect(where(cycle('2026-10-07'), [], MONDAY)).toEqual({ block: 'Bloco A', week: 1, movedFrom: null })
   })
 
   it('a week without a done set pauses the block, and two sessions in one week count once', () => {
     const sessions = [trained('2026-10-06'), trained('2026-10-08'), session('empty', '2026-10-13', [{ exerciseId: SQUAT, sets: [pending(5, 80)] }])]
-    expect(where(cycle(MONDAY), sessions, '2026-10-21')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
+    expect(where(cycle(MONDAY), sessions, '2026-10-21')).toEqual({ block: 'Bloco A', week: 2, movedFrom: null })
   })
 
   it('ignores sessions before the start and the sessions of the week asked about', () => {
@@ -26,13 +26,13 @@ describe('blockPosition', () => {
 
   it('moves into the next block after the block’s training weeks, naming the one before on its week 1', () => {
     const sessions = [trained(MONDAY), trained('2026-10-12')]
-    expect(where(cycle(MONDAY), sessions, '2026-10-19')).toEqual({ block: 'Bloco B', week: 1, rir: { min: 0, max: 1 }, movedFrom: 'Bloco A' })
+    expect(where(cycle(MONDAY), sessions, '2026-10-19')).toEqual({ block: 'Bloco B', week: 1, movedFrom: 'Bloco A' })
   })
 
   it('wraps to the first block after the last', () => {
     const sessions = [MONDAY, '2026-10-12', '2026-10-19', '2026-10-26'].map((d) => trained(d))
-    expect(where(cycle(MONDAY), sessions, '2026-11-02')).toEqual({ block: 'Bloco A', week: 2, rir: { min: 0, max: 1 }, movedFrom: null })
-    expect(where(cycle(MONDAY), sessions.slice(0, 3), '2026-10-26')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: 'Bloco B' })
+    expect(where(cycle(MONDAY), sessions, '2026-11-02')).toEqual({ block: 'Bloco A', week: 2, movedFrom: null })
+    expect(where(cycle(MONDAY), sessions.slice(0, 3), '2026-10-26')).toEqual({ block: 'Bloco A', week: 1, movedFrom: 'Bloco B' })
   })
 
   it('starts from the block named in the start, and from the first when that block is gone', () => {
@@ -41,7 +41,7 @@ describe('blockPosition', () => {
   })
 
   it('a plan with one block has no block before it', () => {
-    expect(where(cycle(MONDAY, [BLOCK_A]), [MONDAY, '2026-10-12'].map((d) => trained(d)), '2026-10-19')).toEqual({ block: 'Bloco A', week: 1, rir: { min: 1, max: 2 }, movedFrom: null })
+    expect(where(cycle(MONDAY, [BLOCK_A]), [MONDAY, '2026-10-12'].map((d) => trained(d)), '2026-10-19')).toEqual({ block: 'Bloco A', week: 1, movedFrom: null })
   })
 })
 

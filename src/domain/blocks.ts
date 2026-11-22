@@ -1,7 +1,7 @@
 import { mondayOf } from './dates.ts'
 import type { ExerciseId, IsoDate, WorkoutDayId } from './types.ts'
 import { isDone, MAX_BLOCK_WEEKS } from './workouts.ts'
-import type { PlannedExercise, RirTarget, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession } from './workouts.ts'
+import type { PlannedExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession } from './workouts.ts'
 
 const blockDays = (block: WorkoutBlock): readonly WorkoutDay[] => block.days
 
@@ -18,7 +18,6 @@ export function findDay(plans: readonly WorkoutPlan[], dayId: WorkoutDayId): Wor
 export interface BlockPosition {
   readonly block: WorkoutBlock
   readonly week: number
-  readonly rir: RirTarget | null
   readonly movedFrom: WorkoutBlock | null
 }
 
@@ -96,7 +95,7 @@ export function blockPosition(plan: WorkoutPlan, sessions: readonly WorkoutSessi
   }
   const block = blocks[index]
   const moved = week === 1 && trained.size > 0 && blocks.length > 1
-  return { block, week, rir: block.rir[week - 1] ?? null, movedFrom: moved ? blocks[(index + blocks.length - 1) % blocks.length] : null }
+  return { block, week, movedFrom: moved ? blocks[(index + blocks.length - 1) % blocks.length] : null }
 }
 
 export function currentBlock(plan: WorkoutPlan, sessions: readonly WorkoutSession[], date: IsoDate): { block: WorkoutBlock; position: BlockPosition | null } {

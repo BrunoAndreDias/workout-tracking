@@ -6,9 +6,9 @@ import { isId, isRecord } from './persistence.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './exerciseCatalog.ts'
 import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
-import { isRirTarget, MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
 import { isRunWeeks } from './blocks.ts'
-import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, RirTarget, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
+import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
 /**
@@ -16,8 +16,10 @@ export const EXERCISES_SCHEMA_VERSION = 1
  * with its days, and a role on each Planned Exercise. Plans of 1 and 2 whose blocks all have 3 or 4 days become that
  * split; the others cannot, and are dropped: loading keeps their text under `:migrated:`. A Planned Exercise's `weeks` and
  * `since` came later than 3 without a new version: absent, the run lasts its role's weeks and started when first done.
+ * 4 drops each block's RIR target per week, since each Role has its RIR Target, and marks a block `light` or not; a
+ * block of an older version is not light.
  */
-export const WORKOUT_PLANS_SCHEMA_VERSION = 3
+export const WORKOUT_PLANS_SCHEMA_VERSION = 4
 /**
  * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises; 3 marks each
  * set done or not, with an optional RIR, and keeps the target the session suggested. A session's optional `feel` and
@@ -79,19 +81,12 @@ function parseDay(raw: unknown, legacy: boolean): WorkoutDay | null {
   return exercises && { id: raw.id as WorkoutDayId, name: raw.name, exercises }
 }
 
-function parseRirTarget(raw: unknown): RirTarget | null | false {
-  if (raw === null) return null
-  if (!isRecord(raw) || typeof raw.min !== 'number' || typeof raw.max !== 'number') return false
-  const rir = { min: raw.min, max: raw.max }
-  return isRirTarget(rir) && rir
-}
-
 /** A block or plan as read, before its days are checked against a split. */
 interface ReadBlock {
   readonly id: WorkoutBlockId
   readonly name: string
   readonly weeks: number
-  readonly rir: readonly (RirTarget | null)[]
+  readonly light: boolean
   readonly days: readonly WorkoutDay[]
 }
 
@@ -103,13 +98,12 @@ interface ReadPlan {
   readonly start: CycleStart | null
 }
 
-function parseBlock(raw: unknown, legacy: boolean): ReadBlock | null {
+/** Before version 4 a block had a RIR target per week, dropped unread, and no `light`: it reads as not light. */
+function parseBlock(raw: unknown, version: 2 | 3 | 4): ReadBlock | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
-  if (!Array.isArray(raw.rir) || raw.rir.length !== raw.weeks) return null
-  const rir = raw.rir.map(parseRirTarget)
-  if (rir.includes(false)) return null
-  const days = parseList(raw.days, (r) => parseDay(r, legacy))
-  return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, rir: rir as (RirTarget | null)[], days }
+  if (version === 4 && typeof raw.light !== 'boolean') return null
+  const days = parseList(raw.days, (r) => parseDay(r, version === 2))
+  return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, light: raw.light === true && version === 4, days }
 }
 
 function parseStart(raw: unknown, blocks: readonly ReadBlock[]): CycleStart | null | false {
@@ -119,11 +113,12 @@ function parseStart(raw: unknown, blocks: readonly ReadBlock[]): CycleStart | nu
   return since !== null && { blockId: raw.blockId as WorkoutBlockId, since }
 }
 
-/** Version 2 had no split, and 3 must have one. */
-function parsePlan(raw: unknown, legacy: boolean): ReadPlan | null {
+/** Version 2 had no split, and 3 on must have one. */
+function parsePlan(raw: unknown, version: 2 | 3 | 4): ReadPlan | null {
+  const legacy = version === 2
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
   if (!legacy && !isSplit(raw.split)) return null
-  const blocks = parseList(raw.blocks, (r) => parseBlock(r, legacy))
+  const blocks = parseList(raw.blocks, (r) => parseBlock(r, version))
   if (!blocks || blocks.length === 0) return null
   const start = parseStart(raw.start, blocks)
   return start === false ? null : { id: raw.id as WorkoutPlanId, name: raw.name, split: legacy ? null : (raw.split as Split), blocks, start }
@@ -133,7 +128,7 @@ function parsePlanV1(raw: unknown): ReadPlan | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
   const days = parseList(raw.days, (r) => parseDay(r, true))
   if (!days) return null
-  const block = { id: `${raw.id}-b1` as WorkoutBlockId, name: 'Bloco A', weeks: 6, rir: Array(6).fill(null), days }
+  const block = { id: `${raw.id}-b1` as WorkoutBlockId, name: 'Bloco A', weeks: 6, light: false, days }
   return { id: raw.id as WorkoutPlanId, name: raw.name, split: null, blocks: [block], start: null }
 }
 
@@ -147,11 +142,14 @@ function asSplit(plan: ReadPlan): WorkoutPlan | null {
 
 const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
 
-/** Versions 1 to 3. A version 3 plan that does not fit its split fails the document; an older one is dropped. */
+const PLAN_VERSIONS = [1, 2, 3, 4] as const
+
+/** Versions 1 to 4. A plan of version 3 or 4 that does not fit its split fails the document; an older one is dropped. */
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
-  if (!isRecord(raw) || (raw.version !== 1 && raw.version !== 2 && raw.version !== WORKOUT_PLANS_SCHEMA_VERSION)) return null
-  const legacy = raw.version !== WORKOUT_PLANS_SCHEMA_VERSION
-  const read = parseList(raw.plans, raw.version === 1 ? parsePlanV1 : (r) => parsePlan(r, legacy), (p) => p.id)
+  const version = isRecord(raw) ? PLAN_VERSIONS.find((v) => v === raw.version) : undefined
+  if (!isRecord(raw) || version === undefined) return null
+  const legacy = version < 3
+  const read = parseList(raw.plans, version === 1 ? parsePlanV1 : (r) => parsePlan(r, version), (p) => p.id)
   if (!read) return null
   if (!isUnique(read.flatMap((p) => p.blocks.map((b) => b.id)))) return null
   if (!read.every((p) => isUnique(p.blocks.flatMap((b) => b.days.map((d) => d.id))))) return null

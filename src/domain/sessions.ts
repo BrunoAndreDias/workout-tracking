@@ -2,7 +2,7 @@ import { addDays } from './dates.ts'
 import { suggestTarget } from './progression.ts'
 import type { Suggestion } from './progression.ts'
 import type { ExerciseId, IsoDate, WorkoutSessionId } from './types.ts'
-import { ROLE_RIR } from './splits.ts'
+import { isLightTarget, LIGHT_RIR_EXTRA, roleRir } from './splits.ts'
 import { EMPTY_SET, isDone, targetRange } from './workouts.ts'
 import type { DoneSet, PendingSet, RepRange, RirTarget, SessionExercise, WorkoutDay, WorkoutSession } from './workouts.ts'
 
@@ -32,20 +32,23 @@ export function sessionsBefore(sessions: readonly WorkoutSession[], session: Wor
 
 /**
  * The suggested target for `exerciseId` on `date`, from the last time it was done; null when it never was. `next` is
- * the RIR Target aimed at; the last session is read against the one its target kept, or `next` when it kept none.
+ * the RIR Target aimed at; the last session is read against the one its target kept. One that kept none never aimed
+ * at a light target, so it is read against `next`, or its normal Role target when `next` is light.
  */
 export function suggestion(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, next: RirTarget, range: RepRange): Suggestion | null {
   const last = lastDoneSets(sessions, exerciseId, date)
-  return last && suggestTarget({ sets: last.sets, previous: last.aimed ?? next, next, range })
+  const unaimed = isLightTarget(next) ? { min: next.min - LIGHT_RIR_EXTRA, max: next.max - LIGHT_RIR_EXTRA } : next
+  return last && suggestTarget({ sets: last.sets, previous: last.aimed ?? unaimed, next, range })
 }
 
 /**
  * A session from a Workout Day has one row per Planned Exercise, each set pending at the suggested target, which is
- * kept with the RIR Target of its Role; an Exercise never done starts with empty sets.
+ * kept with the RIR Target of its Role, 2 further from failure when the day's Training Block is light; an Exercise
+ * never done starts with empty sets.
  */
-export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, sessions: readonly WorkoutSession[]): WorkoutSession {
+export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, light: boolean, sessions: readonly WorkoutSession[]): WorkoutSession {
   const exercises = (day?.exercises ?? []).map((p): SessionExercise => {
-    const rir = ROLE_RIR[p.role]
+    const rir = roleRir(p.role, light)
     const s = suggestion(sessions, p.exerciseId, date, rir, p.reps)
     if (!s) return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(EMPTY_SET) }
     const set: PendingSet = { done: false, kg: s.kg, reps: s.reps, rir: null }

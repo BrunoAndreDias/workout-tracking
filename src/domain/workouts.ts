@@ -53,7 +53,8 @@ export interface BlockOf<S extends Split> {
   readonly id: WorkoutBlockId
   readonly name: string
   readonly weeks: number
-  readonly rir: readonly (RirTarget | null)[]
+  /** A light block, such as a deload: every Role's RIR Target is LIGHT_RIR_EXTRA further from failure. */
+  readonly light: boolean
   readonly days: DaysOf<S>
 }
 
@@ -155,13 +156,6 @@ export function parseRepRange(text: string): RepRange | null {
 }
 
 export const MAX_RIR = 10
-
-export const isRirTarget = (r: RirTarget): boolean => Number.isInteger(r.min) && Number.isInteger(r.max) && r.min >= 0 && r.max >= r.min && r.max <= MAX_RIR
-
-export function parseRir(text: string): RirTarget | null {
-  const r = parseRange(text)
-  return r && isRirTarget(r) ? r : null
-}
 
 /** The one rule for what counts: a set is logged when it is done. */
 export const isDone = (set: LoggedSet): set is DoneSet => set.done

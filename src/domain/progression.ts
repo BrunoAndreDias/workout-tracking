@@ -1,3 +1,4 @@
+import { isLightTarget } from './splits.ts'
 import { LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
 import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
@@ -58,11 +59,16 @@ export function loadStep(load: number, direction: 1 | -1): number | null {
   return next > 0 ? next : null
 }
 
-/** Said when the next target differs from the one the sets aimed at. */
+/**
+ * Said when the next target differs from the one the sets aimed at: into a light block, back from one, or any other
+ * change, such as a new Role or a session from before RIR Targets that aimed at its single old RIR.
+ */
 function effortChange(previous: RirTarget, next: RirTarget): string {
-  if (next.min > previous.min) return ` Semana leve: alvo RIR ${rangeText(next)}.`
-  if (next.min < previous.min) return ` Volta ao alvo RIR ${rangeText(next)}.`
-  return ''
+  if (previous.min === next.min && previous.max === next.max) return ''
+  const [wasLight, isLight] = [isLightTarget(previous), isLightTarget(next)]
+  if (isLight && !wasLight) return ` Semana leve: alvo RIR ${rangeText(next)}.`
+  if (wasLight && !isLight) return ` Volta ao alvo RIR ${rangeText(next)}.`
+  return ` Novo alvo: RIR ${rangeText(next)}.`
 }
 
 export function suggestTarget(input: ProgressionInput): Suggestion | null {

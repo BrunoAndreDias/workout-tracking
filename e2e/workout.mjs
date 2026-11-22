@@ -26,7 +26,7 @@ await tab('Plano de treino').click()
 assert((await page.locator('.split-tile').allTextContents()).join('|') === '3 diasPush · Pull · Full body|4 diasUpper A · Lower A · Upper B · Lower B', 'a new plan offers the 3-day and the 4-day split')
 await createWorkoutPlan(page, { name: 'Força', days: 3 })
 assert((await page.getByRole('navigation', { name: 'Dias de Bloco A' }).getByRole('button').allTextContents()).join('|') === 'Push|Pull|Full body', 'the plan’s days are Push, Pull and Full body tabs')
-assert((await page.getByLabel(/^RIR da semana \d de Bloco A$/).evaluateAll((els) => els.map((e) => e.value))).join(' ') === '4–5 3 2–3 2 1–2 0–1', 'Bloco A ramps RIR from 4–5 down to 0–1 over 6 weeks')
+assert(!(await page.getByRole('checkbox', { name: /^Semana leve/ }).isChecked()), 'Bloco A is not a light block')
 const push = await workoutDay(page, 'Push')
 assert((await push.locator('.planned-name').allTextContents()).join('|') === 'Flat Barbell Bench Press|Standing Overhead Barbell Press|Dumbbell Lateral Raises|Cable Press-Downs|Cable Crunches', 'Push comes filled from the template')
 assert((await push.locator('.role-label').allTextContents()).join('|') === 'Principal|Secundário|Isolamento|Isolamento|Abs', 'each row shows its role')
@@ -147,7 +147,7 @@ assert(stored['workout-sessions'].version === 3 && stored['workout-sessions'].se
 assert(stored['workout-sessions'].sessions[0].feel === 4 && !('after' in stored['workout-sessions'].sessions[0]), 'the end feel is stored as 4, and no After-effects key yet')
 const supinoSets = stored['workout-sessions'].sessions[0].exercises.find((e) => e.note).sets
 assert(JSON.stringify(supinoSets.map((s) => [s.done, s.kg, s.reps, s.rir])) === '[[true,60,8,null],[true,62.5,7,null]]', `stored sets are done, with kg in decimals (got ${JSON.stringify(supinoSets)})`)
-assert(stored['workout-plans'].version === 3 && stored['workout-plans'].plans[0].split === 'ppf', 'the plan is stored as version 3 with its split')
+assert(stored['workout-plans'].version === 4 && stored['workout-plans'].plans[0].split === 'ppf', 'the plan is stored as version 4 with its split')
 assert(stored.exercises.exercises.some((e) => e.name === 'Supino') && stored.exercises.exercises.some((e) => e.name === BENCH), 'the user’s and the catalog’s exercises are stored by name')
 
 await page.goto(`${URL}#treino/${yesterday}`)

@@ -23,7 +23,7 @@ describe('the suggested target', () => {
   })
 
   it('a session from a Workout Day fills each planned set, pending, with the suggestion, and keeps it as the target', () => {
-    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, HISTORY)).toEqual({
+    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, false, HISTORY)).toEqual({
       id: 'new',
       date: '2026-10-06',
       workoutDayId: 'd-peito',
@@ -35,7 +35,7 @@ describe('the suggested target', () => {
   })
 
   it('a blank session starts with no exercises', () => {
-    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
+    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, false, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
   })
 
   it('counts only done sets', () => {

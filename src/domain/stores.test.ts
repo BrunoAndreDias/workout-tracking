@@ -24,11 +24,11 @@ describe('the text each store writes', () => {
   it('workout plans', () => {
     const day = (id: string, exercises: PlannedExercise[] = []) => ({ id: id as WorkoutDayId, name: id, exercises })
     const days = [day('Push', [{ exerciseId: 'x1' as ExerciseId, role: 'main', sets: 3, reps: { min: 6, max: 8 }, weeks: null, since: null }]), day('Pull'), day('Full body')] as const
-    const blocks = [{ id: 'wb1' as WorkoutBlockId, name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days }] as const
+    const blocks = [{ id: 'wb1' as WorkoutBlockId, name: 'Bloco A', weeks: 2, light: true, days }] as const
     const plans: WorkoutPlan[] = [{ id: 'wp1' as WorkoutPlanId, name: 'Força', split: 'ppf', blocks, start: { blockId: 'wb1' as WorkoutBlockId, since: '2026-10-05' as IsoDate } }]
     expect(written((s) => saveStore(STORES.workoutPlans, { plans, activePlanId: 'wp1' as WorkoutPlanId }, s))).toMatchInlineSnapshot(`
       {
-        "workout-tracking:workout-plans": "{"version":3,"plans":[{"id":"wp1","name":"Força","split":"ppf","blocks":[{"id":"wb1","name":"Bloco A","weeks":2,"rir":[{"min":5,"max":6},null],"days":[{"id":"Push","name":"Push","exercises":[{"exerciseId":"x1","role":"main","sets":3,"reps":{"min":6,"max":8},"weeks":null,"since":null}]},{"id":"Pull","name":"Pull","exercises":[]},{"id":"Full body","name":"Full body","exercises":[]}]}],"start":{"blockId":"wb1","since":"2026-10-05"}}],"activePlanId":"wp1"}",
+        "workout-tracking:workout-plans": "{"version":4,"plans":[{"id":"wp1","name":"Força","split":"ppf","blocks":[{"id":"wb1","name":"Bloco A","weeks":2,"light":true,"days":[{"id":"Push","name":"Push","exercises":[{"exerciseId":"x1","role":"main","sets":3,"reps":{"min":6,"max":8},"weeks":null,"since":null}]},{"id":"Pull","name":"Pull","exercises":[]},{"id":"Full body","name":"Full body","exercises":[]}]}],"start":{"blockId":"wb1","since":"2026-10-05"}}],"activePlanId":"wp1"}",
       }
     `)
   })

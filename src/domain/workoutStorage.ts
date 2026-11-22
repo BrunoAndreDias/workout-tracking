@@ -21,7 +21,8 @@ export const WORKOUT_PLANS_SCHEMA_VERSION = 3
 /**
  * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises; 3 marks each
  * set done or not, with an optional RIR, and keeps the target the session suggested. A session's optional `feel` and
- * `after` came later than 2 without a new version: absent, they are none.
+ * `after` came later than 2 without a new version: absent, they are none. So did a target's optional `rirMax`: absent,
+ * the target aimed at the single RIR `rir`.
  */
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 3
 
@@ -171,9 +172,12 @@ function parseSet(raw: unknown, legacy: boolean): LoggedSet | null {
   return raw.done === false ? { done: false, kg: raw.kg, reps: raw.reps, rir: raw.rir } : null
 }
 
+/** A kept target; an optional `rirMax` above `rir` makes its RIR a range, and without it the target is the single RIR. */
 function parseTarget(raw: unknown): SetTarget | null {
   if (!isRecord(raw) || (raw.kg !== null && !isKg(raw.kg)) || !isCount(raw.reps) || !isRir(raw.rir)) return null
-  return { kg: raw.kg, reps: raw.reps, rir: raw.rir }
+  if (raw.rirMax === undefined) return { kg: raw.kg, reps: raw.reps, rir: raw.rir }
+  if (!isRir(raw.rirMax) || raw.rirMax <= raw.rir) return null
+  return { kg: raw.kg, reps: raw.reps, rir: raw.rir, rirMax: raw.rirMax }
 }
 
 function parseSessionExercise(raw: unknown, legacy: boolean): SessionExercise | null {

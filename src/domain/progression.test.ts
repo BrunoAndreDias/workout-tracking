@@ -18,8 +18,13 @@ describe('the Suggested Target’s reason line', () => {
     expect(note(sets(60, [8, 8, 8], 2), TWO, MAIN)).toBe('Última: 60 kg × 8/8/8 · RIR 2, alvo 2. Sobram repetições acima de 6–8, por isso sobe para 62,5 kg e faz 6.')
   })
 
-  it('leaves out the RIR when none was logged, and names a bodyweight load', () => {
-    expect(note(sets(62.5, [7], null), TWO, MAIN)).toBe('Última: 62,5 kg × 7. Faz 8 com 62,5 kg.')
+  it('names the RIR of the set that decided, not the lowest RIR logged', () => {
+    const decided: DoneSet[] = [{ done: true, kg: 60, reps: 6, rir: 2 }, { done: true, kg: 60, reps: 8, rir: 1 }]
+    expect(note(decided, TWO, MAIN)).toBe('Última: 60 kg × 6/8 · RIR 2, alvo 2. Faz 7 com 60 kg.')
+  })
+
+  it('names only the target when the deciding set has no RIR logged, and names a bodyweight load', () => {
+    expect(note(sets(62.5, [7], null), TWO, MAIN)).toBe('Última: 62,5 kg × 7 · alvo 2. Faz 8 com 62,5 kg.')
     expect(note(sets(null, [8], 2), TWO, MAIN)).toBe('Última: peso corporal × 8 · RIR 2, alvo 2. Mantém peso corporal × 8.')
   })
 

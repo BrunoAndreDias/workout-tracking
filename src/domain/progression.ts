@@ -84,9 +84,8 @@ export function suggestTarget(input: ProgressionInput): Suggestion | null {
   const hardest = moves.reduce((a, b) => (b.reps < a.reps ? b : a))
   const lowest = Math.min(...atLoad.map((s) => s.reps))
   const reps = Math.min(hardest.reps + previous.min - next.min, lowest + MAX_REPS_UP)
-  const rirs = atLoad.flatMap((s) => (s.rir === null ? [] : [s.rir]))
-  const aimed = rirs.length > 0 ? ` · RIR ${Math.min(...rirs)}, alvo ${rangeText(previous)}` : ''
-  const summary = `Última: ${loadText(load)} × ${atLoad.map((s) => s.reps).join('/')}${aimed}.${effortChange(previous, next)}`
+  const logged = hardest.set.rir === null ? '' : `RIR ${hardest.set.rir}, `
+  const summary = `Última: ${loadText(load)} × ${atLoad.map((s) => s.reps).join('/')} · ${logged}alvo ${rangeText(previous)}.${effortChange(previous, next)}`
 
   const direction = reps > range.max ? 1 : reps < range.min ? -1 : 0
   const kg = load === null || direction === 0 ? null : loadStep(load, direction)

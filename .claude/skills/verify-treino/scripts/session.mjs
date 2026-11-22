@@ -5,9 +5,9 @@
 // Every check and artifact path is appended to <RUN_DIR>/<feature>/steps.log.
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright'
-import { openWorkoutTab, readStored, rendered, resetServer } from '../../../../e2e/_driver.mjs'
+import { fakeWhisper, openWorkoutTab, readStored, rendered, resetServer } from '../../../../e2e/_driver.mjs'
 
-export async function openApp({ feature, mobile = false, fresh = true, url = process.env.APP_URL, runDir = process.env.RUN_DIR } = {}) {
+export async function openApp({ feature, mobile = false, fresh = true, init, mic = false, url = process.env.APP_URL, runDir = process.env.RUN_DIR } = {}) {
   if (!url || !runDir) throw new Error('set APP_URL and RUN_DIR from launch.sh output')
   if (!feature) throw new Error('pass the feature id, e.g. { feature: "workouts" }')
   const dir = `${runDir}/${feature}`
@@ -17,12 +17,15 @@ export async function openApp({ feature, mobile = false, fresh = true, url = pro
     appendFileSync(`${dir}/steps.log`, line + '\n')
   }
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch(mic ? { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] } : {})
   // A new context has empty localStorage and `fresh` empties the server, so a drive starts with no data.
   // `fresh: false` opens a second device on the same server instead.
-  const page = await browser.newPage(
-    mobile ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } : { viewport: { width: 1280, height: 900 } },
-  )
+  const page = await browser.newPage({
+    ...(mobile ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } : { viewport: { width: 1280, height: 900 } }),
+    ...(mic ? { permissions: ['microphone'] } : {}),
+  })
+  if (init) await page.addInitScript(...(Array.isArray(init) ? init : [init]))
+  const whisper = mic ? await fakeWhisper(page.context()) : null
   const errors = []
   const confirms = []
   page.on('pageerror', (e) => errors.push(e.message))
@@ -44,6 +47,7 @@ export async function openApp({ feature, mobile = false, fresh = true, url = pro
     confirms,
     errors,
     log,
+    say: (text) => whisper.say(text),
     /** A region by its exact accessible name: a Workout Day card, a session card, … */
     region: (name) => page.getByRole('region', { name, exact: true }),
     /** Opens a Treino tab ('Registo', 'Plano de treino', 'Material') and waits until it is current. */

@@ -9,7 +9,7 @@ A button at the end of the `Treino` tab row (`Registo`, `Plano de treino`, `Mate
 
 ## How to get to it (user POV)
 
-- The icon button (☾ in light, ☀ in dark) at the right of the header.
+- The icon button (☾ in light, ☀ in dark) at the end of the `Treino` tab row (there is no header).
 
 ## Driving it with session.mjs
 
@@ -24,5 +24,5 @@ Preconditions:
 
 ## Gotchas
 
-- `app.stored()` reads only the twelve data stores, not the theme key. Read the key with `page.evaluate`.
+- `app.stored()` reads only the four data stores, not the theme key. Read the key with `page.evaluate`.
 - A layout or colour change should be checked in both themes. Toggle through the button rather than setting `data-theme` by hand.

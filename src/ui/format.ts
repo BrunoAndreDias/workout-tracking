@@ -5,22 +5,16 @@ import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
 import { AFTER_EFFECT_DAYS } from '../domain/sessions.ts'
 import { findDay } from '../domain/blocks.ts'
+import { rangeText } from '../domain/numbers.ts'
 import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
-
-const one = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
-
-/** Up to one decimal, comma separated: "42,5". */
-export const formatDecimal = (v: number) => one.format(v)
 
 const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
 /** "segunda-feira, 5 de outubro" */
 export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(date))
 
-export const formatRange = ({ min, max }: { min: number; max: number }) => (min === max ? `${min}` : `${min}–${max}`)
-
 /** "3 × 8–12", or "4 × 6" when the range is a single target. */
-export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) => `${sets} × ${formatRange(reps)}`
+export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) => `${sets} × ${rangeText(reps)}`
 
 /** "1 noite", "3 noites" */
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`

@@ -44,6 +44,12 @@ describe('the Suggested Target’s reason line', () => {
     expect(note(sets(60, [7], 2), ONE_TO_THREE, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 2, alvo 1–3. Novo alvo: RIR 2. Mantém 60 kg × 7.')
   })
 
+  it('names kg with up to two decimals, trimmed', () => {
+    expect(note(sets(61.25, [7], null), TWO, MAIN)).toBe('Última: 61,25 kg × 7 · alvo 2. Faz 8 com 61,25 kg.')
+    expect(note(sets(61.25, [8, 8, 8], 2), TWO, MAIN)).toBe('Última: 61,25 kg × 8/8/8 · RIR 2, alvo 2. Sobram repetições acima de 6–8, por isso sobe para 63,75 kg e faz 6.')
+    expect(note(sets(61.257, [7], null), TWO, MAIN)).toBe('Última: 61,26 kg × 7 · alvo 2. Faz 8 com 61,26 kg.')
+  })
+
   it('suggests nothing without done sets', () => {
     expect(suggestTarget({ sets: [], previous: TWO, next: TWO, range: MAIN })).toBe(null)
   })

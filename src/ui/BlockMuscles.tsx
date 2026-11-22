@@ -6,6 +6,7 @@ import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import type { Muscle } from '../domain/exerciseCatalog.ts'
 import { blockMuscles } from '../domain/muscles.ts'
 import type { MuscleVolume } from '../domain/muscles.ts'
+import { ratioText } from '../domain/numbers.ts'
 import { rankedVolumes, REFERENCE_RANGE, volumeNotes, volumeZone } from '../domain/volume.ts'
 import type { VolumeNote, VolumeZone } from '../domain/volume.ts'
 import { nameLookup } from '../domain/workouts.ts'
@@ -111,7 +112,7 @@ function noteText(note: VolumeNote): string {
     case 'above':
       return `Acima de ${high} séries por semana: ${list(note.muscles, true)}.`
     case 'uneven':
-      return `${MUSCLE_LABEL[note.more.muscle]} tem ${note.ratio.toFixed(1).replace('.', ',')}× as séries de ${MUSCLE_LABEL[note.less.muscle]}.`
+      return `${MUSCLE_LABEL[note.more.muscle]} tem ${ratioText(note.ratio)}× as séries de ${MUSCLE_LABEL[note.less.muscle]}.`
   }
 }
 

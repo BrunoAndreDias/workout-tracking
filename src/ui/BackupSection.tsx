@@ -1,19 +1,11 @@
 import { useRef, useState } from 'react'
-import { describeBackup, exportBackup, mergeBackup, parseBackup, writeAll } from '../domain/backup.ts'
-import { toIsoDate } from '../domain/dates.ts'
+import { describeBackup, mergeBackup, parseBackup, writeAll } from '../domain/backup.ts'
 import { defaultStorage } from '../domain/persistence.ts'
 import { loadAll, STORES } from '../domain/stores.ts'
 import type { AppData } from '../domain/stores.ts'
+import { downloadBackup } from './exportFile.ts'
+import { Notice } from './Notice.tsx'
 import { Panel } from './Panel.tsx'
-
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  link.click()
-  URL.revokeObjectURL(url)
-}
 
 /**
  * Every store is read once at start, so writing storage and reloading is the one way that cannot leave a stale
@@ -43,8 +35,7 @@ export function BackupSection() {
   const exportData = () => {
     const storage = defaultStorage()
     if (!storage) return setError('O armazenamento do navegador não está disponível.')
-    const { file, skipped } = exportBackup(storage)
-    download(`treino-${toIsoDate(new Date())}.json`, JSON.stringify(file, null, 2))
+    const skipped = downloadBackup(storage)
     setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map((name) => STORES[name].label).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
   }
 
@@ -79,16 +70,8 @@ export function BackupSection() {
           }}
         />
       </div>
-      {error && (
-        <p className="backup-error" role="alert">
-          {error}
-        </p>
-      )}
-      {warning && (
-        <p className="backup-error" role="status">
-          {warning}
-        </p>
-      )}
+      {error && <Notice tone="error">{error}</Notice>}
+      {warning && <Notice tone="warning">{warning}</Notice>}
       {incoming && (
         <Panel eyebrow="Importar dados" title="Cópia de segurança" onClose={() => setIncoming(null)}>
           <div className="panel-body backup-body">

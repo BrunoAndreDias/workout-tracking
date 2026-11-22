@@ -47,5 +47,6 @@ Each feature file starts with an H1 and one paragraph describing what the user s
 - [Backup](./backup.md): export all data to a JSON file, import it with merge or replace, and reject corrupt files.
 - [Server store](./sync.md): the stores on disk, a second browser on the same server, the offline line, the conflict line with `Recarregar`, and the upload of a browser's data to an empty server.
 - [Dictation](./dictation.md): the mic button on the exercise, workout and After-effect notes, on-device Whisper small, with the status line and the appended text.
+- [Crash page](./crash.md): what shows instead of a blank page when the app fails to start or a render throws, with `Exportar dados` read straight from the browser and `Recarregar`.
 - [Theme](./theme.md): the light and dark toggle at the end of the `Treino` tab row.
 - [Home screen app](./pwa.md): the manifest, the icons and the head tags that let the iPhone add the app to its home screen.

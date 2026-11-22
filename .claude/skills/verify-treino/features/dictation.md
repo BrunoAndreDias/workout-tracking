@@ -7,7 +7,7 @@ Every note field has a mic button in the textarea's top-right corner: an Exercis
 - `dictation-record` toggles `Ditar nota` and `Parar ditado` (`aria-pressed`). The status line under the field (`.dictate-status`, `role=status`) reads `A ouvir…`.
 - `dictation-load` shows `A descarregar o modelo de voz: <loaded> / <total> MB (só da primeira vez)` after stopping, only when the model is not ready yet, or `A preparar o modelo de voz…` while the size is unknown. The button is disabled meanwhile. It starts loading when recording starts, so the wait overlaps with talking.
 - `dictation-transcribe` shows `A transcrever…` with the button disabled, then appends the text: an empty note becomes the text, otherwise one space, or none after a newline. A blank transcription changes nothing.
-- `dictation-error` shows `Sem acesso ao microfone.` when permission is refused, or `Não foi possível transcrever. Tenta outra vez.`
+- `dictation-error` shows `Sem acesso ao microfone.` when permission is refused, or `Não foi possível transcrever. Tenta outra vez.`, as an `alert` in the error colour; every other status line is a muted `status`.
 
 ## How to get to it (user POV)
 

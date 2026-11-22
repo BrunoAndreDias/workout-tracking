@@ -1,4 +1,5 @@
 import { MicIcon, StopIcon } from '../ui/icons'
+import { Notice } from '../ui/Notice'
 import { appendDictation } from './appendDictation'
 import { useDictation } from './useDictation'
 
@@ -6,7 +7,7 @@ import { useDictation } from './useDictation'
 export function DictateButton({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const dictation = useDictation((text) => onChange(appendDictation(value, text)))
   if (!dictation.supported) return null
-  const { recording, busy, status, toggle } = dictation
+  const { recording, busy, failed, status, toggle } = dictation
 
   return (
     <>
@@ -20,7 +21,9 @@ export function DictateButton({ value, onChange }: { value: string; onChange: (v
       >
         {recording ? <StopIcon /> : <MicIcon />}
       </button>
-      <p className="dictate-status hint muted" role="status" aria-live="polite">{status}</p>
+      <Notice tone={failed ? 'error' : 'info'} className="dictate-status">
+        {status}
+      </Notice>
     </>
   )
 }

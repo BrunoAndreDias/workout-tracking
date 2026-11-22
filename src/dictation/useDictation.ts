@@ -90,6 +90,7 @@ export function useDictation(onText: (text: string) => void) {
     supported,
     recording: state.kind === 'recording',
     busy: state.kind === 'loading' || state.kind === 'transcribing',
+    failed: state.kind === 'error',
     status: statusText(state),
     toggle: () => (state.kind === 'recording' ? recorder.current?.stop() : void start()),
   }

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { Sync } from '../sync.ts'
+import { Notice } from './Notice.tsx'
 
 /** Says nothing while every change reaches the server. */
 export function SyncLine({ sync }: { sync: Sync }) {
@@ -7,13 +8,13 @@ export function SyncLine({ sync }: { sync: Sync }) {
   if (status === 'ligado') return null
   if (status === 'offline') {
     return (
-      <p className="sync-line" role="status">
+      <Notice tone="warning" className="sync-line">
         Sem ligação ao servidor. As alterações ficam neste navegador até voltar.
-      </p>
+      </Notice>
     )
   }
   return (
-    <p className="sync-line conflict" role="alert">
+    <Notice tone="error" className="sync-line">
       Os dados mudaram noutro dispositivo.{' '}
       <button
         type="button"
@@ -25,6 +26,6 @@ export function SyncLine({ sync }: { sync: Sync }) {
       >
         Recarregar
       </button>
-    </p>
+    </Notice>
   )
 }

@@ -2,8 +2,9 @@ import { addDays } from './dates.ts'
 import { suggestTarget } from './progression.ts'
 import type { Suggestion } from './progression.ts'
 import type { ExerciseId, IsoDate, WorkoutSessionId } from './types.ts'
+import { ROLE_RIR } from './splits.ts'
 import { EMPTY_SET, isDone, LOAD_INCREMENT } from './workouts.ts'
-import type { DoneSet, PendingSet, RepRange, RirTarget, Role, SessionExercise, WorkoutDay, WorkoutSession } from './workouts.ts'
+import type { DoneSet, PendingSet, RepRange, SessionExercise, WorkoutDay, WorkoutSession } from './workouts.ts'
 
 /**
  * The done sets of `exerciseId` in the latest session on or before `date` that has any, on the same date the one
@@ -29,13 +30,10 @@ export function sessionsBefore(sessions: readonly WorkoutSession[], session: Wor
   return sessions.filter((s, i) => s.date < session.date || (s.date === session.date && i < index))
 }
 
-/** How close to failure a role goes in a week: the week's lowest RIR, never under 1 for compounds; 2 when the week has none. */
-export function targetRir(role: Role, week: RirTarget | null): number {
-  if (!week) return 2
-  return role === 'main' || role === 'secondary' ? Math.max(1, week.min) : week.min
-}
-
-/** The suggested target for `exerciseId` on `date`, from the last time it was done; null when it never was. */
+/**
+ * The suggested target for `exerciseId` on `date`, from the last time it was done; null when it never was. `nextRir`
+ * is the lower end of the RIR Target aimed at, as is the RIR the last session's target kept.
+ */
 export function suggestion(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, nextRir: number, range: RepRange): Suggestion | null {
   const last = lastDoneSets(sessions, exerciseId, date)
   return last && suggestTarget({ sets: last.sets, previousRir: last.targetRir ?? nextRir, nextRir, range, increment: LOAD_INCREMENT })
@@ -43,15 +41,15 @@ export function suggestion(sessions: readonly WorkoutSession[], exerciseId: Exer
 
 /**
  * A session from a Workout Day has one row per Planned Exercise, each set pending at the suggested target, which is
- * kept; an Exercise never done starts with empty sets. `week` is the RIR target of the week the date falls in.
+ * kept with the RIR Target of its Role; an Exercise never done starts with empty sets.
  */
-export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, week: RirTarget | null, sessions: readonly WorkoutSession[]): WorkoutSession {
+export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, sessions: readonly WorkoutSession[]): WorkoutSession {
   const exercises = (day?.exercises ?? []).map((p): SessionExercise => {
-    const rir = targetRir(p.role, week)
-    const s = suggestion(sessions, p.exerciseId, date, rir, p.reps)
+    const rir = ROLE_RIR[p.role]
+    const s = suggestion(sessions, p.exerciseId, date, rir.min, p.reps)
     if (!s) return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(EMPTY_SET) }
     const set: PendingSet = { done: false, kg: s.kg, reps: s.reps, rir: null }
-    return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(set), target: { kg: s.kg, reps: s.reps, rir } }
+    return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(set), target: { kg: s.kg, reps: s.reps, rir: rir.min, ...(rir.max > rir.min && { rirMax: rir.max }) } }
   })
   return { id, date, workoutDayId: day?.id ?? null, exercises }
 }

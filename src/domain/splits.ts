@@ -137,6 +137,17 @@ export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
 export const DEFAULT_SETS = 3
 
+/**
+ * The RIR Target of each Role, about 80% of the reps a set could do (docs/research/rir-and-volume.md): 2 reps in
+ * reserve for compounds, 1 to 3 for isolation and core work. A recommendation the Suggested Target reads, never a limit.
+ */
+export const ROLE_RIR: { readonly [R in Role]: RirTarget } = {
+  main: { min: 2, max: 2 },
+  secondary: { min: 2, max: 2 },
+  isolation: { min: 1, max: 3 },
+  abs: { min: 1, max: 3 },
+}
+
 /** A 6-week block from 4–5 reps in reserve down to 0–1. */
 export const DEFAULT_RIR_RAMP: readonly RirTarget[] = [
   { min: 4, max: 5 },

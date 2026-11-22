@@ -80,12 +80,19 @@ export type PendingSet = { readonly done: false; readonly kg: number | null; rea
 export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
 export type LoggedSet = PendingSet | DoneSet
 
-/** What the session suggested when it started: the next session reads `rir` as what these sets aimed at. */
+/**
+ * What the session suggested when it started: the next session reads `rir` as what these sets aimed at. `rirMax` is
+ * the top of the RIR Target when it is a range; without it the target is the single RIR `rir`.
+ */
 export interface SetTarget {
   readonly kg: number | null
   readonly reps: number
   readonly rir: number
+  readonly rirMax?: number
 }
+
+/** The RIR range a kept target aimed at. */
+export const targetRange = (t: SetTarget): RirTarget => ({ min: t.rir, max: t.rirMax ?? t.rir })
 
 /** One Exercise's sets in a session. An Exercise appears at most once in a session. */
 export interface SessionExercise {

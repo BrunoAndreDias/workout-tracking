@@ -156,10 +156,23 @@ describe('logging sets', () => {
     expect(s.sessions[1].exercises[1]).toEqual({ exerciseId: REMO, sets: [pending(10, 40)] })
   })
 
-  it('starting a session suggests from the history in the state, at the week’s RIR', () => {
-    const history = { ...created, sessions: [session('s0', '2026-10-01', [{ exerciseId: BENCH, sets: [done(7, 60, 2)] }])] }
-    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, week: { min: 2, max: 3 } }], history)
-    expect(s.sessions[1].exercises[0]).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(8, 60)), target: { kg: 60, reps: 8, rir: 2 } })
+  it('starting a session suggests from the history in the state, each Exercise aiming at its Role’s RIR Target', () => {
+    const [bench, press, raise, , crunch] = PUSH.exercises.map((p) => p.exerciseId)
+    const last = [
+      { exerciseId: bench, sets: [done(7, 60, 2)] },
+      { exerciseId: press, sets: [done(8, 40, 2)] },
+      { exerciseId: raise, sets: [done(12, 10, 1)] },
+      { exerciseId: crunch, sets: [done(12, 20)] },
+    ]
+    const s = run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH }], { ...created, sessions: [session('s0', '2026-10-01', last)] })
+    expect(s.sessions[1].exercises.map((e) => e.target)).toEqual([
+      { kg: 60, reps: 8, rir: 2 },
+      { kg: 40, reps: 9, rir: 2 },
+      { kg: 10, reps: 13, rir: 1, rirMax: 3 },
+      undefined,
+      { kg: 20, reps: 13, rir: 1, rirMax: 3 },
+    ])
+    expect(s.sessions[1].exercises[0].sets).toEqual(Array(3).fill(pending(8, 60)))
   })
 })
 

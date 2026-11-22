@@ -30,7 +30,7 @@ export type WorkoutAction =
   | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'setPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; planned: PlannedExercise }
   | { type: 'removePlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId }
-  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; week: RirTarget | null }
+  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null }
   | { type: 'addSessionExercise'; sessionId: WorkoutSessionId; name: string; newExerciseId: ExerciseId }
   | { type: 'removeSessionExercise'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
   | { type: 'addSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
@@ -212,7 +212,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'removePlannedExercise':
       return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({ ...d, exercises: d.exercises.filter((p) => p.exerciseId !== action.exerciseId) }))
     case 'startSession':
-      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, action.week, state.sessions)] }
+      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, state.sessions)] }
     case 'addSessionExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state

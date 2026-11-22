@@ -207,7 +207,7 @@ function Lift({ sessionId, exercise, name, plan, note, current, dispatch }: Lift
             <button
               key={r}
               type="button"
-              className={target?.rir === r ? 'filter-chip rir-chip rir-target' : 'filter-chip rir-chip'}
+              className={target && r >= target.rir && r <= (target.rirMax ?? target.rir) ? 'filter-chip rir-chip rir-target' : 'filter-chip rir-chip'}
               aria-pressed={sets[active].rir === r}
               aria-label={`RIR ${r === 5 ? '5 ou mais' : r} na série ${active + 1} de ${name}`}
               onClick={() => edit(active, { kg: sets[active].kg, reps: sets[active].reps, rir: sets[active].rir === r ? null : r })}

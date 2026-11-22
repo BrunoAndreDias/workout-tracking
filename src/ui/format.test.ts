@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
-import { formatAfterDay, formatDaysAgo, formatDecimal, formatNoteTimes, formatPlanned } from './format.ts'
+import { formatAfterDay, formatDaysAgo, formatNoteTimes, formatPlanned } from './format.ts'
 
 describe('pt-PT formatting', () => {
-  it('uses comma decimals', () => {
-    expect(formatDecimal(42.5)).toBe('42,5')
-    expect(formatDecimal(60)).toBe('60')
-  })
-
   it('writes a planned exercise', () => {
     expect(formatPlanned({ sets: 3, reps: { min: 8, max: 12 } })).toBe('3 × 8–12')
     expect(formatPlanned({ sets: 4, reps: { min: 6, max: 6 } })).toBe('4 × 6')

@@ -5,6 +5,7 @@ import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import { dayMuscleSets } from '../domain/muscles.ts'
 import type { DayMuscle } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
+import { rangeText } from '../domain/numbers.ts'
 import { defaultRole, LIGHT_RIR_EXTRA, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
 import { blockExercises, currentBlock, isRunDue, isRunWeeks, weeksRun } from '../domain/blocks.ts'
@@ -15,7 +16,7 @@ import { BlockMuscles } from './BlockMuscles.tsx'
 import { CountField } from './CountField.tsx'
 import { EquipmentContext } from './equipmentContext.ts'
 import { ExercisePicker } from './ExercisePicker.tsx'
-import { formatRange, materialText, plural } from './format.ts'
+import { materialText, plural } from './format.ts'
 import { CloseIcon, PlusIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
 import { PlanTitle } from './PlanTitle.tsx'
@@ -27,7 +28,7 @@ function RangeField({ value, label, parse, onCommit }: { value: RepRange; label:
       className="count-input reps-input"
       type="text"
       aria-label={label}
-      value={text ?? formatRange(value)}
+      value={text ?? rangeText(value)}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
         setText(e.target.value)

@@ -62,7 +62,7 @@ What was trained on one calendar date (`YYYY-MM-DD`, the user's local day). It s
 _Avoid_: Workout (as a type name), training log
 
 **Logged Set**:
-One set of a Workout Session: the load in kg, or no load for a bodyweight set, the reps, an optional reps in reserve (RIR, 0 to 5 or more), and whether it is done. Only a done set counts, everywhere: in the session's counts, the training weeks, the muscle groups trained and the next Suggested Target. A set becomes done only by the user's tap, and only with reps; typing kg or reps never marks it. A set stays pending until then, kept with what was suggested or typed. Picking a RIR also fills the next pending set that has none. Sets logged before done sets existed count as done when they have reps.
+One set of a Workout Session: the load in kg, to two decimals at most (typing more rounds them, [ADR-0007](docs/adr/0007-kg-to-two-decimals.md)), or no load for a bodyweight set, the reps, an optional reps in reserve (RIR, 0 to 5 or more), and whether it is done. Only a done set counts, everywhere: in the session's counts, the training weeks, the muscle groups trained and the next Suggested Target. A set becomes done only by the user's tap, and only with reps; typing kg or reps never marks it. A set stays pending until then, kept with what was suggested or typed. Picking a RIR also fills the next pending set that has none. Sets logged before done sets existed count as done when they have reps.
 _Avoid_: Rep set, entry; "filled" for done
 
 **Exercise Note** (Nota):

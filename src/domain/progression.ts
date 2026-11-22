@@ -1,3 +1,4 @@
+import { kgText, rangeText, roundKg } from './numbers.ts'
 import { LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
 import { inTarget } from './workouts.ts'
 import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
@@ -31,14 +32,12 @@ const MAX_REPS_UP = 2
 const STEP: Record<Effort, number> = { failure: -1, harder: 0, on: 1, easy: MAX_REPS_UP }
 
 const clamp = (n: number, range: RepRange) => Math.min(Math.max(n, range.min), range.max)
-const kgText = (kg: number) => `${String(Math.round(kg * 100) / 100).replace('.', ',')} kg`
 const loadText = (kg: number | null) => (kg === null ? 'peso corporal' : kgText(kg))
-const rangeText = (r: { min: number; max: number }) => (r.min === r.max ? `${r.min}` : `${r.min}–${r.max}`)
 const sentence = (cause: string, text: string) => (cause ? cause + text : text[0].toUpperCase() + text.slice(1))
 
 export function loadStep(load: number, direction: 1 | -1): number | null {
   const step = load < SMALL_LOAD_BELOW ? SMALL_LOAD_INCREMENT : LOAD_INCREMENT
-  const next = Math.round((load + direction * step) * 100) / 100
+  const next = roundKg(load + direction * step)
   return next > 0 ? next : null
 }
 

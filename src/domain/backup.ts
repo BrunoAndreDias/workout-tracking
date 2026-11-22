@@ -8,11 +8,6 @@ import { findExercise } from './exerciseCatalog.ts'
 import { mapPlanDays } from './workoutReducer.ts'
 
 export const BACKUP_APP = 'workout-tracking'
-/**
- * The meal-planning app this one was split from wrote its Backups under this name, with the same file shape and the
- * same names for the stores both kept. Its food, plan, day, sleep, mood and Apple Watch stores are not read.
- */
-const MEAL_APP = 'plano-alimentar'
 export const BACKUP_VERSION = 1
 
 export type ParsedBackup = { ok: true; data: AppData } | { ok: false; error: string }
@@ -59,7 +54,7 @@ export function exportBackup(storage: StorageLike, now: Date = new Date()): Expo
 
 /** Rejects the whole file when any store this app keeps fails its own parser. Stores it does not keep are ignored. */
 export function parseBackup(raw: unknown): ParsedBackup {
-  if (!isRecord(raw) || (raw.app !== BACKUP_APP && raw.app !== MEAL_APP)) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Treino.' }
+  if (!isRecord(raw) || raw.app !== BACKUP_APP) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Treino.' }
   if (raw.version !== BACKUP_VERSION) return { ok: false, error: 'Esta cópia de segurança é de uma versão que a app não conhece.' }
   if (!isRecord(raw.stores)) return { ok: false, error: 'A cópia de segurança está danificada: faltam os dados.' }
   const data = Object.fromEntries(STORE_NAMES.map((name) => [name, STORES[name].fresh()])) as { -readonly [K in StoreName]: unknown }

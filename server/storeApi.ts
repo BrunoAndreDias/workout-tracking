@@ -30,8 +30,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 /**
- * The database the app keeps: `WORKOUT_DB`, else a file in the home directory, outside every checkout. It is not the
- * meal app's database, so the two apps never write into each other's file.
+ * The database the app keeps: `WORKOUT_DB`, else a file in the home directory, outside every checkout.
  */
 export function dbPath(env: NodeJS.ProcessEnv = process.env): string {
   if (env.WORKOUT_DB) return env.WORKOUT_DB

@@ -14,7 +14,7 @@ assert(await page.title() === 'Treino', 'the page title is Treino')
 await tabs.waitFor()
 assert(await page.getByRole('navigation', { name: 'Secções' }).count() === 0, 'the header has no view switcher: Treino is the only view')
 
-for (const old of ['#diario', '#alimentacao/hoje', '#historico', '#relogio', `#relogio/${todayIso()}`]) {
+for (const old of ['#relogio', `#relogio/${todayIso()}`, '#nada']) {
   await page.goto(URL + old)
   await tabs.waitFor()
   assert(await page.getByRole('region', { name: 'Relógio', exact: true }).count() === 0, `the old ${old} hash falls back to Treino`)

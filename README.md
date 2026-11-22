@@ -4,8 +4,6 @@ A private, single-user workout log in European Portuguese, for the gym.
 
 The app opens on `Treino`. Its `Plano de treino` tab holds your workout plan: a 3-day split (Push, Pull, Full body) or a 4-day one (Upper and Lower twice), which starts filled with exercises from a catalog you swap and add to, each with its sets and rep range. The plan names the muscle groups each day trains and adds up the block's sets a week per muscle group, so a group left untrained shows. It is written as training blocks, such as 6 weeks from 4–5 to 0–1 reps in reserve. The app counts the weeks you trained, starts the next day of the rotation from the current block, and on the week a new block starts says which exercises come in and go. `Registo` logs the sets of one date: each set comes with a suggested weight and reps worked out from the last time, and one tap marks it done; the session names the muscle groups its done sets trained. It also keeps how each session felt at its end and, on the following days, how it still feels, for the whole session or one exercise, so an injury that shows a day or two late can be followed. `Material` says what each exercise needs and what each place you train has, so the exercise picker lists first what you can do there.
 
-This app was split from a meal-planning app. A Backup that app exported imports here: its workouts and material come in, and its food and Apple Watch data are left out (see [Moving data over from the meal app](#moving-data-over-from-the-meal-app)).
-
 ## Run
 
 ```sh
@@ -15,7 +13,7 @@ npm run dev            # http://localhost:5180
 
 ## Where the data lives
 
-Exercises, workout plans, sessions and material live in a SQLite file on this machine, `~/.workout-tracking/workout.sqlite`. Set `WORKOUT_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. It is not the meal app's file, so the two apps never write into each other's data. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
+Exercises, workout plans, sessions and material live in a SQLite file on this machine, `~/.workout-tracking/workout.sqlite`. Set `WORKOUT_DB` to use another file. The file is outside the repo on purpose, so `git clean` and worktrees never touch it and it is never committed. `npm run dev`, `vite preview` and `npm run serve` all read and write it through `/api/stores`.
 
 The browser keeps a working copy in localStorage, under `workout-tracking:` keys. When the page opens, it takes the server's copy of each store, sends any change it made that the server never got, and uploads any store the server does not have yet. After that, each change is sent a moment after it is made. If the server does not answer, the app runs from the browser's copy and says `Sem ligação ao servidor. As alterações ficam neste navegador até voltar.`, and it sends the changes when the server answers again. If another device changed the same store first, it says `Os dados mudaram noutro dispositivo.` and stops sending that store until you press `Recarregar`, which takes the server's copy and drops this browser's unsent change to it.
 
@@ -39,14 +37,6 @@ It listens on this machine only. `HOST=0.0.0.0` would open it to your network, a
 
 Tests never open this file. `npm run e2e` and the verify-treino skill give each dev server they start a temp `WORKOUT_DB` and `WORKOUT_TEST=1`, which is also the only way the API allows `DELETE /api/stores`.
 
-## Moving data over from the meal app
-
-1. In the meal app, `Exportar dados` downloads `plano-alimentar-<date>.json`.
-2. Here, `Importar dados` and pick that file. The panel says what comes in, such as `1 plano de treino, 12 treinos, 2 locais de treino`.
-3. Tap `Juntar aos meus dados`, or `Substituir tudo` on an empty app.
-
-Only the stores this app keeps are read: exercises, workout plans and sessions, and material. The plans, foods, units, day logs, sleep, Feelings, Mood Notes and Apple Watch data in the file are ignored, and the file is still rejected whole when one of the stores this app reads is damaged. `src/domain/mealAppBackup.test.ts` and `e2e/backup.mjs` import a full Backup the meal app exported.
-
 ## On the iPhone
 
 The app installs on the iPhone home screen as a web app, with its own icon and no browser bars. There is no App Store step.
@@ -67,7 +57,7 @@ There is no service worker. The app needs the Mac's server for its data anyway, 
 
 ## Backup
 
-`Exportar dados`, at the bottom of `Treino`, downloads every store as one `treino-<date>.json`. `Importar dados` reads such a file, or one from the meal app. `Juntar aos meus dados` adds what you do not have yet, by id (an exercise named like one you have becomes that one), and keeps what you have. `Substituir tudo` replaces everything, after a confirm that says what you lose. A file with any damaged store changes nothing. The Apple Watch stores of a file from an older version are ignored.
+`Exportar dados`, at the bottom of `Treino`, downloads every store as one `treino-<date>.json`. `Importar dados` reads such a file. `Juntar aos meus dados` adds what you do not have yet, by id (an exercise named like one you have becomes that one), and keeps what you have. `Substituir tudo` replaces everything, after a confirm that says what you lose. A file with any damaged store changes nothing. The Apple Watch stores of a file from an older version are ignored.
 
 ## Dictation
 

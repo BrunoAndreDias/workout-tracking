@@ -93,7 +93,7 @@ const text = await notes.inputValue()
 console.log('note:', JSON.stringify(text))
 assert(text.startsWith('Bom treino. '), 'the dictation follows the existing note after a space')
 assert(/supino/i.test(text), 'the note holds the words of the clip')
-assert((await readStored(page))['workout-sessions'].sessions[0].note.text === text, 'the dictated note is persisted')
+assert((await readStored(page)).workoutSessions.sessions[0].note.text === text, 'the dictated note is persisted')
 assert(await page.locator('.dictate-status').first().textContent() === '', 'the status line is empty again')
 await page.screenshot({ path: `${S}/dictation-desktop-after.png`, fullPage: true })
 

@@ -31,8 +31,8 @@ await page.waitForEvent('load')
 await rendered(page)
 
 const stored = await readStored(page)
-assert(stored['workout-plans'].plans.map((p) => p.name).join() === 'Força', 'the workout plan came in')
-assert(stored['workout-sessions'].sessions[0].note.text === 'Bom treino', 'the session came in with its note')
+assert(stored.workoutPlans.plans.map((p) => p.name).join() === 'Força', 'the workout plan came in')
+assert(stored.workoutSessions.sessions[0].note.text === 'Bom treino', 'the session came in with its note')
 assert(stored.equipment.gyms.map((g) => g.name).join() === 'Casa', 'the material came in')
 
 await page.goto(`${URL}#treino/2026-05-01`)

@@ -62,18 +62,18 @@ assert((await startButtons()).join('|') === 'Começar Upper A|Lower A|Upper B|Lo
 assert(await page.getByRole('region', { name: 'Novo bloco' }).count() === 0, 'the cycle’s first week has no new-block notice')
 
 const stored = await readStored(page)
-const plans = stored['workout-plans']
+const plans = stored.workoutPlans
 assert(plans.version === 4 && plans.plans[0].blocks.map((b) => b.light).join() === 'false,true' && !('rir' in plans.plans[0].blocks[0]), `Bloco B is stored light (got ${JSON.stringify(plans.plans[0].blocks.map((b) => b.light))})`)
 assert(plans.plans[0].split === 'ul' && plans.plans[0].start.since === todayIso(), `the start is stored as today (got ${JSON.stringify(plans.plans[0].start)})`)
 const bench = stored.exercises.exercises.find((e) => e.name === 'Flat Barbell Bench Press').id
 const pressDowns = stored.exercises.exercises.find((e) => e.name === 'Cable Press-Downs').id
 const upperADay = plans.plans[0].blocks[0].days[0].id
-await putStore(page, URL, 'workout-plans', { ...plans, plans: [{ ...plans.plans[0], start: { ...plans.plans[0].start, since: mondayWeeksAgo(2) } }] })
+await putStore(page, URL, 'workoutPlans', { ...plans, plans: [{ ...plans.plans[0], start: { ...plans.plans[0].start, since: mondayWeeksAgo(2) } }] })
 const seeded = { id: 'seeded', date: mondayWeeksAgo(1), workoutDayId: upperADay, exercises: [
   { exerciseId: bench, sets: [{ done: true, kg: 60, reps: 7, rir: 2 }], target: { kg: 60, reps: 7, rir: 2 } },
   { exerciseId: pressDowns, sets: [{ done: true, kg: 20, reps: 12, rir: 1 }] },
 ] }
-await putStore(page, URL, 'workout-sessions', { version: 4, sessions: [seeded] })
+await putStore(page, URL, 'workoutSessions', { version: 4, sessions: [seeded] })
 await reloadApp(page)
 
 const notice = page.getByRole('region', { name: 'Novo bloco' })
@@ -94,10 +94,10 @@ assert((await liftNote('Flat Barbell Bench Press')).endsWith('Última: 60 kg × 
 assert((await liftNote('Cable Press-Downs')).endsWith('Última: 20 kg × 12 · RIR 1, alvo 1–3. Semana leve: alvo RIR 3–5. Faz 11 com 20 kg.'), `a session that kept no target is read against Isolamento’s 1–3, then two reps come off for the light week (got ${await liftNote('Cable Press-Downs')})`)
 const targetChips = (name) => session.getByRole('group', { name: `RIR da série 1 de ${name}` }).locator('.rir-target').allTextContents()
 assert((await targetChips('Flat Barbell Bench Press')).join(' ') === '4', 'the bench press’s RIR chips highlight its light target, RIR 4')
-const started = (await readStored(page))['workout-sessions']
+const started = (await readStored(page)).workoutSessions
 const pressDownsOnly = { ...started.sessions[1], exercises: started.sessions[1].exercises.filter((e) => e.exerciseId === pressDowns) }
 assert(JSON.stringify(pressDownsOnly.exercises[0].target) === '{"kg":20,"reps":11,"rir":3,"rirMax":5,"light":true}', `an Isolamento exercise keeps its light RIR Target 3–5, marked light (got ${JSON.stringify(pressDownsOnly.exercises[0].target)})`)
-await putStore(page, URL, 'workout-sessions', { ...started, sessions: [started.sessions[0], pressDownsOnly] })
+await putStore(page, URL, 'workoutSessions', { ...started, sessions: [started.sessions[0], pressDownsOnly] })
 await reloadApp(page)
 assert((await targetChips('Cable Press-Downs')).join(' ') === '3 4 5+', 'its RIR chips highlight every RIR from 3 to 5 or more')
 
@@ -119,7 +119,7 @@ const v2Day = (id, name, rows) => ({ id, name, exercises: rows.map((exerciseId) 
 const v2Block = (id, days) => ({ id, name: 'Bloco A', weeks: 6, rir: Array(6).fill(null), days })
 await seedStored(fresh, URL, {
   exercises: { version: 1, exercises: [{ id: 'x1', name: 'Agachamento' }, { id: 'x2', name: 'Prensa' }] },
-  'workout-plans': {
+  workoutPlans: {
     version: 2,
     plans: [
       { id: 'cinco', name: 'Cinco dias', blocks: [v2Block('b5', ['a', 'b', 'c', 'd', 'e'].map((d) => v2Day(`b5${d}`, d, ['x1'])))], start: null },
@@ -127,7 +127,7 @@ await seedStored(fresh, URL, {
     ],
     activePlanId: 'cinco',
   },
-  'workout-sessions': { version: 2, sessions: [{ id: 'old', date: mondayWeeksAgo(1), workoutDayId: 'b5a', exercises: [{ exerciseId: 'x1', sets: [{ reps: 5, kg: 100 }, { reps: null, kg: 100 }] }] }] },
+  workoutSessions: { version: 2, sessions: [{ id: 'old', date: mondayWeeksAgo(1), workoutDayId: 'b5a', exercises: [{ exerciseId: 'x1', sets: [{ reps: 5, kg: 100 }, { reps: null, kg: 100 }] }] }] },
 })
 await fresh.goto(URL + '#treino')
 await rendered(fresh)
@@ -137,9 +137,9 @@ assert((await fresh.getByRole('navigation', { name: 'Dias de Bloco A' }).getByRo
 const pernas = fresh.getByRole('region', { name: 'Pernas', exact: true })
 assert((await pernas.locator('.role-label').allTextContents()).join('|') === 'Principal|Isolamento', 'the first exercise of a day is guessed as the main lift')
 const migrated = await readStored(fresh)
-assert(migrated['workout-plans'].version === 4 && migrated['workout-sessions'].version === 4, 'the plans and the sessions are saved as version 4')
-assert(migrated['workout-plans'].plans[0].blocks[0].light === false, 'an older block reads as not light')
-assert(JSON.stringify(migrated['workout-sessions'].sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
+assert(migrated.workoutPlans.version === 4 && migrated.workoutSessions.version === 4, 'the plans and the sessions are saved as version 4')
+assert(migrated.workoutPlans.plans[0].blocks[0].light === false, 'an older block reads as not light')
+assert(JSON.stringify(migrated.workoutSessions.sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
 await fresh.goto(`${URL}#treino/${mondayWeeksAgo(1)}`)
 await fresh.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Registo' }).click()
 await fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' }).waitFor()

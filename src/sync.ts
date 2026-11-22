@@ -1,6 +1,6 @@
 import { preserveCopy } from './domain/persistence.ts'
 import type { BrowserStorage } from './domain/persistence.ts'
-import { isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
+import { DEVICE_KEY, isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
 import { parsePutReply, parseStoreList } from './domain/storeProtocol.ts'
 import type { PutBody, Stored, StoreList } from './domain/storeProtocol.ts'
@@ -21,8 +21,6 @@ interface SyncMeta {
   pending: StoreKey[]
   fresh: StoreKey[]
 }
-
-const SYNC_META_KEY = 'workout-tracking:sync'
 
 export interface Sync {
   /** localStorage, plus: each change to a store is sent to the server shortly after. */
@@ -60,7 +58,7 @@ async function requestJson<T>(request: typeof fetch, url: string, init: RequestI
 
 function readMeta(storage: BrowserStorage): SyncMeta {
   try {
-    const raw: unknown = JSON.parse(storage.getItem(SYNC_META_KEY) ?? 'null')
+    const raw: unknown = JSON.parse(storage.getItem(DEVICE_KEY.sync) ?? 'null')
     if (typeof raw !== 'object' || raw === null) return { revs: {}, pending: [], fresh: [] }
     const { revs, pending, fresh } = raw as Record<string, unknown>
     const keys = (list: unknown) => (Array.isArray(list) ? list.filter(isStoreKey) : [])
@@ -93,7 +91,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
 
   const saveMeta = () => {
     try {
-      storage.setItem(SYNC_META_KEY, JSON.stringify(meta))
+      storage.setItem(DEVICE_KEY.sync, JSON.stringify(meta))
     } catch {
       // a full storage loses only the bookkeeping: the next start pulls or re-sends
     }

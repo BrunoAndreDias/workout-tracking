@@ -30,7 +30,7 @@ const sessions = [8, 7, 6, 5, 4, 3, 2, 1].map((n) => ({ id: `w${n}`, date: monda
 const backdated = structuredClone(created['workout-plans'])
 for (const day of backdated.plans[0].blocks[0].days) for (const p of day.exercises) if ([bench, raises, curls].includes(p.exerciseId)) p.since = mondayWeeksAgo(9)
 await putStore(page, URL, 'workout-plans', backdated)
-await putStore(page, URL, 'workout-sessions', { version: 3, sessions })
+await putStore(page, URL, 'workout-sessions', { version: 4, sessions })
 await reloadApp(page)
 
 await tab('Registo').click()

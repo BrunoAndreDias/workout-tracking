@@ -12,7 +12,7 @@ import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, Rol
 
 export const EXERCISES_SCHEMA_VERSION = 1
 export const WORKOUT_PLANS_SCHEMA_VERSION = 4
-export const WORKOUT_SESSIONS_SCHEMA_VERSION = 3
+export const WORKOUT_SESSIONS_SCHEMA_VERSION = 4
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
 const isKg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0
@@ -185,7 +185,7 @@ function parseAfterEffect(raw: unknown, session: { date: IsoDate; exercises: rea
   return { date, exerciseId, note }
 }
 
-function parseSession(raw: unknown, version: 1 | 2 | 3): WorkoutSession | null {
+function parseSession(raw: unknown, version: 1 | 2 | 3 | 4): WorkoutSession | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string') return null
   const date = parseIsoDate(raw.date)
   if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
@@ -207,10 +207,10 @@ function parseSession(raw: unknown, version: 1 | 2 | 3): WorkoutSession | null {
   }
 }
 
-/** Versions 1 to 3; null for anything else, including one bad session or two with the same id. */
+/** Versions 1 to 4; null for anything else, including one bad session or two with the same id. */
 export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
   if (!isRecord(raw)) return null
   const version = raw.version
-  if (version !== 1 && version !== 2 && version !== WORKOUT_SESSIONS_SCHEMA_VERSION) return null
+  if (version !== 1 && version !== 2 && version !== 3 && version !== WORKOUT_SESSIONS_SCHEMA_VERSION) return null
   return parseList(raw.sessions, (r) => parseSession(r, version), (s) => s.id)
 }

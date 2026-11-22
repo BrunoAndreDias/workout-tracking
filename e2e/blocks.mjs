@@ -76,7 +76,7 @@ const seeded = { id: 'seeded', date: mondayWeeksAgo(1), workoutDayId: upperADay,
   { exerciseId: bench, sets: [{ done: true, kg: 60, reps: 7, rir: 2 }], target: { kg: 60, reps: 7, rir: 2 } },
   { exerciseId: pressDowns, sets: [{ done: true, kg: 20, reps: 12, rir: 1 }] },
 ] }
-await putStore(page, URL, 'workout-sessions', { version: 3, sessions: [seeded] })
+await putStore(page, URL, 'workout-sessions', { version: 4, sessions: [seeded] })
 await reloadApp(page)
 
 const notice = page.getByRole('region', { name: 'Novo bloco' })
@@ -140,7 +140,7 @@ assert((await fresh.getByRole('navigation', { name: 'Dias de Bloco A' }).getByRo
 const pernas = fresh.getByRole('region', { name: 'Pernas', exact: true })
 assert((await pernas.locator('.role-label').allTextContents()).join('|') === 'Principal|Isolamento', 'the first exercise of a day is guessed as the main lift')
 const migrated = await readStored(fresh)
-assert(migrated['workout-plans'].version === 4 && migrated['workout-sessions'].version === 3, 'the plans are saved as version 4 and the sessions as version 3')
+assert(migrated['workout-plans'].version === 4 && migrated['workout-sessions'].version === 4, 'the plans and the sessions are saved as version 4')
 assert(migrated['workout-plans'].plans[0].blocks[0].light === false, 'an older block reads as not light')
 assert(JSON.stringify(migrated['workout-sessions'].sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
 await fresh.goto(`${URL}#treino/${mondayWeeksAgo(1)}`)

@@ -31,7 +31,7 @@ const SESSION = {
   ],
   note: { text: 'Ombro ok', createdAt: '2026-10-06T19:30:00', updatedAt: '2026-10-06T19:41:00' },
 }
-const sessions = (...list: unknown[]) => ({ version: 3, sessions: list })
+const sessions = (...list: unknown[]) => ({ version: 4, sessions: list })
 const withSets = (sets: unknown[]) => sessions({ ...SESSION, exercises: [{ exerciseId: 'e1', sets }] })
 
 const ROW = { exerciseId: 'e1', role: 'main', sets: 4, reps: { min: 6, max: 6 }, weeks: 10, since: '2026-09-28' }
@@ -79,15 +79,15 @@ describe('workout storage', () => {
     const storage = memoryStorage()
     saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(ranged, { ...SESSION, id: 's2' }))!, storage)
     expect(loadStore(STORES.workoutSessions, storage)).toEqual([ranged, { ...SESSION, id: 's2' }])
-    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
+    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":4')
   })
 
-  it('reads back a kept light target, still at version 3', () => {
+  it('reads back a kept light target', () => {
     const light = { ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 10, reps: 12, rir: 3, rirMax: 5, light: true } }] }
     const storage = memoryStorage()
     saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(light))!, storage)
     expect(loadStore(STORES.workoutSessions, storage)).toEqual([light])
-    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
+    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":4')
   })
 
   it('reads an empty After-effects list as none', () => {
@@ -123,7 +123,7 @@ describe('workout storage', () => {
   })
 
   it.each([
-    ['an unknown version', { version: 4, sessions: [] }],
+    ['an unknown version', { version: 5, sessions: [] }],
     ['a bad date', sessions({ ...SESSION, date: '2026-02-30' })],
     ['negative kg', withSets([{ ...SET, kg: -1 }])],
     ['a done set with no reps', withSets([{ ...SET, reps: null }])],

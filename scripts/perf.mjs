@@ -79,7 +79,7 @@ async function seed(browser, url) {
     }
   }
   await putStore(page, url, 'workout-plans', plans)
-  await putStore(page, url, 'workout-sessions', { version: 3, sessions })
+  await putStore(page, url, 'workout-sessions', { version: 4, sessions })
   await page.close()
   return { sessions: sessions.length, sets: sessions.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.length, 0), 0) }
 }

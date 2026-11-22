@@ -4,4 +4,4 @@ What a reviewer checks in a diff, beyond what `npm run check` already enforces. 
 
 ## Stored user data
 
-Code that replaces stored user data (load fallbacks, sync, import, migration) keeps the old copy first with `preserveCopy` (`src/domain/persistence.ts`), and a test covers the order in which browsers or devices start.
+Code that replaces stored user data (load fallbacks, sync, import, migration) keeps the old copy first with `preserveCopy` (`src/domain/persistence.ts`), and a test covers the order in which browsers or devices start. A new key in a stored document bumps its version, so code that predates the key refuses the document instead of saving it back without the key ([ADR-0005](docs/adr/0005-stored-document-versions.md)).

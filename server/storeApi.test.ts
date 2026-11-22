@@ -5,8 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { brotliDecompressSync, gunzipSync } from 'node:zlib'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { dbPath, openStores, storeHandler } from './storeApi.ts'
+import type { Stores } from './storeApi.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
 const SLEEP = 'workout-tracking:exercises'
@@ -121,6 +122,13 @@ describe('store API', () => {
     expect(await api.get()).toEqual({})
   })
 
+  it('answers a key with a bad % escape with 400', async () => {
+    const api = await start()
+    const res = await fetch(`${api.base}/%E0`)
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'bad store key' })
+  })
+
   it('leaves out a row the database still holds under a key the app no longer keeps', async () => {
     const api = await start()
     await api.put(PLANS, '{"a":1}', null)
@@ -156,6 +164,35 @@ describe('store API', () => {
     await test.put(PLANS, '{}', null)
     expect((await fetch(test.base, { method: 'DELETE' })).status).toBe(200)
     expect(await test.get()).toEqual({})
+  })
+})
+
+describe('a store that throws', () => {
+  it('answers 500 with JSON and keeps answering the next request', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stores: Stores = {
+      all: () => {
+        throw new Error('database is locked')
+      },
+      get: () => null,
+      put: () => ({ ok: true, rev: 1 }),
+      reset: () => {},
+      close: () => {},
+    }
+    const server = createServer(storeHandler(() => stores))
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    close = () => {
+      server.close()
+      error.mockRestore()
+    }
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+    const failed = await fetch(base)
+    expect(failed.status).toBe(500)
+    expect(await failed.json()).toEqual({ error: 'internal' })
+    expect(error).toHaveBeenCalled()
+    const next = await fetch(`${base}/${encodeURIComponent(PLANS)}`)
+    expect(next.status).toBe(200)
+    expect(await next.json()).toEqual({ doc: null, rev: 0 })
   })
 })
 

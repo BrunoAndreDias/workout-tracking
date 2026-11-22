@@ -157,7 +157,7 @@ function parsePut(text: string): { doc: string; baseRev: number | null } | null 
  * the database only when `allowReset`, which only the test server sets.
  */
 export function storeHandler(stores: () => Stores, { allowReset = false } = {}) {
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const path = url.pathname
     if (path === '/api/stores') {
@@ -170,7 +170,8 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
     }
     const match = /^\/api\/stores\/([^/]+)$/.exec(path)
     if (!match) return send(res, 404, { error: 'not found' })
-    const key = decodeURIComponent(match[1])
+    const key = decodeKey(match[1])
+    if (key === null) return send(res, 400, { error: 'bad store key' })
     if (!isStoreKey(key)) return send(res, 404, { error: `unknown store ${key}`, stores: STORE_KEYS })
     if (req.method === 'GET') return send(res, 200, stores().get(key) ?? { doc: null, rev: 0 })
     if (req.method !== 'PUT') return send(res, 405, { error: 'method not allowed' })
@@ -180,5 +181,22 @@ export function storeHandler(stores: () => Stores, { allowReset = false } = {}) 
     const result = stores().put(key, body.doc, body.baseRev)
     if (result.ok) return send(res, 200, { rev: result.rev })
     return send(res, 409, { doc: result.current?.doc ?? null, rev: result.current?.rev ?? 0 })
+  }
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      await handle(req, res)
+    } catch (e) {
+      console.error(e)
+      if (!res.headersSent) send(res, 500, { error: 'internal' })
+      else res.end()
+    }
+  }
+}
+
+function decodeKey(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw)
+  } catch {
+    return null
   }
 }

@@ -44,10 +44,18 @@ export interface WorkoutDay {
 
 export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
 
-export interface RirTarget {
+/** A range of RIR, such as 1–3; a single RIR has `min` and `max` equal. */
+export interface RirRange {
   readonly min: number
   readonly max: number
 }
+
+/** The RIR range a set aims at, and whether it is a light Training Block's. */
+export interface RirTarget extends RirRange {
+  readonly light: boolean
+}
+
+export const inTarget = (rir: number, target: RirRange): boolean => rir >= target.min && rir <= target.max
 
 export interface BlockOf<S extends Split> {
   readonly id: WorkoutBlockId
@@ -83,17 +91,19 @@ export type LoggedSet = PendingSet | DoneSet
 
 /**
  * What the session suggested when it started: the next session reads `rir` as what these sets aimed at. `rirMax` is
- * the top of the RIR Target when it is a range; without it the target is the single RIR `rir`.
+ * the top of the RIR Target when it is a range; without it the target is the single RIR `rir`. `light` marks a light
+ * block's target; without it the target was not light.
  */
 export interface SetTarget {
   readonly kg: number | null
   readonly reps: number
   readonly rir: number
   readonly rirMax?: number
+  readonly light?: true
 }
 
-/** The RIR range a kept target aimed at. */
-export const targetRange = (t: SetTarget): RirTarget => ({ min: t.rir, max: t.rirMax ?? t.rir })
+/** The RIR Target a kept target aimed at. */
+export const aimedAt = (t: SetTarget): RirTarget => ({ min: t.rir, max: t.rirMax ?? t.rir, light: t.light === true })
 
 /** One Exercise's sets in a session. An Exercise appears at most once in a session. */
 export interface SessionExercise {

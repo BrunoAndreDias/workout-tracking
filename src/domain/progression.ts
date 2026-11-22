@@ -1,5 +1,5 @@
-import { isLightTarget } from './splits.ts'
 import { LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
+import { inTarget } from './workouts.ts'
 import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
 /**
@@ -34,7 +34,7 @@ type Effort = 'failure' | 'harder' | 'on' | 'easy'
 
 /** How a set's logged RIR compares with the target it aimed at; none logged counts as on target. */
 function effort(rir: number | null, aimed: RirTarget): Effort {
-  if (rir === null || (rir >= aimed.min && rir <= aimed.max)) return 'on'
+  if (rir === null || inTarget(rir, aimed)) return 'on'
   if (rir > aimed.max) return 'easy'
   return rir === 0 ? 'failure' : 'harder'
 }
@@ -64,10 +64,9 @@ export function loadStep(load: number, direction: 1 | -1): number | null {
  * change, such as a new Role or a session from before RIR Targets that aimed at its single old RIR.
  */
 function effortChange(previous: RirTarget, next: RirTarget): string {
+  if (next.light && !previous.light) return ` Semana leve: alvo RIR ${rangeText(next)}.`
+  if (previous.light && !next.light) return ` Volta ao alvo RIR ${rangeText(next)}.`
   if (previous.min === next.min && previous.max === next.max) return ''
-  const [wasLight, isLight] = [isLightTarget(previous), isLightTarget(next)]
-  if (isLight && !wasLight) return ` Semana leve: alvo RIR ${rangeText(next)}.`
-  if (wasLight && !isLight) return ` Volta ao alvo RIR ${rangeText(next)}.`
   return ` Novo alvo: RIR ${rangeText(next)}.`
 }
 

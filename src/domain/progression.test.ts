@@ -4,8 +4,8 @@ import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
 const MAIN = { min: 6, max: 8 }
 const ISOLATION = { min: 10, max: 15 }
-const TWO: RirTarget = { min: 2, max: 2 }
-const ONE_TO_THREE: RirTarget = { min: 1, max: 3 }
+const TWO: RirTarget = { min: 2, max: 2, light: false }
+const ONE_TO_THREE: RirTarget = { min: 1, max: 3, light: false }
 const sets = (kg: number | null, reps: number[], rir: number | null): DoneSet[] => reps.map((r) => ({ done: true, kg, reps: r, rir }))
 const note = (done: DoneSet[], previous: RirTarget, range: RepRange, next = previous) => suggestTarget({ sets: done, previous, next, range })?.note
 
@@ -33,14 +33,14 @@ describe('the Suggested Target’s reason line', () => {
   })
 
   it('names a light week’s target on the way in and the normal target on the way back', () => {
-    const LIGHT_MAIN: RirTarget = { min: 4, max: 4 }
+    const LIGHT_MAIN: RirTarget = { min: 4, max: 4, light: true }
     expect(note(sets(60, [7], 2), TWO, MAIN, LIGHT_MAIN)).toBe('Última: 60 kg × 7 · RIR 2, alvo 2. Semana leve: alvo RIR 4. Faz 6 com 60 kg.')
-    expect(note(sets(12, [11], 4), { min: 3, max: 5 }, ISOLATION, ONE_TO_THREE)).toBe('Última: 12 kg × 11 · RIR 4, alvo 3–5. Volta ao alvo RIR 1–3. Faz 13 com 12 kg.')
+    expect(note(sets(12, [11], 4), { min: 3, max: 5, light: true }, ISOLATION, ONE_TO_THREE)).toBe('Última: 12 kg × 11 · RIR 4, alvo 3–5. Volta ao alvo RIR 1–3. Faz 13 com 12 kg.')
   })
 
   it('calls any other change of target a new target, such as a session from before RIR Targets that aimed at its single old RIR', () => {
-    expect(note(sets(60, [7], 0), { min: 0, max: 0 }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 0, alvo 0. Novo alvo: RIR 2. Faz 6 com 60 kg.')
-    expect(note(sets(60, [7], 3), { min: 3, max: 3 }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 3, alvo 3. Novo alvo: RIR 2. Sobram repetições acima de 6–8, por isso sobe para 62,5 kg e faz 6.')
+    expect(note(sets(60, [7], 0), { min: 0, max: 0, light: false }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 0, alvo 0. Novo alvo: RIR 2. Faz 6 com 60 kg.')
+    expect(note(sets(60, [7], 3), { min: 3, max: 3, light: false }, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 3, alvo 3. Novo alvo: RIR 2. Sobram repetições acima de 6–8, por isso sobe para 62,5 kg e faz 6.')
     expect(note(sets(60, [7], 2), ONE_TO_THREE, MAIN, TWO)).toBe('Última: 60 kg × 7 · RIR 2, alvo 1–3. Novo alvo: RIR 2. Mantém 60 kg × 7.')
   })
 

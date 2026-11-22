@@ -2,8 +2,8 @@ import { addDays } from './dates.ts'
 import { suggestTarget } from './progression.ts'
 import type { Suggestion } from './progression.ts'
 import type { ExerciseId, IsoDate, WorkoutSessionId } from './types.ts'
-import { isLightTarget, LIGHT_RIR_EXTRA, roleRir } from './splits.ts'
-import { EMPTY_SET, isDone, targetRange } from './workouts.ts'
+import { roleRir, withLight } from './splits.ts'
+import { aimedAt, EMPTY_SET, isDone } from './workouts.ts'
 import type { DoneSet, PendingSet, RepRange, RirTarget, SessionExercise, WorkoutDay, WorkoutSession } from './workouts.ts'
 
 /**
@@ -18,7 +18,7 @@ export function lastDoneSets(sessions: readonly WorkoutSession[], exerciseId: Ex
     const exercise = session.exercises.find((e) => e.exerciseId === exerciseId)
     const sets = exercise?.sets.filter(isDone) ?? []
     if (sets.length === 0) continue
-    found = { sets, aimed: exercise?.target ? targetRange(exercise.target) : null }
+    found = { sets, aimed: exercise?.target ? aimedAt(exercise.target) : null }
     foundDate = session.date
   }
   return found
@@ -37,8 +37,7 @@ export function sessionsBefore(sessions: readonly WorkoutSession[], session: Wor
  */
 export function suggestion(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, next: RirTarget, range: RepRange): Suggestion | null {
   const last = lastDoneSets(sessions, exerciseId, date)
-  const unaimed = isLightTarget(next) ? { min: next.min - LIGHT_RIR_EXTRA, max: next.max - LIGHT_RIR_EXTRA } : next
-  return last && suggestTarget({ sets: last.sets, previous: last.aimed ?? unaimed, next, range })
+  return last && suggestTarget({ sets: last.sets, previous: last.aimed ?? withLight(next, false), next, range })
 }
 
 /**
@@ -52,7 +51,7 @@ export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDa
     const s = suggestion(sessions, p.exerciseId, date, rir, p.reps)
     if (!s) return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(EMPTY_SET) }
     const set: PendingSet = { done: false, kg: s.kg, reps: s.reps, rir: null }
-    return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(set), target: { kg: s.kg, reps: s.reps, rir: rir.min, ...(rir.max > rir.min && { rirMax: rir.max }) } }
+    return { exerciseId: p.exerciseId, sets: Array(p.sets).fill(set), target: { kg: s.kg, reps: s.reps, rir: rir.min, ...(rir.max > rir.min && { rirMax: rir.max }), ...(rir.light && { light: true }) } }
   })
   return { id, date, workoutDayId: day?.id ?? null, exercises }
 }

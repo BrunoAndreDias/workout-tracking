@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutDayId } from './types.ts'
 import type { LoggedSet, PlannedExercise, RepRange, SetTarget } from './workouts.ts'
+import { suggestion } from './sessions.ts'
+import { roleRir } from './splits.ts'
 import { SUPINO, S1, created, date, done, planned, run, session } from './workoutFixtures.ts'
 
 const MAIN: RepRange = { min: 6, max: 8 }
@@ -77,5 +79,25 @@ describe('the Suggested Target follows the RIR table', () => {
 
   it('reads only the sets at the last set’s load', () => {
     expect(next('main', MAIN, [done(3, 60, 0), done(6, 80, 2), done(6, 80, 2)], { ...TWO, kg: 80 })).toEqual({ kg: 80, reps: 7 })
+  })
+})
+
+describe('the Suggested Target’s change of RIR Target', () => {
+  /** The reason line for a normal Principal session after one that did 60 × 7 at RIR 4 keeping `aimed`. */
+  const backToNormal = (aimed: SetTarget) => {
+    const last = session('s0', '2026-10-01', [{ exerciseId: SUPINO, sets: [done(7, 60, 4)], target: aimed }])
+    return suggestion([last], SUPINO, date('2026-10-06'), roleRir('main', false), MAIN)?.note
+  }
+
+  it('returns from a light block only when the last session kept a light target', () => {
+    const day = { id: 'd' as WorkoutDayId, name: 'Dia', exercises: [planned(SUPINO, 'main', 1, MAIN)] }
+    const before = session('s-1', '2026-09-21', [{ exerciseId: SUPINO, sets: [done(7, 60, 2)] }])
+    const started = run([{ type: 'startSession', sessionId: S1, date: date('2026-09-28'), day, light: true }], { ...created, sessions: [before] })
+    const light = started.sessions[1].exercises[0].target!
+    expect(backToNormal(light)).toContain('Volta ao alvo RIR 2.')
+  })
+
+  it('calls an older session’s single RIR a new target, even when it matches a light one', () => {
+    expect(backToNormal({ kg: 60, reps: 7, rir: 4 })).toContain('Novo alvo: RIR 2.')
   })
 })

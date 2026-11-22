@@ -99,7 +99,7 @@ const targetChips = (name) => session.getByRole('group', { name: `RIR da série 
 assert((await targetChips('Flat Barbell Bench Press')).join(' ') === '4', 'the bench press’s RIR chips highlight its light target, RIR 4')
 const started = (await readStored(page))['workout-sessions']
 const pressDownsOnly = { ...started.sessions[1], exercises: started.sessions[1].exercises.filter((e) => e.exerciseId === pressDowns) }
-assert(JSON.stringify(pressDownsOnly.exercises[0].target) === '{"kg":20,"reps":11,"rir":3,"rirMax":5}', `an Isolamento exercise keeps its light RIR Target 3–5 (got ${JSON.stringify(pressDownsOnly.exercises[0].target)})`)
+assert(JSON.stringify(pressDownsOnly.exercises[0].target) === '{"kg":20,"reps":11,"rir":3,"rirMax":5,"light":true}', `an Isolamento exercise keeps its light RIR Target 3–5, marked light (got ${JSON.stringify(pressDownsOnly.exercises[0].target)})`)
 await putStore(page, URL, 'workout-sessions', { ...started, sessions: [started.sessions[0], pressDownsOnly] })
 await reloadApp(page)
 assert((await targetChips('Cable Press-Downs')).join(' ') === '3 4 5+', 'its RIR chips highlight every RIR from 3 to 5 or more')

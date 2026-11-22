@@ -82,6 +82,14 @@ describe('workout storage', () => {
     expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
   })
 
+  it('reads back a kept light target, still at version 3', () => {
+    const light = { ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 10, reps: 12, rir: 3, rirMax: 5, light: true } }] }
+    const storage = memoryStorage()
+    saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(light))!, storage)
+    expect(loadStore(STORES.workoutSessions, storage)).toEqual([light])
+    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
+  })
+
   it('reads an empty After-effects list as none', () => {
     const [session] = parseWorkoutSessions(sessions({ ...SESSION, after: [] }))!
     expect(session).toEqual(SESSION)
@@ -123,6 +131,7 @@ describe('workout storage', () => {
     ['a RIR of 11', withSets([{ ...SET, rir: 11 }])],
     ['a target with no RIR', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8 } }] })],
     ['a target whose RIR range is upside down', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 3, rirMax: 1 } }] })],
+    ['a target whose `light` is not true', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 2, light: false } }] })],
     ['a target whose RIR range is one RIR', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 2, rirMax: 2 } }] })],
     ['an exercise twice', sessions({ ...SESSION, exercises: [SESSION.exercises[0], SESSION.exercises[0]] })],
     ['a repeated session id', sessions(SESSION, SESSION)],

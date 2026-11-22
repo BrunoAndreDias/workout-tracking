@@ -1,7 +1,7 @@
 import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
 import type { CatalogId } from './catalogEntries.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
-import type { BlockOf, DaysOf, Exercise, RepRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
+import type { BlockOf, DaysOf, Exercise, RepRange, RirRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
 
 export interface SlotSpec {
   readonly role: Role
@@ -141,7 +141,7 @@ export const DEFAULT_SETS = 3
  * The RIR Target of each Role, about 80% of the reps a set could do (docs/research/rir-and-volume.md): 2 reps in
  * reserve for compounds, 1 to 3 for isolation and core work. A recommendation the Suggested Target reads, never a limit.
  */
-export const ROLE_RIR: { readonly [R in Role]: RirTarget } = {
+export const ROLE_RIR: { readonly [R in Role]: RirRange } = {
   main: { min: 2, max: 2 },
   secondary: { min: 2, max: 2 },
   isolation: { min: 1, max: 3 },
@@ -151,17 +151,15 @@ export const ROLE_RIR: { readonly [R in Role]: RirTarget } = {
 /** How much further from failure every Role aims in a light block, such as a deload. */
 export const LIGHT_RIR_EXTRA = 2
 
-/** The RIR Target of a Role, in a light block or not. */
-export function roleRir(role: Role, light: boolean): RirTarget {
-  const { min, max } = ROLE_RIR[role]
-  return light ? { min: min + LIGHT_RIR_EXTRA, max: max + LIGHT_RIR_EXTRA } : { min, max }
+/** `target` moved LIGHT_RIR_EXTRA into a light block or back out of one; unchanged when it already is `light` or not. */
+export function withLight(target: RirTarget, light: boolean): RirTarget {
+  if (target.light === light) return target
+  const shift = light ? LIGHT_RIR_EXTRA : -LIGHT_RIR_EXTRA
+  return { min: target.min + shift, max: target.max + shift, light }
 }
 
-/** Whether `target` is a Role's RIR Target in a light block. */
-export const isLightTarget = (target: RirTarget): boolean => ROLES.some((role) => {
-  const light = roleRir(role, true)
-  return light.min === target.min && light.max === target.max
-})
+/** The RIR Target of a Role, in a light block or not. */
+export const roleRir = (role: Role, light: boolean): RirTarget => withLight({ ...ROLE_RIR[role], light: false }, light)
 
 /** A new plan's block length, inside the 4 to 8 weeks between deloads that docs/research/block-length-and-progression.md finds. */
 export const DEFAULT_BLOCK_WEEKS = 6

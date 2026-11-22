@@ -177,12 +177,12 @@ describe('logging sets', () => {
     expect(s.sessions[1].exercises[0].sets).toEqual(Array(3).fill(pending(8, 60)))
   })
 
-  it('in a light block every Exercise aims 2 RIR further from failure, and back in a normal block the reps rise by at most 2', () => {
+  it('in a light block every Exercise aims 2 RIR further from failure, kept as light, and back in a normal block the reps rise by at most 2', () => {
     const benchAt = (reps: number, rir: number) => session('s0', '2026-10-01', [{ exerciseId: BENCH, sets: [done(reps, 60, rir)], target: { kg: 60, reps, rir: 2 } }])
     const start = (light: boolean, history: WorkoutState['sessions']) =>
       run([{ type: 'startSession', sessionId: S1, date: date('2026-10-06'), day: PUSH, light }], { ...created, sessions: history }).sessions.at(-1)!.exercises[0]
     const light = start(true, [benchAt(7, 2)])
-    expect(light).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(6, 60)), target: { kg: 60, reps: 6, rir: 4 } })
+    expect(light).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(6, 60)), target: { kg: 60, reps: 6, rir: 4, light: true } })
     const deload = session('s0', '2026-10-01', [{ ...light, sets: [done(6, 60, 4)] }])
     expect(start(false, [deload])).toEqual({ exerciseId: BENCH, sets: Array(3).fill(pending(8, 60)), target: { kg: 60, reps: 8, rir: 2 } })
   })

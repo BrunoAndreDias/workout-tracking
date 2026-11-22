@@ -6,7 +6,7 @@ import { SUPINO, REMO, date, done, pending, session, PEITO, HISTORY } from './wo
 
 describe('the suggested target', () => {
   it('reads the done sets of the latest earlier session that has any, and the RIR it aimed at', () => {
-    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-06'))).toEqual({ sets: [done(7, 62.5, 2), done(7, 62.5, 2)], aimed: { min: 2, max: 2 } })
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-06'))).toEqual({ sets: [done(7, 62.5, 2), done(7, 62.5, 2)], aimed: { min: 2, max: 2, light: false } })
     expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-02'))).toEqual({ sets: [done(8, 60), done(7, 60)], aimed: null })
     expect(lastDoneSets(HISTORY, SUPINO, date('2026-09-30'))).toBe(null)
   })

@@ -116,12 +116,15 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
 /** The exact text a store is saved as, in the browser and by the server. */
 export const serializeStore = <T>(def: StoreDef<T>, value: T): string => def.serialize?.(value) ?? JSON.stringify({ version: def.version, ...def.toDoc(value) })
 
+const leavesRefusedInPlace = <T>(def: StoreDef<T>, value: T, storage: StorageLike | null): boolean =>
+  refused.has(def.key) && storage?.getItem(def.key) === refused.get(def.key) && serializeStore(def, value) === serializeStore(def, def.fresh())
+
 /** False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
   try {
     const text = typeof value === 'object' && value !== null ? readFrom.get(value) : undefined
     if (text !== undefined && storage?.getItem(def.key) === text) return true
-    if (refused.has(def.key) && storage?.getItem(def.key) === refused.get(def.key) && serializeStore(def, value) === serializeStore(def, def.fresh())) return true
+    if (leavesRefusedInPlace(def, value, storage)) return true
     storage?.setItem(def.key, serializeStore(def, value))
     return storage !== null
   } catch {

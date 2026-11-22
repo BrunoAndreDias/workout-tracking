@@ -185,7 +185,9 @@ function parseAfterEffect(raw: unknown, session: { date: IsoDate; exercises: rea
   return { date, exerciseId, note }
 }
 
-function parseSession(raw: unknown, version: 1 | 2 | 3 | 4): WorkoutSession | null {
+const SESSION_VERSIONS = [1, 2, 3, 4] as const
+
+function parseSession(raw: unknown, version: (typeof SESSION_VERSIONS)[number]): WorkoutSession | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.date !== 'string') return null
   const date = parseIsoDate(raw.date)
   if (!date || (raw.workoutDayId !== null && !isId(raw.workoutDayId))) return null
@@ -209,8 +211,7 @@ function parseSession(raw: unknown, version: 1 | 2 | 3 | 4): WorkoutSession | nu
 
 /** Versions 1 to 4; null for anything else, including one bad session or two with the same id. */
 export function parseWorkoutSessions(raw: unknown): WorkoutSession[] | null {
-  if (!isRecord(raw)) return null
-  const version = raw.version
-  if (version !== 1 && version !== 2 && version !== 3 && version !== WORKOUT_SESSIONS_SCHEMA_VERSION) return null
+  const version = isRecord(raw) ? SESSION_VERSIONS.find((v) => v === raw.version) : undefined
+  if (!isRecord(raw) || version === undefined) return null
   return parseList(raw.sessions, (r) => parseSession(r, version), (s) => s.id)
 }

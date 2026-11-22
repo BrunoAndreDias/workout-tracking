@@ -65,6 +65,9 @@ describe('workout sessions at version 4', () => {
     expect(storage.data[KEY]).toBe(newer)
   })
 
+})
+
+describe('a document this build refuses', () => {
   it('leaves a newer Workout Plans document in place when the app saves its empty plans as it starts', () => {
     const newer = JSON.stringify({ version: STORES.workoutPlans.version + 1, plans: [{ id: 'p1' }], activePlanId: 'p1' })
     const storage = enumerableStorage({ [STORES.workoutPlans.key]: newer })

@@ -14,8 +14,6 @@ Workout Sessions:
 - **1** had a plain-text `notes`, read as written at midday of the session's date.
 - **2** has an optional timed `note` on the session and on each of its Exercises.
 - **3** marks each set done or not, with an optional RIR, and keeps the target the session suggested. Before 3, a set with reps counted as logged, so it reads as done.
-- **4** has the same shape as 3, and is the first version that may hold a session's `feel` and `after` and its target's `rirMax` and `light`. Those keys were added at 3 without a new version, so a version 3 document reads with them, and code that knows only 3 refuses a 4 instead of saving it back without them.
+- **4** has the shape of 3. A kept target's `rirMax` and `light` came at 3 without a new version, so 3 reads with them, and code that knows only 3 refuses 4 ([ADR-0006](0006-a-new-stored-key-bumps-the-version.md)).
 
-A new key bumps the version, so code that predates it refuses the document instead of dropping the key on save. A refused document is kept under `:unreadable:` and left in place until the user changes that store.
-
-Workout Plans stay at 4: a Planned Exercise's `weeks` and `since` came at 3 without a new version, but 4 came after them, so code that knows 4 knows them, and code that predates them refuses 4.
+Plans stayed at 4 for a Planned Exercise's `weeks` and `since`: they came at 3 without a new version, but 4 came after them, so code that knows 4 knows them and older code refuses 4.

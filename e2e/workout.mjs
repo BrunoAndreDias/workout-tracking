@@ -179,6 +179,7 @@ assert(JSON.stringify(await values(supino, 'Kg')) === '["62,5","62,5","62,5","62
 assert((await supino.locator('.lift-note').textContent()).endsWith('Última: 62,5 kg × 7. Faz 8 com 62,5 kg.'), `and says why (got ${await supino.locator('.lift-note').textContent()})`)
 assert(JSON.stringify(await ticks(supino)) === '["false","false","false","false"]', 'suggested sets start pending')
 assert(JSON.stringify(await values(ohp, 'Repetições')) === '["9","9","9"]' && JSON.stringify(await values(ohp, 'Kg')) === '["","",""]', `a bodyweight exercise moves only its reps (got ${JSON.stringify(await values(ohp, 'Repetições'))})`)
+assert((await ohp.locator('.lift-note').textContent()).endsWith('Última: peso corporal × 10/9/8 · RIR 2, alvo 2. Faz 9 com peso corporal.'), `the hardest set, 8 with no RIR, decides (got ${await ohp.locator('.lift-note').textContent()})`)
 await supino.getByRole('button', { name: 'Série 1 de Supino feita' }).click()
 assert(JSON.stringify(await ticks(supino)) === '["true","false","false","false"]', 'one tap marks a suggested set done as shown')
 await addExercise(session, 'Prancha')

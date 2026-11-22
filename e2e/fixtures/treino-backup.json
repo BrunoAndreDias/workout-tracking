@@ -1,0 +1,149 @@
+{
+  "app": "workout-tracking",
+  "version": 1,
+  "exportedAt": "2026-11-01T10:00:00.000Z",
+  "stores": {
+    "exercises": {
+      "version": 1,
+      "exercises": [
+        {
+          "id": "ex-supino",
+          "name": "Supino"
+        }
+      ]
+    },
+    "workoutPlans": {
+      "version": 3,
+      "plans": [
+        {
+          "id": "wp-1",
+          "name": "Força",
+          "split": "ppf",
+          "blocks": [
+            {
+              "id": "wb-1",
+              "name": "Bloco A",
+              "weeks": 6,
+              "rir": [
+                {
+                  "min": 4,
+                  "max": 5
+                },
+                null,
+                null,
+                null,
+                null,
+                null
+              ],
+              "days": [
+                {
+                  "id": "Push",
+                  "name": "Push",
+                  "exercises": [
+                    {
+                      "exerciseId": "ex-supino",
+                      "role": "main",
+                      "sets": 3,
+                      "reps": {
+                        "min": 6,
+                        "max": 8
+                      },
+                      "weeks": null,
+                      "since": "2026-04-27"
+                    }
+                  ]
+                },
+                {
+                  "id": "Pull",
+                  "name": "Pull",
+                  "exercises": []
+                },
+                {
+                  "id": "Full body",
+                  "name": "Full body",
+                  "exercises": []
+                }
+              ]
+            }
+          ],
+          "start": {
+            "blockId": "wb-1",
+            "since": "2026-04-27"
+          }
+        }
+      ],
+      "activePlanId": "wp-1"
+    },
+    "workoutSessions": {
+      "version": 3,
+      "sessions": [
+        {
+          "id": "ws-1",
+          "date": "2026-05-01",
+          "workoutDayId": "Push",
+          "exercises": [
+            {
+              "exerciseId": "ex-supino",
+              "sets": [
+                {
+                  "done": true,
+                  "reps": 8,
+                  "kg": 60,
+                  "rir": 2
+                },
+                {
+                  "done": true,
+                  "reps": 7,
+                  "kg": 60,
+                  "rir": 1
+                }
+              ],
+              "note": {
+                "text": "Ombro bem",
+                "createdAt": "2026-05-01T18:40:00",
+                "updatedAt": "2026-05-01T18:40:00"
+              }
+            }
+          ],
+          "note": {
+            "text": "Bom treino",
+            "createdAt": "2026-05-01T19:00:00",
+            "updatedAt": "2026-05-01T19:00:00"
+          },
+          "feel": 4,
+          "after": [
+            {
+              "date": "2026-05-02",
+              "exerciseId": "ex-supino",
+              "note": {
+                "text": "Peito dorido",
+                "createdAt": "2026-05-02T09:00:00",
+                "updatedAt": "2026-05-02T09:00:00"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "equipment": {
+      "version": 1,
+      "custom": [
+        {
+          "id": "mat:elasticos",
+          "name": "Elásticos"
+        }
+      ],
+      "gyms": [
+        {
+          "id": "gym-casa",
+          "name": "Casa",
+          "has": [
+            "mat:elasticos"
+          ]
+        }
+      ],
+      "activeGymId": "gym-casa",
+      "needs": {}
+    }
+  }
+}

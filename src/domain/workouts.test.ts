@@ -1,20 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseRepRange, parseRir } from './workouts.ts'
-
-describe('parseRir', () => {
-  it.each([
-    ['3', { min: 3, max: 3 }],
-    ['5-6', { min: 5, max: 6 }],
-    ['5–6', { min: 5, max: 6 }],
-    ['5 a 6', { min: 5, max: 6 }],
-    ['0', { min: 0, max: 0 }],
-    ['6-5', null],
-    ['11', null],
-    ['', null],
-  ])('%s', (text, rir) => {
-    expect(parseRir(text)).toEqual(rir)
-  })
-})
+import { parseRepRange } from './workouts.ts'
 
 describe('parseRepRange', () => {
   it.each([

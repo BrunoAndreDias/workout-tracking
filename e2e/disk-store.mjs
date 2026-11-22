@@ -76,7 +76,7 @@ await openWorkoutTab(old.page, 'Plano de treino')
 assert((await planTabs(old.page)).includes('Plano antigo'), 'a browser holding a version 1 workout plans doc opens it')
 await synced(old.page)
 const uploaded = JSON.parse(row('workout-plans').doc)
-assert(uploaded.version === 3 && uploaded.plans[0].name === 'Plano antigo', 'the browser’s plans reach an empty server, saved as version 3')
+assert(uploaded.version === 4 && uploaded.plans[0].name === 'Plano antigo', 'the browser’s plans reach an empty server, saved as version 4')
 
 const [download] = await Promise.all([old.page.waitForEvent('download'), old.page.getByRole('button', { name: 'Exportar dados' }).click()])
 const file = `${S}/disk-store-backup.json`

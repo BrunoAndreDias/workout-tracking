@@ -33,7 +33,7 @@ const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,
   name: 'Força',
   split: 'ppf',
-  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, rir: [{ min: 5, max: 6 }], days: [PEITO_DAY, restDay('wd-1b'), restDay('wd-1c')] }],
+  blocks: [{ id: 'wb-1' as WorkoutBlockId, name: 'Bloco A', weeks: 1, light: false, days: [PEITO_DAY, restDay('wd-1b'), restDay('wd-1c')] }],
   start: { blockId: 'wb-1' as WorkoutBlockId, since: '2026-05-04' as IsoDate },
 }
 const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
@@ -92,6 +92,7 @@ describe('backup', () => {
 
   it.each([
     ['not a backup', { foo: 1 }, 'Este ficheiro não é uma cópia de segurança do Treino.'],
+    ['a meal app Backup', { app: 'plano-alimentar', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO] } } }, 'Este ficheiro não é uma cópia de segurança do Treino.'],
     ['an unknown version', { app: 'workout-tracking', version: 2, stores: {} }, 'Esta cópia de segurança é de uma versão que a app não conhece.'],
     ['no stores', { app: 'workout-tracking', version: 1 }, 'A cópia de segurança está danificada: faltam os dados.'],
     [

@@ -5,7 +5,7 @@ import { doneMuscleSets, MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
 import { ROLE_REPS } from '../domain/splits.ts'
 import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
-import { doneSets, nameLookup } from '../domain/workouts.ts'
+import { aimedAt, doneSets, inTarget, nameLookup } from '../domain/workouts.ts'
 import { suggestion } from '../domain/sessions.ts'
 import type { Exercise, PlannedExercise, SessionExercise, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import type { SetValues, WorkoutAction } from '../domain/workoutReducer.ts'
@@ -57,7 +57,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
       {session.exercises.map((exercise) => {
         const plan = planned.get(exercise.exerciseId)
         const target = exercise.target
-        const note = target && suggestion(before, exercise.exerciseId, session.date, target.rir, plan?.reps ?? ROLE_REPS.isolation)?.note
+        const note = target && suggestion(before, exercise.exerciseId, session.date, aimedAt(target), plan?.reps ?? ROLE_REPS.isolation)?.note
         return (
           <Lift
             key={exercise.exerciseId}
@@ -207,7 +207,7 @@ function Lift({ sessionId, exercise, name, plan, note, current, dispatch }: Lift
             <button
               key={r}
               type="button"
-              className={target?.rir === r ? 'filter-chip rir-chip rir-target' : 'filter-chip rir-chip'}
+              className={target && inTarget(r, aimedAt(target)) ? 'filter-chip rir-chip rir-target' : 'filter-chip rir-chip'}
               aria-pressed={sets[active].rir === r}
               aria-label={`RIR ${r === 5 ? '5 ou mais' : r} na série ${active + 1} de ${name}`}
               onClick={() => edit(active, { kg: sets[active].kg, reps: sets[active].reps, rir: sets[active].rir === r ? null : r })}

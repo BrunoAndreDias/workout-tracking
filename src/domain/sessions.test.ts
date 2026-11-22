@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutSessionId } from './types.ts'
 import { loggedCounts } from './workouts.ts'
-import { lastDoneSets, sessionsBefore, startSession, targetRir } from './sessions.ts'
+import { lastDoneSets, sessionsBefore, startSession } from './sessions.ts'
 import { SUPINO, REMO, date, done, pending, session, PEITO, HISTORY } from './workoutFixtures.ts'
 
 describe('the suggested target', () => {
   it('reads the done sets of the latest earlier session that has any, and the RIR it aimed at', () => {
-    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-06'))).toEqual({ sets: [done(7, 62.5, 2), done(7, 62.5, 2)], targetRir: 2 })
-    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-02'))).toEqual({ sets: [done(8, 60), done(7, 60)], targetRir: null })
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-06'))).toEqual({ sets: [done(7, 62.5, 2), done(7, 62.5, 2)], aimed: { min: 2, max: 2, light: false } })
+    expect(lastDoneSets(HISTORY, SUPINO, date('2026-10-02'))).toEqual({ sets: [done(8, 60), done(7, 60)], aimed: null })
     expect(lastDoneSets(HISTORY, SUPINO, date('2026-09-30'))).toBe(null)
   })
 
@@ -22,15 +22,8 @@ describe('the suggested target', () => {
     expect(sessionsBefore(sameDay, sameDay[1]).map((s) => s.id)).toEqual(['s1'])
   })
 
-  it('aims at the week’s lowest RIR, never under 1 for compounds, and 2 when the week has no target', () => {
-    expect(targetRir('main', { min: 0, max: 1 })).toBe(1)
-    expect(targetRir('secondary', { min: 3, max: 4 })).toBe(3)
-    expect(targetRir('isolation', { min: 0, max: 1 })).toBe(0)
-    expect(targetRir('abs', null)).toBe(2)
-  })
-
   it('a session from a Workout Day fills each planned set, pending, with the suggestion, and keeps it as the target', () => {
-    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, { min: 2, max: 3 }, HISTORY)).toEqual({
+    expect(startSession('new' as WorkoutSessionId, date('2026-10-06'), PEITO, false, HISTORY)).toEqual({
       id: 'new',
       date: '2026-10-06',
       workoutDayId: 'd-peito',
@@ -42,7 +35,7 @@ describe('the suggested target', () => {
   })
 
   it('a blank session starts with no exercises', () => {
-    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, null, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
+    expect(startSession('b' as WorkoutSessionId, date('2026-10-06'), null, false, HISTORY)).toEqual({ id: 'b', date: '2026-10-06', workoutDayId: null, exercises: [] })
   })
 
   it('counts only done sets', () => {

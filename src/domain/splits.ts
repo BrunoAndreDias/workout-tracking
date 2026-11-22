@@ -1,7 +1,7 @@
 import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
 import type { CatalogId } from './catalogEntries.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
-import type { BlockOf, DaysOf, Exercise, RepRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
+import type { BlockOf, DaysOf, Exercise, RepRange, RirRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
 
 export interface SlotSpec {
   readonly role: Role
@@ -137,15 +137,24 @@ export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
 export const DEFAULT_SETS = 3
 
-/** A 6-week block from 4–5 reps in reserve down to 0–1. */
-export const DEFAULT_RIR_RAMP: readonly RirTarget[] = [
-  { min: 4, max: 5 },
-  { min: 3, max: 3 },
-  { min: 2, max: 3 },
-  { min: 2, max: 2 },
-  { min: 1, max: 2 },
-  { min: 0, max: 1 },
-]
+export const ROLE_RIR: { readonly [R in Role]: RirRange } = {
+  main: { min: 2, max: 2 },
+  secondary: { min: 2, max: 2 },
+  isolation: { min: 1, max: 3 },
+  abs: { min: 1, max: 3 },
+}
+
+export const LIGHT_RIR_EXTRA = 2
+
+export function withLight(target: RirTarget, light: boolean): RirTarget {
+  if (target.light === light) return target
+  const shift = light ? LIGHT_RIR_EXTRA : -LIGHT_RIR_EXTRA
+  return { min: target.min + shift, max: target.max + shift, light }
+}
+
+export const roleRir = (role: Role, light: boolean): RirTarget => withLight({ ...ROLE_RIR[role], light: false }, light)
+
+export const DEFAULT_BLOCK_WEEKS = 6
 
 /** The role an Exercise added by hand starts with: core work is abs, a catalog compound secondary, anything else isolation. */
 export function defaultRole(name: string): Role {
@@ -188,5 +197,5 @@ export function templateBlock<S extends Split>(
     name: spec.name,
     exercises: spec.slots.map((slot) => ({ exerciseId: idOf(slot.exercise), role: slot.role, sets: DEFAULT_SETS, reps: ROLE_REPS[slot.role], weeks: ROLE_WEEKS[slot.role], since })),
   }))
-  return { block: { id: blockId, name, weeks: DEFAULT_RIR_RAMP.length, rir: DEFAULT_RIR_RAMP, days: days as unknown as DaysOf<S> }, exercises: known }
+  return { block: { id: blockId, name, weeks: DEFAULT_BLOCK_WEEKS, light: false, days: days as unknown as DaysOf<S> }, exercises: known }
 }

@@ -1,13 +1,7 @@
-import type { DoneSet, RepRange } from './workouts.ts'
+import { LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
+import { inTarget } from './workouts.ts'
+import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
-/**
- * The suggested target for an Exercise's next session, by double progression, ported from just-workout.
- *
- * A set's rep capacity is its reps plus its reps in reserve (the RIR aimed at when none was logged). The next reps are
- * that capacity minus the next RIR, so a set harder than planned lowers them and one with reps to spare raises them.
- * Past the top of the rep range the load goes up one increment, below the bottom it goes down, and the reps at the new
- * load are re-estimated with the Epley formula. Bodyweight sets (no kg) move the reps only.
- */
 export interface Suggestion {
   readonly kg: number | null
   readonly reps: number
@@ -18,65 +12,70 @@ export interface Suggestion {
 export interface ProgressionInput {
   /** The done sets of the last session that had any. */
   readonly sets: readonly DoneSet[]
-  /** The RIR those sets aimed at. */
-  readonly previousRir: number
-  readonly nextRir: number
+  readonly previous: RirTarget
+  readonly next: RirTarget
   readonly range: RepRange
-  readonly increment: number
 }
 
-const MAX_LOAD_STEPS = 4
+type Effort = 'failure' | 'harder' | 'on' | 'easy'
+
+function effort(rir: number | null, aimed: RirTarget): Effort {
+  if (rir === null || inTarget(rir, aimed)) return 'on'
+  if (rir > aimed.max) return 'easy'
+  return rir === 0 ? 'failure' : 'harder'
+}
+
+const CAUSE: Record<Effort, string> = { failure: 'Chegou à falha: ', harder: 'Mais duro do que o alvo: ', on: '', easy: 'Sobraram repetições: ' }
+
+const MAX_REPS_UP = 2
+const STEP: Record<Effort, number> = { failure: -1, harder: 0, on: 1, easy: MAX_REPS_UP }
 
 const clamp = (n: number, range: RepRange) => Math.min(Math.max(n, range.min), range.max)
-const round = (kg: number, increment: number) => Math.round(kg / increment) * increment
 const kgText = (kg: number) => `${String(Math.round(kg * 100) / 100).replace('.', ',')} kg`
 const loadText = (kg: number | null) => (kg === null ? 'peso corporal' : kgText(kg))
-const rangeText = (r: RepRange) => `${r.min}–${r.max}`
+const rangeText = (r: { min: number; max: number }) => (r.min === r.max ? `${r.min}` : `${r.min}–${r.max}`)
+const sentence = (cause: string, text: string) => (cause ? cause + text : text[0].toUpperCase() + text.slice(1))
 
-function stepLoad(load: number, direction: 1 | -1, capacity: number, input: ProgressionInput): { kg: number; reps: number } | null {
-  const oneRepMax = load * (1 + capacity / 30)
-  const repsAt = (kg: number) => Math.floor(30 * (oneRepMax / kg - 1) - input.nextRir + 1e-6)
-  let kg = load
-  for (let step = 0; step < MAX_LOAD_STEPS; step++) {
-    const next = round(kg + direction * input.increment, input.increment)
-    if (next <= 0) break
-    const reps = repsAt(next)
-    if (direction > 0 && reps < input.range.min) break
-    kg = next
-    if (direction > 0 ? reps <= input.range.max : reps >= input.range.min) break
-  }
-  return kg === load ? null : { kg, reps: clamp(repsAt(kg), input.range) }
+export function loadStep(load: number, direction: 1 | -1): number | null {
+  const step = load < SMALL_LOAD_BELOW ? SMALL_LOAD_INCREMENT : LOAD_INCREMENT
+  const next = Math.round((load + direction * step) * 100) / 100
+  return next > 0 ? next : null
 }
 
-function effortChange(previous: number, next: number): string {
-  if (next > previous) return ` Semana mais leve: RIR ${next} (era ${previous}).`
-  if (next < previous) return ` Mais esforço: RIR ${next} (era ${previous}).`
-  return ''
+function effortChange(previous: RirTarget, next: RirTarget): string {
+  if (next.light && !previous.light) return ` Semana leve: alvo RIR ${rangeText(next)}.`
+  if (previous.light && !next.light) return ` Volta ao alvo RIR ${rangeText(next)}.`
+  if (previous.min === next.min && previous.max === next.max) return ''
+  return ` Novo alvo: RIR ${rangeText(next)}.`
 }
 
 export function suggestTarget(input: ProgressionInput): Suggestion | null {
   const last = input.sets.at(-1)
   if (!last) return null
-  const { previousRir, nextRir, range } = input
+  const { previous, next, range } = input
   const load = last.kg
   const atLoad = input.sets.filter((s) => s.kg === load)
-  const capacity = Math.min(...atLoad.map((s) => s.reps + (s.rir ?? previousRir)))
-  const harder = atLoad.some((s) => s.rir !== null && s.rir < previousRir)
-  const nudge = !harder && nextRir === previousRir ? 1 : 0
-  const reps = capacity - nextRir + nudge
-  const rirs = atLoad.flatMap((s) => (s.rir === null ? [] : [s.rir]))
-  const summary = `Última: ${loadText(load)} × ${atLoad.map((s) => s.reps).join('/')}${rirs.length > 0 ? ` · RIR ${Math.min(...rirs)}` : ''}.${effortChange(previousRir, nextRir)}`
+  const moves = atLoad.map((set) => {
+    const setEffort = effort(set.rir, previous)
+    return { set, effort: setEffort, reps: set.reps + STEP[setEffort] }
+  })
+  const hardest = moves.reduce((a, b) => (b.reps < a.reps ? b : a))
+  const lowest = Math.min(...atLoad.map((s) => s.reps))
+  const reps = Math.min(hardest.reps + previous.min - next.min, lowest + MAX_REPS_UP)
+  const logged = hardest.set.rir === null ? '' : `RIR ${hardest.set.rir}, `
+  const summary = `Última: ${loadText(load)} × ${atLoad.map((s) => s.reps).join('/')} · ${logged}alvo ${rangeText(previous)}.${effortChange(previous, next)}`
 
-  if (reps >= range.min && reps <= range.max) {
-    const why = harder ? ` Foi mais duro do que o RIR ${previousRir} pedido.` : ''
-    return { kg: load, reps, change: 'keep', note: `${summary}${why} Faz ${reps} com ${loadText(load)}.` }
-  }
-  const direction = reps > range.max ? 1 : -1
-  const stepped = load === null ? null : stepLoad(load, direction, capacity, input)
-  if (!stepped) {
+  const direction = reps > range.max ? 1 : reps < range.min ? -1 : 0
+  const kg = load === null || direction === 0 ? null : loadStep(load, direction)
+  if (load === null || kg === null) {
     const kept = clamp(reps, range)
-    return { kg: load, reps: kept, change: 'keep', note: `${summary} Faz ${kept} com ${loadText(load)}.` }
+    const repsUnchanged = atLoad.every((s) => s.reps === kept)
+    const advice = repsUnchanged ? `mantém ${loadText(load)} × ${kept}.` : `faz ${kept} com ${loadText(load)}.`
+    return { kg: load, reps: kept, change: 'keep', note: `${summary} ${sentence(CAUSE[hardest.effort], advice)}` }
   }
-  const why = direction > 0 ? `Sobram repetições acima de ${rangeText(range)}, por isso sobe para` : `Com este esforço ficarias abaixo de ${rangeText(range)}, por isso desce para`
-  return { kg: stepped.kg, reps: stepped.reps, change: direction > 0 ? 'up' : 'down', note: `${summary} ${why} ${kgText(stepped.kg)} e faz ${stepped.reps}.` }
+  const capacity = hardest.set.reps + (hardest.set.rir ?? previous.min)
+  const oneRepMax = load * (1 + capacity / 30)
+  const nextReps = clamp(Math.floor(30 * (oneRepMax / kg - 1) - next.min + 1e-6), range)
+  const move = direction > 0 ? `Sobram repetições acima de ${rangeText(range)}, por isso sobe para` : `Com este esforço ficarias abaixo de ${rangeText(range)}, por isso desce para`
+  return { kg, reps: nextReps, change: direction > 0 ? 'up' : 'down', note: `${summary} ${move} ${kgText(kg)} e faz ${nextReps}.` }
 }

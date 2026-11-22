@@ -5,11 +5,11 @@ import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import { dayMuscleSets } from '../domain/muscles.ts'
 import type { DayMuscle } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
-import { defaultRole, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
+import { defaultRole, LIGHT_RIR_EXTRA, ROLE_LABEL, ROLES, SPLIT_IDS, SPLITS } from '../domain/splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from '../domain/types.ts'
 import { blockExercises, currentBlock, isRunDue, isRunWeeks, weeksRun } from '../domain/blocks.ts'
-import { nameLookup, parseRepRange, parseRir } from '../domain/workouts.ts'
-import type { RepRange, RirTarget, Role, Split, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
+import { nameLookup, parseRepRange } from '../domain/workouts.ts'
+import type { RepRange, Role, Split, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import type { WorkoutAction } from '../domain/workoutReducer.ts'
 import { BlockMuscles } from './BlockMuscles.tsx'
 import { CountField } from './CountField.tsx'
@@ -20,20 +20,19 @@ import { CloseIcon, PlusIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
 import { PlanTitle } from './PlanTitle.tsx'
 
-function RangeField<T extends RepRange | RirTarget>({ value, label, parse, onCommit, optional = false }: { value: T | null; label: string; parse: (text: string) => T | null; onCommit: (value: T | null) => void; optional?: boolean }) {
+function RangeField({ value, label, parse, onCommit }: { value: RepRange; label: string; parse: (text: string) => RepRange | null; onCommit: (value: RepRange) => void }) {
   const [text, setText] = useState<string | null>(null)
   return (
     <input
       className="count-input reps-input"
       type="text"
       aria-label={label}
-      placeholder={optional ? '—' : undefined}
-      value={text ?? (value ? formatRange(value) : '')}
+      value={text ?? formatRange(value)}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
         setText(e.target.value)
         const parsed = parse(e.target.value)
-        if (parsed || (optional && e.target.value.trim() === '')) onCommit(parsed)
+        if (parsed) onCommit(parsed)
       }}
       onBlur={() => setText(null)}
     />
@@ -253,17 +252,12 @@ function BlockEditor({ plan, block, isCurrent, today, exercises, sessions, dispa
             Começar aqui
           </button>
         </div>
-        <fieldset className="block-rir">
-          <legend className="field-label">RIR por semana</legend>
-          <ol className="block-rir-weeks">
-            {block.rir.map((rir, i) => (
-              <li key={i} className="block-rir-week">
-                <span className="unit">S{i + 1}</span>
-                <RangeField value={rir} optional label={`RIR da semana ${i + 1} de ${block.name}`} parse={parseRir} onCommit={(r) => dispatch({ type: 'setBlockRir', planId, blockId, week: i + 1, rir: r })} />
-              </li>
-            ))}
-          </ol>
-        </fieldset>
+        <label className="block-light">
+          <input type="checkbox" checked={block.light} onChange={(e) => dispatch({ type: 'setBlockLight', planId, blockId, light: e.target.checked })} />
+          <span>
+            Semana leve <span className="hint">mais {LIGHT_RIR_EXTRA} RIR em cada exercício, para descarregar</span>
+          </span>
+        </label>
       </section>
 
       <div className="plan-bar">
@@ -368,7 +362,7 @@ function DayEditor({ planId, blockId, day, before, exercises, runs, today, dispa
                 <span className="planned-fields">
                   <CountField value={p.sets} required label={`Séries de ${name}`} onCommit={(n) => n && set({ sets: n })} />
                   <span className="unit">×</span>
-                  <RangeField value={p.reps} label={`Repetições de ${name}`} parse={parseRepRange} onCommit={(reps) => reps && set({ reps })} />
+                  <RangeField value={p.reps} label={`Repetições de ${name}`} parse={parseRepRange} onCommit={(reps) => set({ reps })} />
                   <span className="unit">reps</span>
                   <CountField value={p.weeks} placeholder="∞" label={`Semanas de ${name}`} onCommit={(weeks) => isRunWeeks(weeks) && set({ weeks })} />
                   <span className="unit">semanas</span>

@@ -44,16 +44,22 @@ export interface WorkoutDay {
 
 export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
 
-export interface RirTarget {
+export interface RirRange {
   readonly min: number
   readonly max: number
 }
+
+export interface RirTarget extends RirRange {
+  readonly light: boolean
+}
+
+export const inTarget = (rir: number, target: RirRange): boolean => rir >= target.min && rir <= target.max
 
 export interface BlockOf<S extends Split> {
   readonly id: WorkoutBlockId
   readonly name: string
   readonly weeks: number
-  readonly rir: readonly (RirTarget | null)[]
+  readonly light: boolean
   readonly days: DaysOf<S>
 }
 
@@ -80,12 +86,15 @@ export type PendingSet = { readonly done: false; readonly kg: number | null; rea
 export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
 export type LoggedSet = PendingSet | DoneSet
 
-/** What the session suggested when it started: the next session reads `rir` as what these sets aimed at. */
 export interface SetTarget {
   readonly kg: number | null
   readonly reps: number
   readonly rir: number
+  readonly rirMax?: number
+  readonly light?: true
 }
+
+export const aimedAt = (t: SetTarget): RirTarget => ({ min: t.rir, max: t.rirMax ?? t.rir, light: t.light === true })
 
 /** One Exercise's sets in a session. An Exercise appears at most once in a session. */
 export interface SessionExercise {
@@ -130,8 +139,9 @@ export interface WorkoutState extends WorkoutPlanState {
 
 export const EMPTY_SET: PendingSet = { done: false, reps: null, kg: null, rir: null }
 
-/** The smallest load step the suggestion moves by. */
 export const LOAD_INCREMENT = 2.5
+export const SMALL_LOAD_INCREMENT = 1
+export const SMALL_LOAD_BELOW = 25
 
 function parseRange(text: string): { min: number; max: number } | null {
   const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)
@@ -146,13 +156,6 @@ export function parseRepRange(text: string): RepRange | null {
 }
 
 export const MAX_RIR = 10
-
-export const isRirTarget = (r: RirTarget): boolean => Number.isInteger(r.min) && Number.isInteger(r.max) && r.min >= 0 && r.max >= r.min && r.max <= MAX_RIR
-
-export function parseRir(text: string): RirTarget | null {
-  const r = parseRange(text)
-  return r && isRirTarget(r) ? r : null
-}
 
 /** The one rule for what counts: a set is logged when it is done. */
 export const isDone = (set: LoggedSet): set is DoneSet => set.done

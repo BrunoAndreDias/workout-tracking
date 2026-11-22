@@ -5,8 +5,8 @@ import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { isRunWeeks } from './blocks.ts'
 import { lastDoneSets, startSession } from './sessions.ts'
-import { EMPTY_SET, isRirTarget, MAX_BLOCK_WEEKS } from './workouts.ts'
-import type { BlockOf, Exercise, LoggedSet, PendingSet, PlannedExercise, PlanOf, RirTarget, Role, SessionExercise, Split, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
+import { EMPTY_SET, MAX_BLOCK_WEEKS } from './workouts.ts'
+import type { BlockOf, Exercise, LoggedSet, PendingSet, PlannedExercise, PlanOf, Role, SessionExercise, Split, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 /** What the user types or taps into a set; whether it is done is set apart. */
 export interface SetValues {
@@ -23,14 +23,14 @@ export type WorkoutAction =
   | { type: 'addBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId; copyOf: WorkoutBlockId }
   | { type: 'renameBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId; name: string }
   | { type: 'setBlockWeeks'; planId: WorkoutPlanId; blockId: WorkoutBlockId; weeks: number }
-  | { type: 'setBlockRir'; planId: WorkoutPlanId; blockId: WorkoutBlockId; week: number; rir: RirTarget | null }
+  | { type: 'setBlockLight'; planId: WorkoutPlanId; blockId: WorkoutBlockId; light: boolean }
   | { type: 'removeBlock'; planId: WorkoutPlanId; blockId: WorkoutBlockId }
   | { type: 'setCycleStart'; planId: WorkoutPlanId; blockId: WorkoutBlockId; since: IsoDate }
   | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; role: Role; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'setPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; planned: PlannedExercise }
   | { type: 'removePlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId }
-  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; week: RirTarget | null }
+  | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; light: boolean }
   | { type: 'addSessionExercise'; sessionId: WorkoutSessionId; name: string; newExerciseId: ExerciseId }
   | { type: 'removeSessionExercise'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
   | { type: 'addSet'; sessionId: WorkoutSessionId; exerciseId: ExerciseId }
@@ -114,8 +114,6 @@ function newPlan(action: Extract<WorkoutAction, { type: 'createPlan' }>, exercis
   return { plan: { id: planId, name, split: 'ul', blocks: [made.block], start: null }, exercises: made.exercises }
 }
 
-const resized = <T>(items: readonly T[], length: number, fill: T): T[] => Array.from({ length }, (_, i) => (i < items.length ? items[i] : fill))
-
 function updatePlan(state: WorkoutState, planId: WorkoutPlanId, fn: PlanFn): WorkoutState {
   return { ...state, plans: state.plans.map((p) => (p.id === planId ? onPlan(p, fn) : p)) }
 }
@@ -178,12 +176,9 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
       return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, name: action.name }))
     case 'setBlockWeeks':
       if (!Number.isInteger(action.weeks) || action.weeks < 1 || action.weeks > MAX_BLOCK_WEEKS) return state
-      return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, weeks: action.weeks, rir: resized(b.rir, action.weeks, null) }))
-    case 'setBlockRir':
-      if (action.rir && !isRirTarget(action.rir)) return state
-      return updateBlock(state, action.planId, action.blockId, (b) =>
-        action.week >= 1 && action.week <= b.weeks ? { ...b, rir: b.rir.map((r, i) => (i === action.week - 1 ? action.rir : r)) } : b,
-      )
+      return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, weeks: action.weeks }))
+    case 'setBlockLight':
+      return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, light: action.light }))
     case 'removeBlock':
       return updatePlan(state, action.planId, removeBlock(action.blockId))
     case 'setCycleStart':
@@ -212,7 +207,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'removePlannedExercise':
       return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({ ...d, exercises: d.exercises.filter((p) => p.exerciseId !== action.exerciseId) }))
     case 'startSession':
-      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, action.week, state.sessions)] }
+      return { ...state, sessions: [...state.sessions, startSession(action.sessionId, action.date, action.day, action.light, state.sessions)] }
     case 'addSessionExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state

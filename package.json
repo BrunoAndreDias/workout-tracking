@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
@@ -14,7 +15,8 @@
     "check": "npm run typecheck && npm run lint && npm test && vite build && npm run e2e",
     "serve": "npm run build && node server/serve.ts",
     "dev-read": "HOST=0.0.0.0 npm run serve",
-    "perf": "node scripts/perf.mjs"
+    "perf": "node scripts/perf.mjs",
+    "comments:ratchet": "node scripts/comment-ratchet.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",

@@ -37,7 +37,7 @@ describe('Training Splits', () => {
       ['isolation', 8],
       ['abs', 8],
     ])
-    expect(block.rir.map((r) => r && `${r.min}-${r.max}`)).toEqual(['4-5', '3-3', '2-3', '2-2', '1-2', '0-1'])
+    expect(block.light).toBe(false)
     expect(block.weeks).toBe(6)
     expect(exercises.find((e) => e.id === 'x-pull-ups')?.name).toBe('Pull-Ups')
   })

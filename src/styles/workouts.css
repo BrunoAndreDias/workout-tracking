@@ -78,9 +78,8 @@
 .blocks-note { font-size: 14px; }
 .block-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
 .block-field { display: grid; gap: 4px; }
-.block-rir { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 6px; }
-.block-rir-weeks { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 14px; }
-.block-rir-week { display: inline-flex; align-items: center; gap: 6px; }
+.block-light { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
+.block-light .hint { display: block; font-size: 13px; color: var(--muted); }
 .planned-new { color: var(--accent); }
 .block-line { font-size: 14px; color: var(--muted); }
 .block-notice { padding: 12px 16px; border-radius: 12px; background: var(--under-bg); color: var(--under-fg); display: grid; gap: 4px; font-size: 14px; }

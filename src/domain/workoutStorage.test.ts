@@ -37,9 +37,9 @@ const withSets = (sets: unknown[]) => sessions({ ...SESSION, exercises: [{ exerc
 const ROW = { exerciseId: 'e1', role: 'main', sets: 4, reps: { min: 6, max: 6 }, weeks: 10, since: '2026-09-28' }
 const day = (id: string, exercises: object[] = []) => ({ id, name: id, exercises })
 const DAYS = [day('d1', [ROW]), day('d2'), day('d3')]
-const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, rir: [{ min: 5, max: 6 }, null], days: DAYS }
+const BLOCK = { id: 'b1', name: 'Bloco A', weeks: 2, light: true, days: DAYS }
 const PLAN = { id: 'p1', name: 'Força', split: 'ppf', blocks: [BLOCK], start: { blockId: 'b1', since: '2026-10-05' } }
-const plans = (...list: unknown[]) => ({ version: 3, plans: list, activePlanId: 'p1' })
+const plans = (...list: unknown[]) => ({ version: 4, plans: list, activePlanId: 'p1' })
 const withBlock = (block: object) => plans({ ...PLAN, blocks: [{ ...BLOCK, ...block }] })
 
 const AFTER = [
@@ -57,6 +57,12 @@ describe('workout storage', () => {
     expect({ exercises, workoutPlans, workoutSessions }).toEqual({ exercises: [{ id: 'e1', name: 'Supino' }], workoutPlans: { plans: [PLAN], activePlanId: 'p1' }, workoutSessions: [SESSION] })
   })
 
+  it('reads a version 3 block as not light, dropping its RIR target per week', () => {
+    const { light: _, ...v3Block } = BLOCK
+    const v3 = { version: 3, plans: [{ ...PLAN, blocks: [{ ...v3Block, rir: [{ min: 5, max: 6 }, null] }] }], activePlanId: 'p1' }
+    expect(parseWorkoutPlans(v3)?.plans[0].blocks).toEqual([{ ...BLOCK, light: false }])
+  })
+
   it('reads back a session’s end feel and After-effects', () => {
     const storage = memoryStorage()
     saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions({ ...SESSION, feel: 4, after: AFTER }))!, storage)
@@ -66,6 +72,22 @@ describe('workout storage', () => {
   it('reads a session stored before end feel and After-effects with neither key', () => {
     const [session] = parseWorkoutSessions(sessions(SESSION))!
     expect(['feel' in session, 'after' in session]).toEqual([false, false])
+  })
+
+  it('reads back a kept target that aimed at a RIR range, and one without `rirMax` as a single RIR', () => {
+    const ranged = { ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 10, reps: 12, rir: 1, rirMax: 3 } }] }
+    const storage = memoryStorage()
+    saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(ranged, { ...SESSION, id: 's2' }))!, storage)
+    expect(loadStore(STORES.workoutSessions, storage)).toEqual([ranged, { ...SESSION, id: 's2' }])
+    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
+  })
+
+  it('reads back a kept light target, still at version 3', () => {
+    const light = { ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 10, reps: 12, rir: 3, rirMax: 5, light: true } }] }
+    const storage = memoryStorage()
+    saveStore(STORES.workoutSessions, parseWorkoutSessions(sessions(light))!, storage)
+    expect(loadStore(STORES.workoutSessions, storage)).toEqual([light])
+    expect(storage.data['workout-tracking:workout-sessions']).toContain('"version":3')
   })
 
   it('reads an empty After-effects list as none', () => {
@@ -108,6 +130,9 @@ describe('workout storage', () => {
     ['a set with no done key', withSets([{ kg: 60, reps: 8, rir: null }])],
     ['a RIR of 11', withSets([{ ...SET, rir: 11 }])],
     ['a target with no RIR', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8 } }] })],
+    ['a target whose RIR range is upside down', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 3, rirMax: 1 } }] })],
+    ['a target whose `light` is not true', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 2, light: false } }] })],
+    ['a target whose RIR range is one RIR', sessions({ ...SESSION, exercises: [{ ...SESSION.exercises[0], target: { kg: 60, reps: 8, rir: 2, rirMax: 2 } }] })],
     ['an exercise twice', sessions({ ...SESSION, exercises: [SESSION.exercises[0], SESSION.exercises[0]] })],
     ['a repeated session id', sessions(SESSION, SESSION)],
     ['a blank note', sessions({ ...SESSION, note: { ...SESSION.note, text: '' } })],
@@ -157,15 +182,14 @@ describe('workout storage', () => {
     ['no blocks', plans({ ...PLAN, blocks: [], start: null })],
     ['two blocks with one id', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, days: [day('x1'), day('x2'), day('x3')] }] })],
     ['one day id in two blocks', plans({ ...PLAN, blocks: [BLOCK, { ...BLOCK, id: 'b2' }] })],
-    ['0 weeks', withBlock({ weeks: 0, rir: [] })],
-    ['53 weeks', withBlock({ weeks: 53, rir: Array(53).fill(null) })],
-    ['fewer RIR targets than weeks', withBlock({ rir: [null] })],
-    ['a RIR above 10', withBlock({ rir: [{ min: 5, max: 11 }, null] })],
-    ['a RIR upside down', withBlock({ rir: [{ min: 6, max: 5 }, null] })],
+    ['0 weeks', withBlock({ weeks: 0 })],
+    ['53 weeks', withBlock({ weeks: 53 })],
+    ['a block with no light key', plans({ ...PLAN, blocks: [{ id: 'b1', name: 'Bloco A', weeks: 2, days: DAYS }] })],
+    ['a light that is not true or false', withBlock({ light: 'sim' })],
     ['a start on a block not in the plan', plans({ ...PLAN, start: { blockId: 'b9', since: '2026-10-05' } })],
     ['a start on a bad date', plans({ ...PLAN, start: { blockId: 'b1', since: '2026-02-30' } })],
     ['no start key', plans({ id: 'p1', name: 'Força', split: 'ppf', blocks: [BLOCK] })],
-    ['a version 1 plan in a version 3 document', plans({ id: 'p1', name: 'Força', days: DAYS })],
+    ['a version 1 plan in a version 4 document', plans({ id: 'p1', name: 'Força', days: DAYS })],
     ['a version 1 plan with a bad day', { version: 1, plans: [{ id: 'p1', name: 'Força', days: [{ ...DAYS[0], exercises: 'x' }] }], activePlanId: 'p1' }],
   ])('rejects plans with %s', (_, raw) => {
     expect(parseWorkoutPlans(raw)).toBe(null)
@@ -187,13 +211,13 @@ describe('migrating Workout Plans to Training Splits', () => {
   const v2Plan = (id: string, ...counts: number[]) => ({ id, name: `Plano ${id}`, blocks: counts.map((n, i) => v2Block(`${id}b${i}`, n)), start: { blockId: `${id}b0`, since: '2026-10-05' } })
   const v2 = (activePlanId: string, ...list: object[]) => ({ version: 2, plans: list, activePlanId })
 
-  it('keeps a plan of 3-day blocks as Push · Pull · Full body, with its names, ids, sets, reps, RIR and start', () => {
+  it('keeps a plan of 3-day blocks as Push · Pull · Full body, with its names, ids, sets, reps and start, not light', () => {
     const plan = parseWorkoutPlans(v2('a', v2Plan('a', 3, 3)))!.plans[0]
     expect(plan.split).toBe('ppf')
     expect(plan.start).toEqual({ blockId: 'ab0', since: '2026-10-05' })
-    expect(plan.blocks.map((b) => [b.id, b.name, b.weeks, b.rir])).toEqual([
-      ['ab0', 'Bloco ab0', 1, [{ min: 2, max: 3 }]],
-      ['ab1', 'Bloco ab1', 1, [{ min: 2, max: 3 }]],
+    expect(plan.blocks.map((b) => [b.id, b.name, b.weeks, b.light])).toEqual([
+      ['ab0', 'Bloco ab0', 1, false],
+      ['ab1', 'Bloco ab1', 1, false],
     ])
     expect(plan.blocks[0].days.map((d) => [d.id, d.name])).toEqual([
       ['ab0-0', 'Dia ab0-0'],
@@ -231,7 +255,7 @@ describe('migrating Workout Plans to Training Splits', () => {
           id: 'p1',
           name: 'Força',
           split: 'ppf',
-          blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, rir: [null, null, null, null, null, null], days: [{ ...v2Day('a'), exercises: [{ ...v2Row('e1'), role: 'main', weeks: null, since: null }] }, v2Day('b'), v2Day('c')] }],
+          blocks: [{ id: 'p1-b1', name: 'Bloco A', weeks: 6, light: false, days: [{ ...v2Day('a'), exercises: [{ ...v2Row('e1'), role: 'main', weeks: null, since: null }] }, v2Day('b'), v2Day('c')] }],
           start: null,
         },
       ],

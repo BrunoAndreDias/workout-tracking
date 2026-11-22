@@ -30,21 +30,11 @@ export function sessionsBefore(sessions: readonly WorkoutSession[], session: Wor
   return sessions.filter((s, i) => s.date < session.date || (s.date === session.date && i < index))
 }
 
-/**
- * The suggested target for `exerciseId` on `date`, from the last time it was done; null when it never was. `next` is
- * the RIR Target aimed at; the last session is read against the one its target kept. One that kept none never aimed
- * at a light target, so it is read against `next`, or its normal Role target when `next` is light.
- */
 export function suggestion(sessions: readonly WorkoutSession[], exerciseId: ExerciseId, date: IsoDate, next: RirTarget, range: RepRange): Suggestion | null {
   const last = lastDoneSets(sessions, exerciseId, date)
   return last && suggestTarget({ sets: last.sets, previous: last.aimed ?? withLight(next, false), next, range })
 }
 
-/**
- * A session from a Workout Day has one row per Planned Exercise, each set pending at the suggested target, which is
- * kept with the RIR Target of its Role, 2 further from failure when the day's Training Block is light; an Exercise
- * never done starts with empty sets.
- */
 export function startSession(id: WorkoutSessionId, date: IsoDate, day: WorkoutDay | null, light: boolean, sessions: readonly WorkoutSession[]): WorkoutSession {
   const exercises = (day?.exercises ?? []).map((p): SessionExercise => {
     const rir = roleRir(p.role, light)

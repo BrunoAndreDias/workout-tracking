@@ -8,7 +8,6 @@ import { SUPINO, S1, created, date, done, planned, run, session } from './workou
 const MAIN: RepRange = { min: 6, max: 8 }
 const ISOLATION: RepRange = { min: 10, max: 15 }
 
-/** Starts a session from a day with one planned Exercise, after a session that logged `sets` aiming at `aimed`. */
 function next(role: PlannedExercise['role'], range: RepRange, sets: LoggedSet[], aimed?: SetTarget) {
   const day = { id: 'd' as WorkoutDayId, name: 'Dia', exercises: [planned(SUPINO, role, 3, range)] }
   const last = session('s0', '2026-10-01', [{ exerciseId: SUPINO, sets, ...(aimed && { target: aimed }) }])
@@ -83,7 +82,6 @@ describe('the Suggested Target follows the RIR table', () => {
 })
 
 describe('the Suggested Target’s change of RIR Target', () => {
-  /** The reason line for a normal Principal session after one that did 60 × 7 at RIR 4 keeping `aimed`. */
   const backToNormal = (aimed: SetTarget) => {
     const last = session('s0', '2026-10-01', [{ exerciseId: SUPINO, sets: [done(7, 60, 4)], target: aimed }])
     return suggestion([last], SUPINO, date('2026-10-06'), roleRir('main', false), MAIN)?.note

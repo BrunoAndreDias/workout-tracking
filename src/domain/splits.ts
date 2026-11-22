@@ -137,10 +137,6 @@ export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
 export const DEFAULT_SETS = 3
 
-/**
- * The RIR Target of each Role, about 80% of the reps a set could do (docs/research/rir-and-volume.md): 2 reps in
- * reserve for compounds, 1 to 3 for isolation and core work. A recommendation the Suggested Target reads, never a limit.
- */
 export const ROLE_RIR: { readonly [R in Role]: RirRange } = {
   main: { min: 2, max: 2 },
   secondary: { min: 2, max: 2 },
@@ -148,20 +144,16 @@ export const ROLE_RIR: { readonly [R in Role]: RirRange } = {
   abs: { min: 1, max: 3 },
 }
 
-/** How much further from failure every Role aims in a light block, such as a deload. */
 export const LIGHT_RIR_EXTRA = 2
 
-/** `target` moved LIGHT_RIR_EXTRA into a light block or back out of one; unchanged when it already is `light` or not. */
 export function withLight(target: RirTarget, light: boolean): RirTarget {
   if (target.light === light) return target
   const shift = light ? LIGHT_RIR_EXTRA : -LIGHT_RIR_EXTRA
   return { min: target.min + shift, max: target.max + shift, light }
 }
 
-/** The RIR Target of a Role, in a light block or not. */
 export const roleRir = (role: Role, light: boolean): RirTarget => withLight({ ...ROLE_RIR[role], light: false }, light)
 
-/** A new plan's block length, inside the 4 to 8 weeks between deloads that docs/research/block-length-and-progression.md finds. */
 export const DEFAULT_BLOCK_WEEKS = 6
 
 /** The role an Exercise added by hand starts with: core work is abs, a catalog compound secondary, anything else isolation. */

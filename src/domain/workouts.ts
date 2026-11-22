@@ -44,13 +44,11 @@ export interface WorkoutDay {
 
 export type DaysOf<S extends Split> = S extends 'ppf' ? readonly [WorkoutDay, WorkoutDay, WorkoutDay] : readonly [WorkoutDay, WorkoutDay, WorkoutDay, WorkoutDay]
 
-/** A range of RIR, such as 1–3; a single RIR has `min` and `max` equal. */
 export interface RirRange {
   readonly min: number
   readonly max: number
 }
 
-/** The RIR range a set aims at, and whether it is a light Training Block's. */
 export interface RirTarget extends RirRange {
   readonly light: boolean
 }
@@ -61,7 +59,6 @@ export interface BlockOf<S extends Split> {
   readonly id: WorkoutBlockId
   readonly name: string
   readonly weeks: number
-  /** A light block, such as a deload: every Role's RIR Target is LIGHT_RIR_EXTRA further from failure. */
   readonly light: boolean
   readonly days: DaysOf<S>
 }
@@ -89,11 +86,6 @@ export type PendingSet = { readonly done: false; readonly kg: number | null; rea
 export type DoneSet = { readonly done: true; readonly kg: number | null; readonly reps: number; readonly rir: number | null }
 export type LoggedSet = PendingSet | DoneSet
 
-/**
- * What the session suggested when it started: the next session reads `rir` as what these sets aimed at. `rirMax` is
- * the top of the RIR Target when it is a range; without it the target is the single RIR `rir`. `light` marks a light
- * block's target; without it the target was not light.
- */
 export interface SetTarget {
   readonly kg: number | null
   readonly reps: number
@@ -102,7 +94,6 @@ export interface SetTarget {
   readonly light?: true
 }
 
-/** The RIR Target a kept target aimed at. */
 export const aimedAt = (t: SetTarget): RirTarget => ({ min: t.rir, max: t.rirMax ?? t.rir, light: t.light === true })
 
 /** One Exercise's sets in a session. An Exercise appears at most once in a session. */
@@ -148,7 +139,6 @@ export interface WorkoutState extends WorkoutPlanState {
 
 export const EMPTY_SET: PendingSet = { done: false, reps: null, kg: null, rir: null }
 
-/** The load step the suggestion moves by, and the smaller one under 25 kg, so a step stays within ACSM's 2–10% (docs/research/progression-rate.md). */
 export const LOAD_INCREMENT = 2.5
 export const SMALL_LOAD_INCREMENT = 1
 export const SMALL_LOAD_BELOW = 25

@@ -11,21 +11,7 @@ import { isRunWeeks } from './blocks.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
 export const EXERCISES_SCHEMA_VERSION = 1
-/**
- * 1 had a plan's days with no blocks; 2 had Training Blocks of any number of days; 3 has a Training Split, every block
- * with its days, and a role on each Planned Exercise. Plans of 1 and 2 whose blocks all have 3 or 4 days become that
- * split; the others cannot, and are dropped: loading keeps their text under `:migrated:`. A Planned Exercise's `weeks` and
- * `since` came later than 3 without a new version: absent, the run lasts its role's weeks and started when first done.
- * 4 drops each block's RIR target per week, since each Role has its RIR Target, and marks a block `light` or not; a
- * block of an older version is not light.
- */
 export const WORKOUT_PLANS_SCHEMA_VERSION = 4
-/**
- * 1 had a plain-text `notes`; 2 has an optional timed `note` on the session and on each of its exercises; 3 marks each
- * set done or not, with an optional RIR, and keeps the target the session suggested. A session's optional `feel` and
- * `after` came later than 2 without a new version: absent, they are none. So did a target's optional `rirMax`: absent,
- * the target aimed at the single RIR `rir`; and its optional `light`: absent, the target was not light.
- */
 export const WORKOUT_SESSIONS_SCHEMA_VERSION = 3
 
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
@@ -98,7 +84,6 @@ interface ReadPlan {
   readonly start: CycleStart | null
 }
 
-/** Before version 4 a block had a RIR target per week, dropped unread, and no `light`: it reads as not light. */
 function parseBlock(raw: unknown, version: 2 | 3 | 4): ReadBlock | null {
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
   if (version === 4 && typeof raw.light !== 'boolean') return null
@@ -113,7 +98,6 @@ function parseStart(raw: unknown, blocks: readonly ReadBlock[]): CycleStart | nu
   return since !== null && { blockId: raw.blockId as WorkoutBlockId, since }
 }
 
-/** Version 2 had no split, and 3 on must have one. */
 function parsePlan(raw: unknown, version: 2 | 3 | 4): ReadPlan | null {
   const legacy = version === 2
   if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string') return null
@@ -144,7 +128,6 @@ const isUnique = (ids: readonly string[]) => new Set(ids).size === ids.length
 
 const PLAN_VERSIONS = [1, 2, 3, 4] as const
 
-/** Versions 1 to 4. A plan of version 3 or 4 that does not fit its split fails the document; an older one is dropped. */
 export function parseWorkoutPlans(raw: unknown): WorkoutPlanState | null {
   const version = isRecord(raw) ? PLAN_VERSIONS.find((v) => v === raw.version) : undefined
   if (!isRecord(raw) || version === undefined) return null
@@ -170,10 +153,6 @@ function parseSet(raw: unknown, legacy: boolean): LoggedSet | null {
   return raw.done === false ? { done: false, kg: raw.kg, reps: raw.reps, rir: raw.rir } : null
 }
 
-/**
- * A kept target; an optional `rirMax` above `rir` makes its RIR a range, and without it the target is the single RIR.
- * An optional `light: true` marks a light block's target; without it the target was not light.
- */
 function parseTarget(raw: unknown): SetTarget | null {
   if (!isRecord(raw) || (raw.kg !== null && !isKg(raw.kg)) || !isCount(raw.reps) || !isRir(raw.rir)) return null
   if (raw.rirMax !== undefined && (!isRir(raw.rirMax) || raw.rirMax <= raw.rir)) return null

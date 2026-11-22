@@ -9,7 +9,7 @@ A button at the end of the `Treino` tab row (`Registo`, `Plano de treino`, `Mate
 
 ## How to get to it (user POV)
 
-- The icon button (☾ in light, ☀ in dark) at the right of the header.
+- The icon button (☾ in light, ☀ in dark) at the end of the `Treino` tab row (there is no header).
 
 ## Driving it with session.mjs
 

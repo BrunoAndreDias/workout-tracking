@@ -11,7 +11,7 @@ Applying is all or nothing: if any of the four stores fails to write (full stora
 - `backup-import-replace` writes the file's stores over everything, after a confirm that names what is lost.
 - `backup-export-skipped` shows, after the download, `Não foi possível exportar: planos de treino. …` (role `status`) naming each store left out (`exercícios`, `planos de treino`, `treinos`, `material`). A store never saved is not skipped.
 - `backup-apply-atomic` shows the inline `alert` above and leaves every store key as it was when a write fails midway.
-- `backup-reject` shows an error for a file that is not JSON, not a Treino backup, including one from the meal app (`Este ficheiro não é uma cópia de segurança do Treino.`), from an unknown backup version (`Esta cópia de segurança é de uma versão que a app não conhece.`), without stores, or with any invalid store this app keeps. The `health` and `watchWorkouts` stores of a file from an older version are ignored.
+- `backup-reject` shows an error for a file that is not JSON, not a Treino backup, including one from the meal app (`Este ficheiro não é uma cópia de segurança do Treino.`), from an unknown backup version (`Esta cópia de segurança é de uma versão que a app não conhece.`), without stores (`A cópia de segurança está danificada: faltam os dados.`), or with any invalid store this app keeps (`A cópia de segurança está danificada: os dados de <store> não são válidos. Não foi alterado nada.`). Any store this app does not keep, such as the old `health` and `watchWorkouts`, is ignored.
 
 ## How to get to it (user POV)
 

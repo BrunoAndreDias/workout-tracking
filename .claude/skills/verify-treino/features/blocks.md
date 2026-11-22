@@ -1,0 +1,27 @@
+# Training Blocks
+
+On `Treino` → `Plano de treino`, a Workout Plan is a cycle of Training Blocks, each with its days and a length in training weeks. `Registo` names the current block and week, says on a new block's first week which Exercises come in and go, and lists the Exercises whose run is done.
+
+## Sub-features
+
+- `workout-blocks` is the region `Blocos` under the plan's title: one `.block-card` button per Training Block in order, with `.block-card-name` and `.block-card-meta` `<n> semanas` (`1 semana`). The selected card has `aria-pressed="true"` (the current block until another is clicked); the current block's card has `aria-current="true"`, a `.track` progress bar and `Semana <w> de <n>`. `+ Novo bloco` copies the selected block (weeks, RIR targets, days and their exercises) as the next free letter, `Bloco B`, and selects it. Muted lines read `Só contam as semanas com treino. Uma semana sem treino não avança o bloco.` and, until the cycle starts, `Ainda não começaste. Usa "Começar aqui" no primeiro bloco.`
+- `workout-block-edit` is the card of the selected block: `Nome do bloco: <name>. Clique para renomear`, `Semanas de <block>` (1 to 52), one `RIR da semana <w> de <block>` field per week (`3`, `5-6`, `5–6` or `5 a 6`, 0 to 10; shows `5–6` once it loses focus; empty is no target, placeholder `—`), `Começar aqui` (starts the cycle on this block this week; a confirm when it was already started) and `Remover bloco` (a confirm; absent with one block). Fewer weeks drop the last RIR targets.
+- `workout-block-notice` is the region `Novo bloco` at the top of that card on week 1 of a block the cycle moved into (not on the week the cycle was started): `Começa o <block> esta semana.`, then `Entram: <exercises>` and `Saem: <exercises>` against the block before, each line absent when empty. Weeks count only when they hold a session with a done set, so a week without training pauses the block. A future date shows `Dia futuro. Só podes registar até hoje.` The card's title is `Sem treino registado`, or `Outro treino` after `+ Outro treino neste dia`. With no workout plan the card offers only `Treino livre`, under `Ainda não tens plano de treino. Cria um em Plano de treino, ou regista um treino livre.`
+- `workout-runs` is the region `Exercícios a rever`, a `.block-notice` at the top of the start card on today or a past date, listing each Exercise of the active plan's current block whose run is done: `.run-row` `<exercise> · <n> semanas feitas` with `Trocar <exercise>` (text `Trocar`) and `Mais 4 semanas de <exercise>` (text `Mais 4 semanas`). `Trocar` opens `Trocar exercício` for it, and the pick swaps it on every day of the block it is in, its run starting today. `Mais 4 semanas` sets its weeks to the weeks done plus 4 (at most 52) on each of those days. The region is absent when no run is done. A run counts training weeks as a block does, from the Monday of the date the Exercise was added or swapped in, or its plan created; one from before runs counts from the week it was first done.
+
+## How to get to it (user POV)
+
+- `Treino` → `Plano de treino`, under the plan's title; and `Registo`, on the start card of a date with no session.
+
+## Driving it with session.mjs
+
+Preconditions and helpers are those of [Workouts](./workouts.md).
+
+- **Blocks.** On a 4-day plan, `+ Novo bloco`, then in Bloco B's `Upper A` remove `Standing Barbell Curls` and add `Cable Curls` (`Cable Curls · novo`). Back on Bloco A, `Semanas de Bloco A` `1` and `Começar aqui`. To reach week 1 of Bloco B, `putStore` the plans with `start.since` two Mondays ago and a version 3 session with a done set on last Monday from Bloco A's `Upper A`, then reload: `Novo bloco` reads `Começa o Bloco B esta semana.`, `Entram: Cable Curls`, `Saem: Standing Barbell Curls`, and the start leads with `Começar Lower A`. `e2e/blocks.mjs` drives this, and the version 2 migration.
+- **Runs.** On a new 3-day plan, `putStore` version 3 sessions on each of the last 8 Mondays with a done set of `Flat Barbell Bench Press`, `Dumbbell Lateral Raises` and `Standing Barbell Curls`, then reload: `Exercícios a rever` lists the lateral raises and the curls (8 weeks done), not the bench press (no limit, `semana 9 · sem limite`). `e2e/runs.mjs` drives this, both buttons included.
+
+## Gotchas
+
+- Plans before version 3 (version 1 had days on the plan, version 2 blocks of any days) load as their split when every block has 3 or 4 days, keeping names, ids, sets, reps, RIR and start, with the first Exercise of each day as `Principal` and the rest `Isolamento`. Any other plan is dropped; the old text is kept under `workout-tracking:workout-plans:migrated:<time>`, and the active plan moves to the first kept one.
+- The block and week are worked out from the sessions each time; nothing about them is stored but the start. The same holds for Exercise Runs: a Planned Exercise stores only `weeks` and `since`; one stored without them reads as its role's weeks and `since: null`.
+- Never drive port 5180.

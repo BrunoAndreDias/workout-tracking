@@ -54,7 +54,9 @@ await app.close()                                              // fails on any c
 APP_URL=$APP_URL RUN_DIR=$RUN_DIR node "$RUN_DIR/workouts.mjs"
 ```
 
-The helper gives you `page`, `dialog`, `region(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, and `close()`. `window.confirm` prompts are accepted automatically and recorded in `confirms`. `workoutTab('Material')` clicks a Treino tab and waits until it is current. The other helpers don't navigate.
+`openApp` also takes `init`, a function (or `[function, arg]`) run in the page before the app's first load, to plant a browser-only store such as data from before the server, and `mic: true`, which adds a fake microphone and the `fakeWhisper` worker; `app.say(text)` then sets the next transcription.
+
+The helper gives you `page`, `dialog`, `region(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, `errors`, `say(text)` (with `mic`), and `close()`. `window.confirm` prompts are accepted automatically and recorded in `confirms`. `workoutTab('Material')` clicks a Treino tab and waits until it is current. The other helpers don't navigate.
 
 The shared flows live once in `e2e/_driver.mjs`: `createWorkoutPlan`, `workoutDay`, `addExercise`, `swapExercise`, `pickExercise`, `addGym`, `openWorkoutTab`, `reloadApp`, `synced`, `putStore`, `seedStored` and `fakeWhisper`. Import them instead of copying them.
 
@@ -75,6 +77,8 @@ APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e node e2e/backup.mjs
 APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e node e2e/mobile.mjs
 APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e WORKOUT_DB=$RUN_DIR/workout.sqlite node e2e/disk-store.mjs   # reads the instance's database
 ```
+
+The other `e2e/*.mjs` (`blocks`, `dictation`, `equipment`, `muscle-map`, `muscle-volume`, `navigation`, `plan-rename`, `pwa`, `runs`) run the same way; `npm run check` runs them all.
 
 Isolation: each run uses its own port and its own database, so its own origin, localStorage and stores, plus a fresh browser context. Two runs on different ports never share state, and none of them touches the user's browser, the user's dev server or the user's database in `~/.workout-tracking`. Two `openApp` calls in one drive share the server: the second one empties it unless you pass `{ fresh: false }`, which opens a second device on the same data.
 

@@ -143,7 +143,7 @@ assert(await session.getByLabel('Notas do treino').inputValue() === 'Ombro bem',
 assert(await endFeel.getByRole('button', { pressed: true }).textContent() === 'Bem', 'the end feel persisted across reload')
 assert(await supinoNote.inputValue() === 'Ombro esq. a picar na 2.ª série', 'the exercise note persisted and opens by itself')
 const stored = await readStored(page)
-assert(stored['workout-sessions'].version === 3 && stored['workout-sessions'].sessions.length === 1, 'one session stored under its own key, version 3')
+assert(stored['workout-sessions'].version === 4 && stored['workout-sessions'].sessions.length === 1, 'one session stored under its own key, version 4')
 assert(stored['workout-sessions'].sessions[0].feel === 4 && !('after' in stored['workout-sessions'].sessions[0]), 'the end feel is stored as 4, and no After-effects key yet')
 const supinoSets = stored['workout-sessions'].sessions[0].exercises.find((e) => e.note).sets
 assert(JSON.stringify(supinoSets.map((s) => [s.done, s.kg, s.reps, s.rir])) === '[[true,60,8,null],[true,62.5,7,null]]', `stored sets are done, with kg in decimals (got ${JSON.stringify(supinoSets)})`)

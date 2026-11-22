@@ -70,7 +70,7 @@ describe('a stored document of an older version', () => {
     const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     expect(copies(storage.data, STORES.workoutSessions.key)).toEqual([SESSIONS_V1])
-    expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(3)
+    expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(4)
   })
 
   it('keeps one copy when this build starts again after converting', () => {
@@ -91,7 +91,7 @@ describe('a stored document of an older version', () => {
 
   it('keeps nothing for a current document or a store with no older version', () => {
     const storage = enumerableStorage({
-      [STORES.workoutSessions.key]: JSON.stringify({ version: 3, sessions: [] }),
+      [STORES.workoutSessions.key]: JSON.stringify({ version: 4, sessions: [] }),
       [STORES.exercises.key]: '{"version":1,"exercises":[]}',
     })
     loadStore(STORES.workoutSessions, storage)

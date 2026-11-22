@@ -14,5 +14,6 @@ Workout Sessions:
 - **1** had a plain-text `notes`, read as written at midday of the session's date.
 - **2** has an optional timed `note` on the session and on each of its Exercises.
 - **3** marks each set done or not, with an optional RIR, and keeps the target the session suggested. Before 3, a set with reps counted as logged, so it reads as done.
+- **4** has the shape of 3. A kept target's `rirMax` and `light` came at 3 without a new version, so 3 reads with them, and code that knows only 3 refuses 4 ([ADR-0006](0006-a-new-stored-key-bumps-the-version.md)).
 
-Some optional keys came later without a new version: a Planned Exercise's `weeks` and `since`, and a session's `feel`, `after` and its target's `rirMax` and `light`. Code that predates them drops them on save; issue #8 fixes this.
+Plans stayed at 4 for a Planned Exercise's `weeks` and `since`: they came at 3 without a new version, but 4 came after them, so code that knows 4 knows them and older code refuses 4.

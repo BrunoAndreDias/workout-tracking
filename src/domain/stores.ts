@@ -82,11 +82,12 @@ export type AppData = { readonly [N in StoreName]: (typeof STORES)[N] extends St
 // The text each value was read from, at the current version. The app saves every store as it starts, and writing one
 // back over the very text it was read from costs a year of data's serialization for nothing.
 const readFrom = new WeakMap<object, string>()
+const refused = new Map<StoreKey, string>()
 
 /**
  * The one way a store is read: the parsed document, or `fresh()` when there is none, storage is blocked, or the
- * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>`. A
- * document of an older version that parses is preserved under `<key>:migrated:<ISO time>`.
+ * document does not parse, in which case its raw text is first preserved under `<key>:unreadable:<ISO time>` and
+ * `saveStore` leaves it in place until the store differs from `fresh()`. A document of an older version that parses is preserved under `<key>:migrated:<ISO time>`.
  */
 export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = defaultStorage()): T {
   let text: string | null | undefined
@@ -108,17 +109,22 @@ export function loadStore<T>(def: StoreDef<T>, storage: StorageLike | null = def
     // corrupt JSON
   }
   preserveCopy(storage, def.key, text, 'unreadable')
+  refused.set(def.key, text)
   return def.fresh()
 }
 
 /** The exact text a store is saved as, in the browser and by the server. */
 export const serializeStore = <T>(def: StoreDef<T>, value: T): string => def.serialize?.(value) ?? JSON.stringify({ version: def.version, ...def.toDoc(value) })
 
+const leavesRefusedInPlace = <T>(def: StoreDef<T>, value: T, storage: StorageLike | null): boolean =>
+  refused.has(def.key) && storage?.getItem(def.key) === refused.get(def.key) && serializeStore(def, value) === serializeStore(def, def.fresh())
+
 /** False when the write failed or there is no storage. A value still stored as the text it was read from is left as it is. */
 export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | null = defaultStorage()): boolean {
   try {
     const text = typeof value === 'object' && value !== null ? readFrom.get(value) : undefined
     if (text !== undefined && storage?.getItem(def.key) === text) return true
+    if (leavesRefusedInPlace(def, value, storage)) return true
     storage?.setItem(def.key, serializeStore(def, value))
     return storage !== null
   } catch {

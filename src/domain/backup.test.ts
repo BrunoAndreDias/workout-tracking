@@ -190,7 +190,7 @@ describe('backup', () => {
     it('reports success and writes every store when nothing throws', () => {
       const storage = quotaStorage(before(), 99)
       expect(writeAll(incoming(), storage)).toEqual({ ok: true })
-      expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 3, sessions: [] })
+      expect(JSON.parse(storage.data[STORES.workoutSessions.key])).toEqual({ version: 4, sessions: [] })
       expect(STORES.exercises.key in storage.data).toBe(true)
     })
   })

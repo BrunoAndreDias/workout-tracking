@@ -45,14 +45,14 @@ describe('the text each store writes', () => {
     ]
     expect(written((s) => saveStore(STORES.workoutSessions, sessions, s))).toMatchInlineSnapshot(`
       {
-        "workout-tracking:workout-sessions": "{"version":3,"sessions":[{"id":"s1","date":"2026-10-05","workoutDayId":"wd1","exercises":[{"exerciseId":"x1","sets":[{"done":true,"reps":10,"kg":42.5,"rir":2},{"done":false,"reps":null,"kg":null,"rir":null}],"target":{"kg":42.5,"reps":10,"rir":2},"note":{"text":"Ombro bem","createdAt":"2026-10-05T18:00:00","updatedAt":"2026-10-05T18:00:00"}}],"note":{"text":"Bom treino","createdAt":"2026-10-05T18:30:00","updatedAt":"2026-10-05T18:30:00"}}]}",
+        "workout-tracking:workout-sessions": "{"version":4,"sessions":[{"id":"s1","date":"2026-10-05","workoutDayId":"wd1","exercises":[{"exerciseId":"x1","sets":[{"done":true,"reps":10,"kg":42.5,"rir":2},{"done":false,"reps":null,"kg":null,"rir":null}],"target":{"kg":42.5,"reps":10,"rir":2},"note":{"text":"Ombro bem","createdAt":"2026-10-05T18:00:00","updatedAt":"2026-10-05T18:00:00"}}],"note":{"text":"Bom treino","createdAt":"2026-10-05T18:30:00","updatedAt":"2026-10-05T18:30:00"}}]}",
       }
     `)
   })
 
   it('workout sessions after an edit: the edited session, the others unchanged, the text JSON.stringify writes', () => {
     const s = (id: string, kg: number): WorkoutSession => ({ id: id as WorkoutSessionId, date: '2026-10-05' as IsoDate, workoutDayId: null, exercises: [{ exerciseId: 'x1' as ExerciseId, sets: [{ done: true, reps: 8, kg, rir: null }] }] })
-    const plain = (sessions: WorkoutSession[]) => JSON.stringify({ version: 3, sessions })
+    const plain = (sessions: WorkoutSession[]) => JSON.stringify({ version: 4, sessions })
     const before = [s('s1', 40), s('s2', 50)]
     expect(written((st) => saveStore(STORES.workoutSessions, before, st))['workout-tracking:workout-sessions']).toBe(plain(before))
     const after = [before[0], s('s2', 52.5)]
@@ -89,6 +89,6 @@ describe('saving a store as the app starts', () => {
   it('writes a store read at an older version in the current one', () => {
     const { data, storage } = storageWith({ [STORES.workoutSessions.key]: JSON.stringify({ version: 1, sessions: [{ id: 's1', date: '2026-10-05', workoutDayId: null, exercises: [], notes: 'Bom treino' }] }) })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
-    expect(JSON.parse(data[STORES.workoutSessions.key]).version).toBe(3)
+    expect(JSON.parse(data[STORES.workoutSessions.key]).version).toBe(4)
   })
 })

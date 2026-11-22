@@ -25,7 +25,7 @@ Preconditions:
 - **On disk.** `new DatabaseSync(process.env.RUN_DIR + '/workout.sqlite', { readOnly: true }).prepare('SELECT doc, rev FROM stores WHERE key = ?').get('workout-tracking:workout-plans')`. `JSON.parse(doc).plans[0].name` is `Força`.
 - **Offline.** `b.page.context().setOffline(true)`, add a Local on `Material`, and `b.page.getByRole('status')` holds the offline line. The row is unchanged. `setOffline(false)`: the line detaches and the row holds the new value.
 - **Conflict.** With A and B both open, add a Local in B and `synced(B)`, then add another in A. A's `getByRole('alert')` holds `Os dados mudaram noutro dispositivo.` and the row still holds B's value. Click `Recarregar`, wait for the load and the render: A shows B's Local and no alert.
-- **Upload.** On an emptied server, open a fresh context first: after `synced` and a second the `workout-plans` row is still absent. Then seed a fresh context before the first load with `page.addInitScript` writing a version 1 `workout-tracking:workout-plans` document only when the key is empty, then open. The app shows its plan, and after `synced` the `workout-plans` row holds `version: 3`.
+- **Upload.** On an emptied server, open a fresh context first: after `synced` and a second the `workout-plans` row is still absent. Then seed a fresh context before the first load with `page.addInitScript` writing a version 1 `workout-tracking:workout-plans` document only when the key is empty, then open. The app shows its plan, and after `synced` the `workout-plans` row holds `version: 4`.
 - **Proof.** `e2e/disk-store.mjs` drives all of this; `app.shot` the conflict and the offline line at 390 px.
 
 ## Gotchas

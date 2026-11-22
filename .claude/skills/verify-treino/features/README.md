@@ -18,7 +18,7 @@ This directory is the maintained source for verifying what a user can do in Trei
 - The app renders only after it has fetched the server's stores, after the page's `load` event. After a reload use `reloadApp(page)` from `e2e/_driver.mjs`, or a locator that waits, before `.count()`.
 - A raw `localStorage.setItem` from the page is overwritten by the server's copy on the next load. To plant a document, write it on the server with `putStore(page, APP_URL, '<store>', doc)` from `e2e/_driver.mjs`, then reload.
 - Build the state under test through the UI (`createWorkoutPlan`, `addExercise` and the other flows in `e2e/_driver.mjs`), never by writing localStorage. Setup that is not under test may be planted with `seedStored(page, APP_URL, state)` before the first load.
-- Switch Treino's tabs with `app.workoutTab('Registo' | 'Plano de treino' | 'Material')`, which waits until the tab is current. The hash is `#treino[/YYYY-MM-DD]`; any other hash, such as the meal app's `#diario`, opens Treino.
+- Switch Treino's tabs with `app.workoutTab('Registo' | 'Plano de treino' | 'Material')`, which waits until the tab is current. The hash is `#treino[/YYYY-MM-DD]`; any other hash, such as the old `#relogio`, opens Treino.
 - Numbers group thousands with U+202F, a narrow no-break space. Compare text after `.replace(/\s/g, ' ')`, or strip whitespace.
 
 ## Proof and skip reporting
@@ -43,7 +43,7 @@ Each feature file starts with an H1 and one paragraph describing what the user s
 - [Workouts](./workouts.md): the `Treino` view, with Workout Plans made of a Training Split and Training Blocks, the exercise catalog, the session logger per date with suggested sets ticked with ✓, the end-of-session feel, and After-effects on the sessions of the last three days.
 - [Exercise picker](./picker.md): `Adicionar exercício` and `Trocar exercício`, with the search, the muscle-group filter, `+ Criar`, and each catalog Exercise's body map of where it is felt (`Alvo`, `Apoio`).
 - [Material](./equipment.md): `Treino` → `Material`, with the Locais and their material, the user's own material, each Exercise's material with `Alterado` and `Repor`, and the picker's `Falta:` flags and order.
-- [Backup](./backup.md): export all data to a JSON file, import it, or a meal-app Backup, with merge or replace, and reject corrupt files.
+- [Backup](./backup.md): export all data to a JSON file, import it with merge or replace, and reject corrupt files.
 - [Server store](./sync.md): the stores on disk, a second browser on the same server, the offline line, the conflict line with `Recarregar`, and the upload of a browser's data to an empty server.
 - [Dictation](./dictation.md): the mic button on the exercise, workout and After-effect notes, on-device Whisper small, with the status line and the appended text.
 - [Theme](./theme.md): the light and dark toggle in the header.

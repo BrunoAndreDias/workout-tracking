@@ -40,17 +40,17 @@ function effort(rir: number | null, aimed: RirTarget): Effort {
 }
 
 /** The cause the reason line names when the hardest set's effort decided. */
-const WHY: Record<Effort, string> = { failure: 'Chegou à falha: ', harder: 'Mais duro do que o alvo: ', on: '', easy: 'Sobraram repetições: ' }
+const CAUSE: Record<Effort, string> = { failure: 'Chegou à falha: ', harder: 'Mais duro do que o alvo: ', on: '', easy: 'Sobraram repetições: ' }
 
-/** The reps each effort adds to the set's reps next time. */
 const MAX_REPS_UP = 2
+/** The reps each effort adds to the set's reps next time. */
 const STEP: Record<Effort, number> = { failure: -1, harder: 0, on: 1, easy: MAX_REPS_UP }
 
 const clamp = (n: number, range: RepRange) => Math.min(Math.max(n, range.min), range.max)
 const kgText = (kg: number) => `${String(Math.round(kg * 100) / 100).replace('.', ',')} kg`
 const loadText = (kg: number | null) => (kg === null ? 'peso corporal' : kgText(kg))
 const rangeText = (r: { min: number; max: number }) => (r.min === r.max ? `${r.min}` : `${r.min}–${r.max}`)
-const sentence = (why: string, text: string) => (why ? why + text : text[0].toUpperCase() + text.slice(1))
+const sentence = (cause: string, text: string) => (cause ? cause + text : text[0].toUpperCase() + text.slice(1))
 
 /** One load step from `load`, 1 kg under 25 kg and 2,5 kg from there, so a step stays near 10% or less. Null at 0. */
 export function loadStep(load: number, direction: 1 | -1): number | null {
@@ -77,8 +77,8 @@ export function suggestTarget(input: ProgressionInput): Suggestion | null {
   const load = last.kg
   const atLoad = input.sets.filter((s) => s.kg === load)
   const moves = atLoad.map((set) => {
-    const e = effort(set.rir, previous)
-    return { set, effort: e, reps: set.reps + STEP[e] }
+    const setEffort = effort(set.rir, previous)
+    return { set, effort: setEffort, reps: set.reps + STEP[setEffort] }
   })
   const hardest = moves.reduce((a, b) => (b.reps < a.reps ? b : a))
   const lowest = Math.min(...atLoad.map((s) => s.reps))
@@ -88,14 +88,14 @@ export function suggestTarget(input: ProgressionInput): Suggestion | null {
 
   const direction = reps > range.max ? 1 : reps < range.min ? -1 : 0
   const kg = load === null || direction === 0 ? null : loadStep(load, direction)
-  if (kg === null) {
+  if (load === null || kg === null) {
     const kept = clamp(reps, range)
-    const same = atLoad.every((s) => s.reps === kept)
-    const what = same ? `mantém ${loadText(load)} × ${kept}.` : `faz ${kept} com ${loadText(load)}.`
-    return { kg: load, reps: kept, change: 'keep', note: `${summary} ${sentence(WHY[hardest.effort], what)}` }
+    const repsUnchanged = atLoad.every((s) => s.reps === kept)
+    const advice = repsUnchanged ? `mantém ${loadText(load)} × ${kept}.` : `faz ${kept} com ${loadText(load)}.`
+    return { kg: load, reps: kept, change: 'keep', note: `${summary} ${sentence(CAUSE[hardest.effort], advice)}` }
   }
   const capacity = hardest.set.reps + (hardest.set.rir ?? previous.min)
-  const oneRepMax = (load as number) * (1 + capacity / 30)
+  const oneRepMax = load * (1 + capacity / 30)
   const nextReps = clamp(Math.floor(30 * (oneRepMax / kg - 1) - next.min + 1e-6), range)
   const move = direction > 0 ? `Sobram repetições acima de ${rangeText(range)}, por isso sobe para` : `Com este esforço ficarias abaixo de ${rangeText(range)}, por isso desce para`
   return { kg, reps: nextReps, change: direction > 0 ? 'up' : 'down', note: `${summary} ${move} ${kgText(kg)} e faz ${nextReps}.` }

@@ -30,7 +30,8 @@ small { font-size: 0.85em; color: var(--muted); }
 /* header */
 
 /* Fixed so it is seen wherever the page is scrolled to; below the side panels. */
-.sync-line { position: fixed; z-index: 40; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-segment); }
+.sync-lines { position: fixed; z-index: 40; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.sync-line { pointer-events: auto; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-segment); }
 .sync-line.notice-error { border-color: var(--over-bg); }
 .sync-line .link-btn { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .plan-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0 12px; border-bottom: 1px solid var(--border); }

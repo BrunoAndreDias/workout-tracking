@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { TimedNote } from './notes.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import type { PlannedExercise, WorkoutPlan, WorkoutSession } from './workouts.ts'
+import { storageFull, subscribeStorageHealth } from './storageHealth.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
 
 function written(save: (storage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void }) => boolean): Record<string, string> {
@@ -90,5 +91,35 @@ describe('saving a store as the app starts', () => {
     const { data, storage } = storageWith({ [STORES.workoutSessions.key]: JSON.stringify({ version: 1, sessions: [{ id: 's1', date: '2026-10-05', workoutDayId: null, exercises: [], notes: 'Bom treino' }] }) })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     expect(JSON.parse(data[STORES.workoutSessions.key]).version).toBe(4)
+  })
+})
+
+describe('a storage that refuses a write', () => {
+  it('reports the store as unsaved until a later save of it succeeds', () => {
+    let refuse = true
+    const data: Record<string, string> = {}
+    const storage = {
+      getItem: (k: string) => data[k] ?? null,
+      setItem(k: string, v: string) {
+        if (refuse) throw new DOMException('full', 'QuotaExceededError')
+        data[k] = v
+      },
+    }
+    let changes = 0
+    const unsubscribe = subscribeStorageHealth(() => changes++)
+    expect(saveStore(STORES.exercises, [{ id: 'x1' as ExerciseId, name: 'Supino' }], storage)).toBe(false)
+    expect(storageFull()).toBe(true)
+    expect(saveStore(STORES.workoutSessions, [], { getItem: () => null, setItem: () => {} })).toBe(true)
+    expect(storageFull()).toBe(true)
+    refuse = false
+    expect(saveStore(STORES.exercises, [{ id: 'x1' as ExerciseId, name: 'Supino' }], storage)).toBe(true)
+    expect(storageFull()).toBe(false)
+    expect(changes).toBe(2)
+    unsubscribe()
+  })
+
+  it('reports nothing when there is no storage at all', () => {
+    expect(saveStore(STORES.exercises, [], null)).toBe(false)
+    expect(storageFull()).toBe(false)
   })
 })

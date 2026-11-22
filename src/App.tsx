@@ -71,7 +71,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   return (
     <div className="app">
       <div className="page">
-        {sync && <SyncLine sync={sync} />}
+        <SyncLine sync={sync} />
 
         <main className="main">
           <WorkoutView state={workouts} dispatch={dispatchWorkouts} date={date} today={today} onDate={onDate} equipment={equipment} dispatchEquipment={dispatchEquipment} />

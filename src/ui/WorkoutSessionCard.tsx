@@ -5,7 +5,7 @@ import { doneMuscleSets, MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
 import { ROLE_REPS } from '../domain/splits.ts'
 import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
-import { doneSets, nameLookup } from '../domain/workouts.ts'
+import { doneSets, nameLookup, targetRange } from '../domain/workouts.ts'
 import { suggestion } from '../domain/sessions.ts'
 import type { Exercise, PlannedExercise, SessionExercise, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import type { SetValues, WorkoutAction } from '../domain/workoutReducer.ts'
@@ -57,7 +57,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
       {session.exercises.map((exercise) => {
         const plan = planned.get(exercise.exerciseId)
         const target = exercise.target
-        const note = target && suggestion(before, exercise.exerciseId, session.date, target.rir, plan?.reps ?? ROLE_REPS.isolation)?.note
+        const note = target && suggestion(before, exercise.exerciseId, session.date, targetRange(target), plan?.reps ?? ROLE_REPS.isolation)?.note
         return (
           <Lift
             key={exercise.exerciseId}

@@ -137,8 +137,10 @@ export interface WorkoutState extends WorkoutPlanState {
 
 export const EMPTY_SET: PendingSet = { done: false, reps: null, kg: null, rir: null }
 
-/** The smallest load step the suggestion moves by. */
+/** The load step the suggestion moves by, and the smaller one under 25 kg, so a step stays within ACSM's 2–10% (docs/research/progression-rate.md). */
 export const LOAD_INCREMENT = 2.5
+export const SMALL_LOAD_INCREMENT = 1
+export const SMALL_LOAD_BELOW = 25
 
 function parseRange(text: string): { min: number; max: number } | null {
   const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)

@@ -19,11 +19,11 @@ afterEach(() => {
 })
 
 /** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
-async function start({ allowReset = false } = {}) {
+async function start({ allowReset = false, maxBodyBytes }: { allowReset?: boolean; maxBodyBytes?: number } = {}) {
   const file = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'workout.sqlite')
   const clock = { now: new Date(2026, 9, 6, 9, 0) }
   const stores = openStores(file, () => clock.now)
-  const server = createServer(storeHandler(() => stores, { allowReset }))
+  const server = createServer(storeHandler(() => stores, { allowReset, maxBodyBytes }))
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   close = () => {
     server.close()
@@ -120,6 +120,13 @@ describe('store API', () => {
     const raw = await fetch(`${api.base}/${encodeURIComponent(PLANS)}`, { method: 'PUT', body: '{"doc":{"version":3},"baseRev":null}' })
     expect(raw.status).toBe(400)
     expect(await api.get()).toEqual({})
+  })
+
+  it('answers a body over the limit with 413 and keeps the store as it was', async () => {
+    const api = await start({ maxBodyBytes: 100 })
+    expect((await api.put(PLANS, '{"a":1}', null)).status).toBe(200)
+    expect(await api.put(PLANS, JSON.stringify({ a: 'x'.repeat(200) }), 1)).toEqual({ status: 413, body: { error: 'body over 100 bytes' } })
+    expect(await api.get()).toEqual({ [PLANS]: { doc: '{"a":1}', rev: 1 } })
   })
 
   it('answers a key with a bad % escape with 400', async () => {

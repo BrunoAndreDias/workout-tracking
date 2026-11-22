@@ -16,6 +16,16 @@ function SyncStatus({ sync }: { sync: Sync | null }) {
       </Notice>
     )
   }
+  if (status === 'recusado') {
+    return (
+      <Notice tone="error" className="sync-line">
+        O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.{' '}
+        <button type="button" className="link-btn" onClick={() => window.location.reload()}>
+          Recarregar
+        </button>
+      </Notice>
+    )
+  }
   return (
     <Notice tone="error" className="sync-line">
       Os dados mudaram noutro dispositivo.{' '}

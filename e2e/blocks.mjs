@@ -68,9 +68,13 @@ const stored = await readStored(page)
 const plans = stored['workout-plans']
 assert(plans.version === 3 && plans.plans[0].split === 'ul' && plans.plans[0].start.since === todayIso(), `the start is stored as today (got ${JSON.stringify(plans.plans[0].start)})`)
 const bench = stored.exercises.exercises.find((e) => e.name === 'Flat Barbell Bench Press').id
+const pressDowns = stored.exercises.exercises.find((e) => e.name === 'Cable Press-Downs').id
 const upperADay = plans.plans[0].blocks[0].days[0].id
 await putStore(page, URL, 'workout-plans', { ...plans, plans: [{ ...plans.plans[0], start: { ...plans.plans[0].start, since: mondayWeeksAgo(2) } }] })
-const seeded = { id: 'seeded', date: mondayWeeksAgo(1), workoutDayId: upperADay, exercises: [{ exerciseId: bench, sets: [{ done: true, kg: 60, reps: 7, rir: 2 }], target: { kg: 60, reps: 7, rir: 2 } }] }
+const seeded = { id: 'seeded', date: mondayWeeksAgo(1), workoutDayId: upperADay, exercises: [
+  { exerciseId: bench, sets: [{ done: true, kg: 60, reps: 7, rir: 2 }], target: { kg: 60, reps: 7, rir: 2 } },
+  { exerciseId: pressDowns, sets: [{ done: true, kg: 20, reps: 12, rir: 1 }] },
+] }
 await putStore(page, URL, 'workout-sessions', { version: 3, sessions: [seeded] })
 await reloadApp(page)
 
@@ -86,7 +90,15 @@ await startCard().getByRole('button', { name: 'Upper A', exact: true }).click()
 const session = page.getByRole('region', { name: 'Upper A', exact: true })
 assert((await session.locator('.lift-name').allTextContents()).at(-1) === 'Cable Curls', 'starting Upper A logs Bloco B’s exercises')
 assert(await session.getByLabel('Kg da série 1 de Flat Barbell Bench Press').inputValue() === '60', 'the bench press is suggested from the last time it was done')
-assert(await session.getByLabel('Repetições da série 1 de Flat Barbell Bench Press').inputValue() === '6', 'at Bloco B’s RIR 3, one rep less than the 7 done at RIR 2')
+assert(await session.getByLabel('Repetições da série 1 de Flat Barbell Bench Press').inputValue() === '8', 'at Principal’s RIR Target 2, whatever Bloco B’s RIR 3 says: one rep more than the 7 done at RIR 2')
+const targetChips = (name) => session.getByRole('group', { name: `RIR da série 1 de ${name}` }).locator('.rir-target').allTextContents()
+assert((await targetChips('Flat Barbell Bench Press')).join(' ') === '2', 'the bench press’s RIR chips highlight its target, RIR 2')
+const started = (await readStored(page))['workout-sessions']
+const pressDownsOnly = { ...started.sessions[1], exercises: started.sessions[1].exercises.filter((e) => e.exerciseId === pressDowns) }
+assert(JSON.stringify(pressDownsOnly.exercises[0].target) === '{"kg":20,"reps":13,"rir":1,"rirMax":3}', `an Isolamento exercise keeps its RIR Target 1–3 (got ${JSON.stringify(pressDownsOnly.exercises[0].target)})`)
+await putStore(page, URL, 'workout-sessions', { ...started, sessions: [started.sessions[0], pressDownsOnly] })
+await reloadApp(page)
+assert((await targetChips('Cable Press-Downs')).join(' ') === '1 2 3', 'its RIR chips highlight every RIR from 1 to 3')
 
 await tab('Plano de treino').click()
 assert(await card('Bloco B').getAttribute('aria-current') === 'true', 'the plan marks Bloco B as current')

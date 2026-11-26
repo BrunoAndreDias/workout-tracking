@@ -1,7 +1,6 @@
 import { chromium } from 'playwright'
-import { appUrl, openFresh } from './_driver.mjs'
+import { appUrl, assert, openFresh } from './_driver.mjs'
 const URL = appUrl()
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 await openFresh(page, URL)

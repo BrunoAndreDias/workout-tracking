@@ -14,6 +14,8 @@ export function appUrl() {
   return url
 }
 
+export const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
+
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
   constructor(message, fix) {

@@ -1,9 +1,8 @@
 import { chromium } from 'playwright'
-import { addGym, appUrl, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
+import { addGym, appUrl, assert, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const FULL = 'Não foi possível guardar neste navegador: o armazenamento está cheio. Exporta os dados.'
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } })

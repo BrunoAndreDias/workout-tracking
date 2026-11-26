@@ -1,8 +1,7 @@
 import { chromium } from 'playwright'
-import { addExercise, appUrl, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
+import { addExercise, appUrl, assert, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const errors = []

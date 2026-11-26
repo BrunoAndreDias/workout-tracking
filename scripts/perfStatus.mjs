@@ -2,19 +2,19 @@
 import { writeFileSync } from 'node:fs'
 
 export const METRICS = [
-  { key: 'coldLoadMs', label: 'First visit, until Registo', unit: 'ms', group: 'load' },
-  { key: 'warmLoadMs', label: 'Reopen, until Registo', unit: 'ms', group: 'load' },
-  { key: 'fcpMs', label: 'First visit, first paint', unit: 'ms', group: 'load' },
-  { key: 'lcpMs', label: 'First visit, largest paint', unit: 'ms', group: 'load' },
-  { key: 'startSessionMs', label: 'Começar <day>', unit: 'ms', group: 'interaction' },
-  { key: 'tickMs', label: 'Tick a set ✓', unit: 'ms', group: 'interaction' },
-  { key: 'typeKgMs', label: 'Type in a kg field', unit: 'ms', group: 'interaction' },
-  { key: 'planTabMs', label: 'Open Plano de treino', unit: 'ms', group: 'interaction' },
-  { key: 'registoTabMs', label: 'Back to Registo', unit: 'ms', group: 'interaction' },
-  { key: 'jsKB', label: 'JS sent, first visit', unit: 'KB', group: 'bytes' },
-  { key: 'cssKB', label: 'CSS sent, first visit', unit: 'KB', group: 'bytes' },
-  { key: 'fontKB', label: 'Fonts sent, first visit', unit: 'KB', group: 'bytes' },
-  { key: 'apiKB', label: 'Stores sent, first visit', unit: 'KB', group: 'bytes' },
+  { key: 'coldLoadMs', label: 'First visit, until Registo', unit: 'ms' },
+  { key: 'warmLoadMs', label: 'Reopen, until Registo', unit: 'ms' },
+  { key: 'fcpMs', label: 'First visit, first paint', unit: 'ms' },
+  { key: 'lcpMs', label: 'First visit, largest paint', unit: 'ms' },
+  { key: 'startSessionMs', label: 'Começar <day>', unit: 'ms' },
+  { key: 'tickMs', label: 'Tick a set ✓', unit: 'ms' },
+  { key: 'typeKgMs', label: 'Type in a kg field', unit: 'ms' },
+  { key: 'planTabMs', label: 'Open Plano de treino', unit: 'ms' },
+  { key: 'registoTabMs', label: 'Back to Registo', unit: 'ms' },
+  { key: 'jsKB', label: 'JS sent, first visit', unit: 'KB' },
+  { key: 'cssKB', label: 'CSS sent, first visit', unit: 'KB' },
+  { key: 'fontKB', label: 'Fonts sent, first visit', unit: 'KB' },
+  { key: 'apiKB', label: 'Stores sent, first visit', unit: 'KB' },
 ]
 
 const delta = (now, then) => (then ? `${now - then > 0 ? '+' : ''}${(((now - then) / then) * 100).toFixed(0)}%` : '—')

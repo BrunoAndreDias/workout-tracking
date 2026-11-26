@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 import { STORE_KEY } from '../src/domain/storeKeys.ts'
-import { addGym, appUrl, assert, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
+import { addGym, appUrl, assert, noHorizontalScroll, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const FULL = 'Não foi possível guardar neste navegador: o armazenamento está cheio. Exporta os dados.'
@@ -26,7 +26,7 @@ const full = page.getByRole('alert').filter({ hasText: FULL })
 await full.waitFor()
 assert(((await readStored(page)).equipment?.gyms ?? []).length === 0, 'the Local could not be saved')
 await page.screenshot({ path: `${S}/storage-full-390.png` })
-assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the line fits a 390 px phone')
+assert(await noHorizontalScroll(page), 'the line fits a 390 px phone')
 
 await page.evaluate(() => window.restoreSetItem())
 await addGym(page, 'Ginásio')

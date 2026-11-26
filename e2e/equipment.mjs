@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addGym, appUrl, assert, createWorkoutPlan, openFresh, openWorkoutTab, readStored, reloadApp, synced, workoutDay } from './_driver.mjs'
+import { addGym, appUrl, assert, closePicker, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openPicker, openWorkoutTab, readStored, reloadApp, synced, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const browser = await chromium.launch()
@@ -13,18 +13,10 @@ await openFresh(page, URL + '#treino')
 const DB_CURLS = 'Standing Dumbbell Curls'
 const BB_CURLS = 'Standing Barbell Curls'
 const dialog = page.getByRole('dialog')
-const result = (name) => dialog.locator('.result', { has: page.locator('.result-name', { hasText: new RegExp(`^${name}$`) }) })
+const result = (name) => dialog.locator('.result', { has: page.locator('.result-name', { hasText: exactly(name) }) })
 const flagged = (name) => result(name).evaluate((el) => el.classList.contains('is-missing'))
 const pickerNames = () => dialog.locator('.result-name').allTextContents()
-const openPicker = async (day, query) => {
-  await day.getByRole('button', { name: 'Exercício', exact: true }).click()
-  await dialog.getByLabel('Pesquisar exercício').fill(query)
-}
-const closePicker = async () => {
-  await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-  await dialog.waitFor({ state: 'detached' })
-}
-const exerciseRow = (name) => page.locator('.equipment-exercise', { has: page.locator('.result-name', { hasText: new RegExp(`^${name}$`) }) })
+const exerciseRow = (name) => page.locator('.equipment-exercise', { has: page.locator('.result-name', { hasText: exactly(name) }) })
 const findExercise = (name) => page.getByRole('region', { name: 'Exercícios' }).getByLabel('Pesquisar exercício').fill(name)
 
 await openWorkoutTab(page, 'Plano de treino')
@@ -36,7 +28,7 @@ assert(await dialog.getByText('Marca o material que tens em Treino → Material'
 assert(await dialog.locator('.result.is-missing').count() === 0, 'and flags nothing')
 assert((await result(DB_CURLS).locator('.result-sub').textContent()) === 'Bíceps · Halteres', 'each row shows its muscle group and its material')
 await page.screenshot({ path: `${S}/equipment-picker-no-gym.png` })
-await closePicker()
+await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
 await addGym(page, 'Casa', ['Halteres', 'Banco plano'])
@@ -55,7 +47,7 @@ assert(!(await flagged(DB_CURLS)) && (await flagged(BB_CURLS)), 'only the barbel
 assert((await result(BB_CURLS).locator('.missing-line').textContent()) === 'Falta: Barra', 'and it says it lacks a Barra')
 assert(await result(BB_CURLS).isEnabled(), 'a flagged Exercise can still be picked')
 await page.screenshot({ path: `${S}/equipment-picker-casa.png` })
-await closePicker()
+await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
 await findExercise(BB_CURLS)
@@ -80,7 +72,7 @@ push = await workoutDay(page, 'Push')
 await openPicker(push, 'curl')
 assert(!(await flagged(BB_CURLS)), 'after the correction the barbell curl is not flagged')
 assert((await result(BB_CURLS).locator('.result-sub').textContent()) === 'Bíceps · Halteres', 'and shows its corrected material')
-await closePicker()
+await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
 await findExercise(BB_CURLS)
@@ -99,11 +91,11 @@ await local.getByRole('button', { name: 'Casa' }).click()
 assert(await flagged(BB_CURLS), 'switching the picker to Casa flags the restored barbell curl again')
 names = await pickerNames()
 assert(names.indexOf(DB_CURLS) < names.indexOf(BB_CURLS), 'and lists it after the dumbbell curl')
-await closePicker()
+await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
 await page.setViewportSize({ width: 375, height: 812 })
-assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Material has no horizontal scroll at 375 px')
+assert(await noHorizontalScroll(page), 'Material has no horizontal scroll at 375 px')
 await page.screenshot({ path: `${S}/equipment-material-mobile.png`, fullPage: true })
 
 assert(errors.length === 0, `no console errors (${errors.join(' | ')})`)

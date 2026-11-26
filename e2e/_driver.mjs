@@ -96,7 +96,9 @@ export const mondayWeeksAgo = (n) => addDays(mondayOf(todayIso()), -7 * n)
 /** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
 export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
-const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+export const noHorizontalScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+
+export const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
 
 /** In the open exercise picker, picks `name`: a catalog Exercise or one of the user's own by name, else a new one. */
 export async function pickExercise(page, name) {
@@ -115,9 +117,22 @@ export async function pickExercise(page, name) {
   await dialog.waitFor({ state: 'detached' })
 }
 
+export async function openPicker(scope, query) {
+  const dialog = scope.page().getByRole('dialog')
+  await scope.getByRole('button', { name: 'Exercício', exact: true }).click()
+  await dialog.waitFor()
+  if (query !== undefined) await dialog.getByLabel('Pesquisar exercício').fill(query)
+}
+
+export async function closePicker(page) {
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
+  await dialog.waitFor({ state: 'detached' })
+}
+
 /** Adds an Exercise to a Workout Day's card or a session's card through its "+ Exercício" picker. */
 export async function addExercise(scope, name) {
-  await scope.getByRole('button', { name: 'Exercício', exact: true }).click()
+  await openPicker(scope)
   await pickExercise(scope.page(), name)
 }
 
@@ -142,6 +157,8 @@ export async function openWorkoutTab(page, name) {
   await tab.click()
   await tab.and(page.locator('[aria-current="page"]')).waitFor()
 }
+
+export const planTabs = (page) => page.getByRole('navigation', { name: 'Planos de treino' }).getByRole('button').allTextContents()
 
 /** On Treino → Material, adds a Gym (it becomes the active one) and ticks each material label in `has`. */
 export async function addGym(page, name, has = []) {

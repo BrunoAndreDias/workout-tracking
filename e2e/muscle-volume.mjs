@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { appUrl, assert, createWorkoutPlan, openFresh } from './_driver.mjs'
+import { appUrl, assert, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openWorkoutTab } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const browser = await chromium.launch()
@@ -9,12 +9,12 @@ page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await openFresh(page, URL)
 
-await page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Plano de treino' }).click()
+await openWorkoutTab(page, 'Plano de treino')
 await createWorkoutPlan(page, { name: 'Força', days: 3 })
 const weekly = page.getByRole('region', { name: 'Músculos por semana', exact: true })
 const ranked = weekly.getByRole('list', { name: /do que tem mais séries/ })
 const gaps = weekly.getByRole('list', { name: 'Grupos sem séries' })
-const rowOf = (name) => weekly.locator('.volume-row', { has: page.locator('.muscle-name', { hasText: new RegExp(`^${name}$`) }) })
+const rowOf = (name) => weekly.locator('.volume-row', { has: page.locator('.muscle-name', { hasText: exactly(name) }) })
 const text = (loc, sel) => loc.locator(sel).allTextContents().then((t) => t.join('|'))
 const pressed = () => text(weekly.locator('.volume-row[aria-pressed="true"]'), '.muscle-name')
 const front = weekly.locator('.volume-figure').first()
@@ -48,7 +48,7 @@ assert(await weekly.getByText('Não é uma regra.', { exact: false }).count() ==
 
 for (const width of [390, 375]) {
   await page.setViewportSize({ width, height: 844 })
-  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Músculos por semana has no horizontal scroll at ${width} px`)
+  assert(await noHorizontalScroll(page), `Músculos por semana has no horizontal scroll at ${width} px`)
 }
 await weekly.screenshot({ path: `${S}/muscle-volume-mobile.png` })
 

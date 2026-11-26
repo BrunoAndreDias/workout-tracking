@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { STORE_KEY } from '../src/domain/storeKeys.ts'
-import { addGym, appUrl, assert, clickAndReload, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
+import { addGym, appUrl, assert, clickAndReload, createWorkoutPlan, noHorizontalScroll, openFresh, openWorkoutTab, planTabs, rendered, resetServer, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const DB = process.env.WORKOUT_DB
@@ -22,7 +22,6 @@ async function device(width = 1280) {
   page.on('dialog', (d) => d.accept())
   return { context, page, open: async () => { await page.goto(URL + '#treino'); await rendered(page) } }
 }
-const planTabs = (page) => page.getByRole('navigation', { name: 'Planos de treino' }).getByRole('button').allTextContents()
 
 const a = await device()
 await openFresh(a.page, URL + '#treino')
@@ -54,7 +53,7 @@ await b.context.setOffline(true)
 await addGym(b.page, 'Rua')
 await b.page.getByRole('status').filter({ hasText: OFFLINE }).waitFor()
 await b.page.screenshot({ path: `${S}/disk-store-offline-390.png` })
-assert(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the offline line fits a 390 px phone')
+assert(await noHorizontalScroll(b.page), 'the offline line fits a 390 px phone')
 assert(gyms() === 'Casa', 'offline, the server still holds one Local')
 await b.context.setOffline(false)
 await b.page.getByRole('status').filter({ hasText: OFFLINE }).waitFor({ state: 'detached' })

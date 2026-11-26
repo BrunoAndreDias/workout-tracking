@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addGym, appUrl, assert, clickAndReload, openFresh, openWorkoutTab, readServerStore, synced } from './_driver.mjs'
+import { addGym, appUrl, assert, clickAndReload, noHorizontalScroll, openFresh, openWorkoutTab, readServerStore, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const REFUSED = 'O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.'
@@ -23,7 +23,7 @@ await addGym(page, 'Casa')
 const refused = page.getByRole('alert').filter({ hasText: REFUSED })
 await refused.waitFor()
 await page.screenshot({ path: `${S}/sync-refused-390.png` })
-assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the refused line fits a 390 px phone')
+assert(await noHorizontalScroll(page), 'the refused line fits a 390 px phone')
 
 await addGym(page, 'Ginásio')
 await page.evaluate(() => {

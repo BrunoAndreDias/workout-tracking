@@ -18,7 +18,7 @@ export function toLocalDateTime(d: Date): LocalDateTime {
 /** `time` is 'HH:MM'. */
 export const atTime = (date: IsoDate, time: string): LocalDateTime => `${date}T${time}:00` as LocalDateTime
 
-export function parseLocalDateTime(s: unknown): LocalDateTime | null {
+function parseLocalDateTime(s: unknown): LocalDateTime | null {
   if (typeof s !== 'string') return null
   const m = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.exec(s)
   return m && parseIsoDate(m[1]) ? (s as LocalDateTime) : null

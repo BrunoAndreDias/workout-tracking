@@ -38,7 +38,7 @@ export type BuiltInEquipmentId = (typeof EQUIPMENT)[number]['id']
 export type EquipmentId = BuiltInEquipmentId | CustomEquipmentId
 
 /** What each catalog Exercise needs, all of it; [] is none. A first guess the user corrects per Exercise. */
-export const DEFAULT_NEEDS = {
+const DEFAULT_NEEDS = {
   'flat-barbell-bench-press': ['barbell', 'bench', 'rack'],
   'flat-dumbbell-bench-press': ['dumbbells', 'bench'],
   'incline-barbell-bench-press': ['barbell', 'adjustable-bench', 'rack'],

@@ -36,7 +36,7 @@ export interface Sync {
   readonly dropConflicts: () => void
 }
 
-export interface SyncOptions {
+interface SyncOptions {
   readonly storage: BrowserStorage
   readonly fetch?: typeof fetch
   readonly base?: string

@@ -3,12 +3,12 @@ import type { CatalogId } from './catalogEntries.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
 import type { BlockOf, DaysOf, Exercise, RepRange, RirRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'
 
-export interface SlotSpec {
+interface SlotSpec {
   readonly role: Role
   readonly exercise: CatalogId
 }
 
-export interface DaySpec {
+interface DaySpec {
   readonly name: string
   readonly slots: readonly SlotSpec[]
 }
@@ -137,7 +137,7 @@ export const ROLES = Object.keys(ROLE_LABEL) as Role[]
 
 export const DEFAULT_SETS = 3
 
-export const ROLE_RIR: { readonly [R in Role]: RirRange } = {
+const ROLE_RIR: { readonly [R in Role]: RirRange } = {
   main: { min: 2, max: 2 },
   secondary: { min: 2, max: 2 },
   isolation: { min: 1, max: 3 },
@@ -154,7 +154,7 @@ export function withLight(target: RirTarget, light: boolean): RirTarget {
 
 export const roleRir = (role: Role, light: boolean): RirTarget => withLight({ ...ROLE_RIR[role], light: false }, light)
 
-export const DEFAULT_BLOCK_WEEKS = 6
+const DEFAULT_BLOCK_WEEKS = 6
 
 /** The role an Exercise added by hand starts with: core work is abs, a catalog compound secondary, anything else isolation. */
 export function defaultRole(name: string): Role {

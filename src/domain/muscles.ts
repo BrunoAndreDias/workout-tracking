@@ -21,7 +21,7 @@ export interface MuscleSets {
 }
 
 /** The sets of each muscle group. A set counts in full for every primary muscle of its catalog Exercise. */
-export function muscleSets(items: readonly NamedSets[]): MuscleSets {
+function muscleSets(items: readonly NamedSets[]): MuscleSets {
   const muscles = Object.fromEntries(MUSCLES.map((m) => [m, 0])) as Record<Muscle, number>
   const ungrouped = new Map<string, number>()
   for (const { name, sets } of items) {

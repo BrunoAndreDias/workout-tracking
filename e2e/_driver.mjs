@@ -30,6 +30,13 @@ export const readStored = (page) =>
 
 const storesUrl = (url, name) => new URL(name ? `api/stores/${encodeURIComponent(STORE_KEY[name])}` : 'api/stores', url).href
 
+const serverEntry = async (page, url, name) => (await (await page.request.get(storesUrl(url))).json())[STORE_KEY[name]]
+
+export async function readServerStore(page, url, name) {
+  const entry = await serverEntry(page, url, name)
+  return entry ? JSON.parse(entry.doc) : null
+}
+
 /** Empties the server's database. Only a test server (WORKOUT_TEST=1: scripts/e2e.mjs, verify-treino launch.sh) allows it. */
 export async function resetServer(page, url) {
   const res = await page.request.delete(storesUrl(url))
@@ -64,7 +71,7 @@ export const synced = (page) =>
 /** Writes one store on the server as another device would; the page sees it on its next load. */
 export async function putStore(page, url, name, doc) {
   await synced(page)
-  const current = (await (await page.request.get(storesUrl(url))).json())[STORE_KEY[name]]
+  const current = await serverEntry(page, url, name)
   const res = await page.request.put(storesUrl(url, name), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
   if (!res.ok()) throw new FlowError(`the server refused ${name} (${res.status()})`, 'check the server log')
 }

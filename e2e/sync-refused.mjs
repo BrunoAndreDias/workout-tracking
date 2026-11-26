@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { addGym, appUrl, assert, clickAndReload, openFresh, openWorkoutTab, synced } from './_driver.mjs'
+import { addGym, appUrl, assert, clickAndReload, openFresh, openWorkoutTab, readServerStore, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const REFUSED = 'O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.'
@@ -11,7 +11,7 @@ page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && !m.text().startsWith('Failed to load resource') && errors.push(m.text()))
 await openFresh(page, URL + '#treino')
 await openWorkoutTab(page, 'Material')
-const gyms = async () => JSON.parse((await (await page.request.get(new globalThis.URL('api/stores', URL).href)).json())['workout-tracking:equipment']?.doc ?? '{"gyms":[]}').gyms.map((g) => g.name).join('|')
+const gyms = async () => ((await readServerStore(page, URL, 'equipment'))?.gyms ?? []).map((g) => g.name).join('|')
 
 let puts = 0
 await page.route('**/api/stores/**', (route) => {

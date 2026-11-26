@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { STORE_KEY } from '../src/domain/storeKeys.ts'
 import { addGym, appUrl, assert, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
@@ -12,14 +13,14 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 await openFresh(page, URL + '#treino')
 await openWorkoutTab(page, 'Material')
 
-await page.evaluate(() => {
+await page.evaluate((fullKey) => {
   const setItem = Storage.prototype.setItem
   window.restoreSetItem = () => (Storage.prototype.setItem = setItem)
   Storage.prototype.setItem = function (key, value) {
-    if (key.startsWith('workout-tracking:equipment')) throw new DOMException('full', 'QuotaExceededError')
+    if (key.startsWith(fullKey)) throw new DOMException('full', 'QuotaExceededError')
     return setItem.call(this, key, value)
   }
-})
+}, STORE_KEY.equipment)
 await addGym(page, 'Casa')
 const full = page.getByRole('alert').filter({ hasText: FULL })
 await full.waitFor()

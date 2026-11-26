@@ -1,6 +1,5 @@
 import { kgText, rangeText, roundKg } from './numbers.ts'
-import { LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
-import { inTarget } from './workouts.ts'
+import { inTarget, LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
 import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
 export interface Suggestion {
@@ -29,6 +28,7 @@ function effort(rir: number | null, aimed: RirTarget): Effort {
 const CAUSE: Record<Effort, string> = { failure: 'Chegou à falha: ', harder: 'Mais duro do que o alvo: ', on: '', easy: 'Sobraram repetições: ' }
 
 const MAX_REPS_UP = 2
+const EPLEY_REPS = 30
 const STEP: Record<Effort, number> = { failure: -1, harder: 0, on: 1, easy: MAX_REPS_UP }
 
 const clamp = (n: number, range: RepRange) => Math.min(Math.max(n, range.min), range.max)
@@ -73,8 +73,8 @@ export function suggestTarget(input: ProgressionInput): Suggestion | null {
     return { kg: load, reps: kept, change: 'keep', note: `${summary} ${sentence(CAUSE[hardest.effort], advice)}` }
   }
   const capacity = hardest.set.reps + (hardest.set.rir ?? previous.min)
-  const oneRepMax = load * (1 + capacity / 30)
-  const nextReps = clamp(Math.floor(30 * (oneRepMax / kg - 1) - next.min + 1e-6), range)
+  const oneRepMax = load * (1 + capacity / EPLEY_REPS)
+  const nextReps = clamp(Math.floor(EPLEY_REPS * (oneRepMax / kg - 1) - next.min + 1e-6), range)
   const move = direction > 0 ? `Sobram repetições acima de ${rangeText(range)}, por isso sobe para` : `Com este esforço ficarias abaixo de ${rangeText(range)}, por isso desce para`
   return { kg, reps: nextReps, change: direction > 0 ? 'up' : 'down', note: `${summary} ${move} ${kgText(kg)} e faz ${nextReps}.` }
 }

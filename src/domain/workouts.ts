@@ -147,20 +147,16 @@ export const EMPTY_SET: PendingSet = { done: false, reps: null, kg: null, rir: n
 export const LOAD_INCREMENT = 2.5
 export const SMALL_LOAD_INCREMENT = 1
 export const SMALL_LOAD_BELOW = 25
+export const MAX_RIR = 10
+export const MAX_BLOCK_WEEKS = 52
 
-function parseRange(text: string): { min: number; max: number } | null {
+export function parseRepRange(text: string): RepRange | null {
   const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)
   if (!m) return null
   const min = Number(m[1])
-  return { min, max: m[2] === undefined ? min : Number(m[2]) }
+  const max = m[2] === undefined ? min : Number(m[2])
+  return min >= 1 && max >= min ? { min, max } : null
 }
-
-export function parseRepRange(text: string): RepRange | null {
-  const r = parseRange(text)
-  return r && r.min >= 1 && r.max >= r.min ? r : null
-}
-
-export const MAX_RIR = 10
 
 /** The one rule for what counts: a set is logged when it is done. */
 export const isDone = (set: LoggedSet): set is DoneSet => set.done
@@ -173,9 +169,6 @@ export function loggedCounts(session: WorkoutSession): { exercises: number; sets
   return { exercises: done.filter((n) => n > 0).length, sets: done.reduce((a, b) => a + b, 0) }
 }
 
-
 export const emptyWorkouts = (): WorkoutState => ({ exercises: [], plans: [], activePlanId: null, sessions: [] })
-
-export const MAX_BLOCK_WEEKS = 52
 
 export const isBlockWeeks = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_BLOCK_WEEKS

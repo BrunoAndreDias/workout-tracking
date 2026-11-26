@@ -129,7 +129,8 @@ export function saveStore<T>(def: StoreDef<T>, value: T, storage: StorageLike | 
   if (!storage) return false
   try {
     const text = typeof value === 'object' && value !== null ? readFrom.get(value) : undefined
-    if (!(text !== undefined && storage.getItem(def.key) === text) && !leavesRefusedInPlace(def, value, storage)) storage.setItem(def.key, serializeStore(def, value))
+    const unchanged = text !== undefined && storage.getItem(def.key) === text
+    if (!unchanged && !leavesRefusedInPlace(def, value, storage)) storage.setItem(def.key, serializeStore(def, value))
     reportSave(def.key, true)
     return true
   } catch {

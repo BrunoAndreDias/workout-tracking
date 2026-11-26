@@ -1,7 +1,7 @@
-import { MicIcon, StopIcon } from '../ui/icons'
-import { Notice } from '../ui/Notice'
-import { appendDictation } from './appendDictation'
-import { useDictation } from './useDictation'
+import { MicIcon, StopIcon } from '../ui/icons.tsx'
+import { Notice } from '../ui/Notice.tsx'
+import { appendDictation } from './appendDictation.ts'
+import { useDictation } from './useDictation.ts'
 
 /** A mic button for a note field. Absolutely placed by `.note-field`; the status line sits under the field. */
 export function DictateButton({ value, onChange }: { value: string; onChange: (value: string) => void }) {

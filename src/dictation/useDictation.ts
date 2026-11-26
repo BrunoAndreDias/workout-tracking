@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { transcribe, warmUp, type Progress } from './transcriber'
+import { transcribe, warmUp } from './transcriber.ts'
+import type { Progress } from './transcriber.ts'
 
 type Dictation =
   | { kind: 'idle' }

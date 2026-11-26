@@ -1,4 +1,4 @@
-import type { WorkerRequest, WorkerResponse } from './protocol'
+import type { WorkerRequest, WorkerResponse } from './protocol.ts'
 
 export type Progress = { loaded: number; total: number }
 

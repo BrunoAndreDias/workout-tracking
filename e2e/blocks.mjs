@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { addExercise, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
+import { addExercise, appUrl, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
@@ -142,8 +142,9 @@ assert(migrated.workoutPlans.plans[0].blocks[0].light === false, 'an older block
 assert(JSON.stringify(migrated.workoutSessions.sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
 await fresh.goto(`${URL}#treino/${mondayWeeksAgo(1)}`)
 await fresh.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Registo' }).click()
-await fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' }).waitFor()
-console.log('ok: a session from a dropped plan reads Dia de treino eliminado')
+const dropped = fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' })
+await dropped.waitFor()
+assert((await dropped.count()) === 1, 'a session from a dropped plan reads Dia de treino eliminado')
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

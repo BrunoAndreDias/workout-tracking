@@ -1,8 +1,8 @@
 import { chromium } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { openFresh, readStored, rendered } from './_driver.mjs'
+import { appUrl, clickAndReload, openFresh, readStored } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const FIXTURE = 'e2e/fixtures/treino-backup.json'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
@@ -26,9 +26,7 @@ await panel.locator('.backup-summary').waitFor()
 const summary = await panel.locator('.backup-summary').textContent()
 assert(summary === '1 plano de treino, 1 treino, 1 local de treino', `a Treino Backup reads as its stores (got ${summary})`)
 await page.screenshot({ path: `${S}/backup-import-preview.png` })
-await panel.getByRole('button', { name: 'Juntar aos meus dados' }).click()
-await page.waitForEvent('load')
-await rendered(page)
+await clickAndReload(page, panel.getByRole('button', { name: 'Juntar aos meus dados' }))
 
 const stored = await readStored(page)
 assert(stored.workoutPlans.plans.map((p) => p.name).join() === 'Força', 'the workout plan came in')

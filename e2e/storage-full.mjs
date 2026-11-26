@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { addGym, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
+import { addGym, appUrl, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const FULL = 'Não foi possível guardar neste navegador: o armazenamento está cheio. Exporta os dados.'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 
@@ -24,7 +24,7 @@ await page.evaluate(() => {
 await addGym(page, 'Casa')
 const full = page.getByRole('alert').filter({ hasText: FULL })
 await full.waitFor()
-assert((await readStored(page)).equipment?.gyms?.length !== 1, 'the Local could not be saved')
+assert(((await readStored(page)).equipment?.gyms ?? []).length === 0, 'the Local could not be saved')
 await page.screenshot({ path: `${S}/storage-full-390.png` })
 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the line fits a 390 px phone')
 

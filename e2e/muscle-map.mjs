@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { addExercise, createWorkoutPlan, openFresh, openWorkoutTab, workoutDay } from './_driver.mjs'
+import { addExercise, appUrl, createWorkoutPlan, openFresh, openWorkoutTab, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
@@ -69,7 +69,7 @@ assert((await search.inputValue()) === 'incline', 'Escape returns to the list wi
 assert(await page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === `Ver músculos de ${n}`, INCLINE), 'and focuses the row it opened')
 await page.keyboard.press('Escape')
 await dialog.waitFor({ state: 'detached' })
-assert(true, 'a second Escape closes the dialog')
+assert((await dialog.count()) === 0, 'a second Escape closes the dialog')
 
 await push.getByRole('button', { name: 'Exercício', exact: true }).click()
 await search.fill('incline barbell')

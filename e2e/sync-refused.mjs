@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { addGym, openFresh, openWorkoutTab, rendered, synced } from './_driver.mjs'
+import { addGym, appUrl, clickAndReload, openFresh, openWorkoutTab, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const REFUSED = 'O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 
@@ -36,9 +36,7 @@ assert(puts === 1, `a refused store is not sent again: not after a later change,
 assert(await gyms() === '', 'the server does not hold the refused change')
 
 await page.unroute('**/api/stores/**')
-await refused.getByRole('button', { name: 'Recarregar' }).click()
-await page.waitForLoadState('load')
-await rendered(page)
+await clickAndReload(page, refused.getByRole('button', { name: 'Recarregar' }))
 await synced(page)
 assert(await gyms() === 'Casa|Ginásio', 'after Recarregar the change kept in the browser is sent again')
 assert(await refused.count() === 0, 'the refused line is gone')

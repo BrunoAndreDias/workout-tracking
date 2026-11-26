@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { createWorkoutPlan, openFresh, workoutDay } from './_driver.mjs'
+import { appUrl, createWorkoutPlan, openFresh, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const W = 390
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()

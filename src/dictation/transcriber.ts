@@ -47,11 +47,10 @@ export function warmUp(onProgress: (p: Progress) => void): Promise<void> {
   return ready.finally(() => progressListeners.delete(onProgress))
 }
 
-export function transcribe(audio: Float32Array, onProgress: (p: Progress) => void): Promise<string> {
+export function transcribe(audio: Float32Array): Promise<string> {
   const id = nextId++
-  progressListeners.add(onProgress)
   return new Promise<string>((resolve, reject) => {
     pending.set(id, { resolve, reject })
     post({ type: 'transcribe', id, audio }, [audio.buffer])
-  }).finally(() => progressListeners.delete(onProgress))
+  })
 }

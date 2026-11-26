@@ -1,11 +1,11 @@
 import { useContext, useId, useState } from 'react'
-import { activeGym, allEquipment, equipmentLabel, isChanged, missingAt, needsOf } from '../domain/equipment.ts'
+import { activeGym, allEquipment, equipmentLabel, isChanged, missingAt, needsOf, newCustomEquipmentId } from '../domain/equipment.ts'
 import type { EquipmentId } from '../domain/equipment.ts'
 import { CATALOG } from '../domain/catalogEntries.ts'
 import { catalogEntry, exerciseKey, MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
 import { newId } from '../domain/ids.ts'
-import type { CustomEquipmentId, GymId } from '../domain/types.ts'
+import type { GymId } from '../domain/types.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'
 import { materialText } from './format.ts'
@@ -126,7 +126,7 @@ function OwnEquipment() {
           ))}
         </ul>
       )}
-      <AddName label="Novo material" button="Adicionar material" onAdd={(name) => dispatch({ type: 'addCustom', id: `mat:${newId<string>()}` as CustomEquipmentId, name })} />
+      <AddName label="Novo material" button="Adicionar material" onAdd={(name) => dispatch({ type: 'addCustom', id: newCustomEquipmentId(), name })} />
     </section>
   )
 }

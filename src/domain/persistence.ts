@@ -22,7 +22,6 @@ export function defaultStorage(): BrowserStorage | null {
   }
 }
 
-export { isRecord } from './records.ts'
 export const isId = (v: unknown): v is string => typeof v === 'string' && v.length > 0
 
 /**

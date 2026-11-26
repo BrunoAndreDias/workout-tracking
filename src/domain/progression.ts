@@ -35,7 +35,7 @@ const clamp = (n: number, range: RepRange) => Math.min(Math.max(n, range.min), r
 const loadText = (kg: number | null) => (kg === null ? 'peso corporal' : kgText(kg))
 const sentence = (cause: string, text: string) => (cause ? cause + text : text[0].toUpperCase() + text.slice(1))
 
-export function loadStep(load: number, direction: 1 | -1): number | null {
+function loadStep(load: number, direction: 1 | -1): number | null {
   const step = load < SMALL_LOAD_BELOW ? SMALL_LOAD_INCREMENT : LOAD_INCREMENT
   const next = roundKg(load + direction * step)
   return next > 0 ? next : null

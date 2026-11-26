@@ -9,7 +9,6 @@ h1, h2, h3, h4, p, ul { margin: 0; padding: 0; }
 ul { list-style: none; }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
-small { font-size: 0.85em; color: var(--muted); }
 .page { max-width: 1040px; margin: 0 auto; padding: 40px var(--gutter) 120px; display: flex; flex-direction: column; gap: 28px; }
 .main { display: flex; flex-direction: column; gap: 28px; }
 
@@ -24,10 +23,6 @@ small { font-size: 0.85em; color: var(--muted); }
 .crash { max-width: 520px; margin: 0 auto; padding: 72px var(--gutter); display: flex; flex-direction: column; gap: 14px; }
 .crash-title { font: 500 26px/1.2 var(--font-serif); }
 .crash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-
-/* buttons */
-
-/* header */
 
 /* Fixed so it is seen wherever the page is scrolled to; below the side panels. */
 .sync-lines { position: fixed; z-index: 40; bottom: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
@@ -44,7 +39,6 @@ small { font-size: 0.85em; color: var(--muted); }
 .inline-name-input:focus-visible { outline: none; background: var(--rule); }
 
 /* dates */
-.summary { border-radius: 20px; padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 28px; }
 .date-title { display: inline-block; }
 .date-title::first-letter { text-transform: uppercase; }
 
@@ -88,9 +82,8 @@ small { font-size: 0.85em; color: var(--muted); }
 .day-start { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 
 /* forms */
-.form-actions { grid-column: 1 / -1; }
 .hint { font-size: 13px; }
-.form-actions { display: flex; gap: 10px; }
+.form-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
 .form-actions .primary, .form-actions .secondary { flex: 1 1 0; min-height: 48px; }
 
 /* panel */
@@ -112,7 +105,6 @@ small { font-size: 0.85em; color: var(--muted); }
 .results li { margin-bottom: 4px; }
 .result { width: 100%; text-align: left; display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 12px; border: 1px solid var(--border-soft); background: var(--surface); }
 .result:hover { border-color: var(--input-border); }
-.result[aria-pressed='true'] { background: var(--accent-tint); border-color: var(--accent); }
 .result-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .result-name { font-weight: 500; }
 .result-sub { font-size: 12px; color: var(--muted); }

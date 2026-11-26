@@ -75,7 +75,7 @@ export function useDictation(onText: (text: string) => void) {
         setState({ kind: 'loading', ...progress })
         const [audio] = await Promise.all([decode(new Blob(chunks, { type: chunks[0]?.type })), warm])
         setState({ kind: 'transcribing' })
-        const text = await transcribe(audio, () => {})
+        const text = await transcribe(audio)
         latest.current(text)
         setState({ kind: 'idle' })
       } catch {

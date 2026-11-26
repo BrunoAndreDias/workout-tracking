@@ -3,7 +3,7 @@ import type { Dispatch } from 'react'
 import { freshEquipment } from '../domain/equipment.ts'
 import type { EquipmentAction, EquipmentState } from '../domain/equipment.ts'
 
-export interface EquipmentStore {
+interface EquipmentStore {
   readonly state: EquipmentState
   readonly dispatch: Dispatch<EquipmentAction>
 }

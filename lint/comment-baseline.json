@@ -1,6 +1,6 @@
 {
   ".claude/skills/verify-treino/scripts/session.mjs": 11,
-  "e2e/_driver.mjs": 23,
+  "e2e/_driver.mjs": 22,
   "e2e/dictation.mjs": 4,
   "e2e/disk-store.mjs": 1,
   "e2e/muscle-map.mjs": 1,
@@ -26,7 +26,7 @@
   "src/domain/blocks.ts": 8,
   "src/domain/catalogEntries.ts": 1,
   "src/domain/catalogMuscles.ts": 1,
-  "src/domain/dates.ts": 6,
+  "src/domain/dates.ts": 5,
   "src/domain/equipment.ts": 12,
   "src/domain/equipmentStorage.ts": 1,
   "src/domain/exerciseCatalog.ts": 6,

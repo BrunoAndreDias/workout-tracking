@@ -7,8 +7,8 @@ import { mergeEquipment } from './equipment.ts'
 import { findExercise } from './exerciseCatalog.ts'
 import { mapPlanDays } from './workoutReducer.ts'
 
-export const BACKUP_APP = 'workout-tracking'
-export const BACKUP_VERSION = 1
+const BACKUP_APP = 'workout-tracking'
+const BACKUP_VERSION = 1
 
 export type ParsedBackup = { ok: true; data: AppData } | { ok: false; error: string }
 

@@ -56,13 +56,15 @@ export const MUSCLE_LABEL: Readonly<Record<Muscle, string>> = {
   calves: 'Gémeos',
 }
 
-const byKey = new Map<string, CatalogEntry>(CATALOG.map((e) => [exerciseKey(e.name), e]))
-const byId = new Map<string, CatalogEntry>(CATALOG.map((e) => [e.id, e]))
+type CatalogItem = (typeof CATALOG)[number]
+
+const byKey = new Map<string, CatalogItem>(CATALOG.map((e) => [exerciseKey(e.name), e]))
+const byId = new Map<CatalogId, CatalogItem>(CATALOG.map((e) => [e.id, e]))
 
 /** The catalog entry of an Exercise named like it, ignoring case; undefined for the user's own names. */
-export const catalogEntry = (name: string): CatalogEntry | undefined => byKey.get(exerciseKey(name))
+export const catalogEntry = (name: string): CatalogItem | undefined => byKey.get(exerciseKey(name))
 
-export const catalogById = (id: CatalogId): CatalogEntry => byId.get(id)!
+export const catalogById = (id: CatalogId): CatalogItem => byId.get(id)!
 
 /**
  * The entries whose name holds every word of `query`, of `muscle` when given. Swapping `current` lists the other

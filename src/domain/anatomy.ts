@@ -1,4 +1,3 @@
-import type { CatalogId } from './catalogEntries.ts'
 import { CATALOG_MUSCLES } from './catalogMuscles.ts'
 import { catalogEntry } from './exerciseCatalog.ts'
 import type { Muscle } from './exerciseCatalog.ts'
@@ -74,7 +73,7 @@ export type Involvement = 'target' | 'assist'
 /** The Activation of a catalog Exercise by its name, ignoring case; undefined for the user's own names. */
 export function activationByName(name: string): Activation | undefined {
   const entry = catalogEntry(name)
-  return entry && CATALOG_MUSCLES[entry.id as CatalogId]
+  return entry && CATALOG_MUSCLES[entry.id]
 }
 
 export function involvement(activation: Activation, region: Region): Involvement | null {

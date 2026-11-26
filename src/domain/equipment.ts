@@ -180,7 +180,6 @@ export interface EquipmentState {
 export const freshEquipment = (): EquipmentState => ({ custom: [], gyms: [], activeGymId: null, needs: {} })
 
 const BUILT_IN = new Map<string, string>(EQUIPMENT.map((e) => [e.id, e.label]))
-const DEFAULTS: Readonly<Record<string, readonly EquipmentId[]>> = DEFAULT_NEEDS
 
 export const isBuiltIn = (id: string): id is BuiltInEquipmentId => BUILT_IN.has(id)
 
@@ -199,7 +198,7 @@ export const equipmentLabel = (state: EquipmentState, id: EquipmentId): string =
 
 const defaultNeeds = (name: string): readonly EquipmentId[] => {
   const entry = catalogEntry(name)
-  return (entry && DEFAULTS[entry.id]) ?? []
+  return (entry && DEFAULT_NEEDS[entry.id]) ?? []
 }
 
 /** What the Exercise needs: the user's correction, else the catalog's guess, else nothing. */

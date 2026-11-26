@@ -6,6 +6,7 @@ import type { ExerciseId } from './types.ts'
 import { mergeEquipment } from './equipment.ts'
 import { findExercise } from './exerciseCatalog.ts'
 import { mapPlanDays } from './workoutReducer.ts'
+import { afterEffectKey } from './workouts.ts'
 
 const BACKUP_APP = 'workout-tracking'
 const BACKUP_VERSION = 1
@@ -103,7 +104,7 @@ function mergeWorkouts(current: AppData, incoming: AppData): Pick<AppData, 'exer
       if (!s.after) return session
       const after = uniqueBy(
         s.after.map((a) => ({ ...a, exerciseId: a.exerciseId && (same.get(a.exerciseId) ?? a.exerciseId) })),
-        (a) => `${a.date} ${a.exerciseId}`,
+        afterEffectKey,
       )
       return { ...session, after }
     })

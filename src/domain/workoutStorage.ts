@@ -7,7 +7,7 @@ import { isRecord } from './records.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './exerciseCatalog.ts'
 import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
-import { MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { afterEffectFits, afterEffectKey, isBlockWeeks, MAX_RIR } from './workouts.ts'
 import { isRunWeeks } from './blocks.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
@@ -89,7 +89,7 @@ interface ReadPlan {
 }
 
 function parseBlock(raw: unknown, version: 2 | 3 | 4): ReadBlock | null {
-  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isBlockWeeks(raw.weeks)) return null
   if (version === 4 && typeof raw.light !== 'boolean') return null
   const days = parseList(raw.days, (r) => parseDay(r, version === 2))
   return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, light: raw.light === true && version === 4, days }
@@ -185,7 +185,7 @@ function parseAfterEffect(raw: unknown, session: { date: IsoDate; exercises: rea
   const date = parseIsoDate(raw.date)
   const note = parseTimedNote(raw.note)
   const exerciseId = raw.exerciseId as ExerciseId | null
-  if (!date || date <= session.date || !note || (exerciseId !== null && !session.exercises.some((e) => e.exerciseId === exerciseId))) return null
+  if (!date || !note || !afterEffectFits(session, date, exerciseId)) return null
   return { date, exerciseId, note }
 }
 
@@ -200,7 +200,7 @@ function parseSession(raw: unknown, version: (typeof SESSION_VERSIONS)[number]):
   const note = version === 1 ? legacyNote(raw.notes as string, date) : parseOptionalNote(raw.note)
   const exercises = parseList(raw.exercises, (r) => parseSessionExercise(r, version < 3), (e) => e.exerciseId)
   if (!exercises || note === false) return null
-  const after = raw.after === undefined ? [] : parseList(raw.after, (r) => parseAfterEffect(r, { date, exercises }), (a) => `${a.date} ${a.exerciseId}`)
+  const after = raw.after === undefined ? [] : parseList(raw.after, (r) => parseAfterEffect(r, { date, exercises }), afterEffectKey)
   if (!after) return null
   return {
     id: raw.id as WorkoutSessionId,

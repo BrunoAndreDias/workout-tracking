@@ -126,6 +126,11 @@ export interface WorkoutSession {
   readonly after?: readonly AfterEffect[]
 }
 
+export const afterEffectFits = (session: { readonly date: IsoDate; readonly exercises: readonly SessionExercise[] }, date: IsoDate, exerciseId: ExerciseId | null): boolean =>
+  date > session.date && (exerciseId === null || session.exercises.some((e) => e.exerciseId === exerciseId))
+
+export const afterEffectKey = (a: Pick<AfterEffect, 'date' | 'exerciseId'>): string => `${a.date} ${a.exerciseId}`
+
 /** `activePlanId` is null only when there are no plans. */
 export interface WorkoutPlanState {
   readonly plans: readonly WorkoutPlan[]
@@ -172,3 +177,5 @@ export function loggedCounts(session: WorkoutSession): { exercises: number; sets
 export const emptyWorkouts = (): WorkoutState => ({ exercises: [], plans: [], activePlanId: null, sessions: [] })
 
 export const MAX_BLOCK_WEEKS = 52
+
+export const isBlockWeeks = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_BLOCK_WEEKS

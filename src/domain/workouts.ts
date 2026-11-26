@@ -126,6 +126,11 @@ export interface WorkoutSession {
   readonly after?: readonly AfterEffect[]
 }
 
+export const afterEffectFits = (session: { readonly date: IsoDate; readonly exercises: readonly SessionExercise[] }, date: IsoDate, exerciseId: ExerciseId | null): boolean =>
+  date > session.date && (exerciseId === null || session.exercises.some((e) => e.exerciseId === exerciseId))
+
+export const afterEffectKey = (a: Pick<AfterEffect, 'date' | 'exerciseId'>): string => `${a.date} ${a.exerciseId}`
+
 /** `activePlanId` is null only when there are no plans. */
 export interface WorkoutPlanState {
   readonly plans: readonly WorkoutPlan[]

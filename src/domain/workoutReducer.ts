@@ -5,7 +5,7 @@ import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { isRunWeeks } from './blocks.ts'
 import { lastDoneSets, startSession } from './sessions.ts'
-import { EMPTY_SET, isBlockWeeks } from './workouts.ts'
+import { afterEffectFits, EMPTY_SET, isBlockWeeks } from './workouts.ts'
 import type { BlockOf, Exercise, LoggedSet, PendingSet, PlannedExercise, PlanOf, Role, SessionExercise, Split, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 /** What the user types or taps into a set; whether it is done is set apart. */
@@ -52,7 +52,7 @@ function withOptional<T, K extends keyof T>(item: T, key: K, value: T[K] | undef
 
 /** Blank text removes the After-effect, and the session's list goes when it empties. */
 function editAfterEffect(session: WorkoutSession, date: IsoDate, exerciseId: ExerciseId | null, text: string, now: LocalDateTime): WorkoutSession {
-  if (date <= session.date || (exerciseId !== null && !session.exercises.some((e) => e.exerciseId === exerciseId))) return session
+  if (!afterEffectFits(session, date, exerciseId)) return session
   const after = session.after ?? []
   const i = after.findIndex((a) => a.date === date && a.exerciseId === exerciseId)
   const note = editNote(after[i]?.note, text, now)

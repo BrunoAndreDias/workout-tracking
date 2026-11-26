@@ -26,7 +26,8 @@ export function ExerciseRunsNotice({ planId, block, due, exercises, today, dispa
   if (due.length === 0) return null
   const nameOf = nameLookup(exercises)
   const blockId = block.id
-  const daysOf = (run: ExerciseRun) => (block.days as readonly WorkoutDay[]).filter((d) => run.dayIds.includes(d.id))
+  const days: readonly WorkoutDay[] = block.days
+  const daysOf = (run: ExerciseRun) => days.filter((d) => run.dayIds.includes(d.id))
   const extend = (run: ExerciseRun) => {
     const weeks = runExtended(run)
     for (const day of daysOf(run)) {

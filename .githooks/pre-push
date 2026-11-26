@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs the full check before a push, locally instead of in paid CI minutes.
-# Enable once per clone: git config core.hooksPath .githooks   (skip a push with --no-verify)
+# npm install turns the hooks on through the prepare script. Skip one push with --no-verify.
 # First refuses a branch whose open PR targets something other than main. No gh, no PR or no network skips that check.
 if command -v gh >/dev/null 2>&1; then
   while read -r _ _ remote_ref _; do

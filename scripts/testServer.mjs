@@ -1,5 +1,5 @@
 // The one way scripts start a Vite dev server for tests: a free port, a temp database and WORKOUT_TEST=1.
-// scripts/e2e.mjs and scripts/compare.mjs use it, so nothing they start can reach the user's database or port.
+// scripts/e2e.mjs uses it, so nothing it starts can reach the user's database or port.
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'

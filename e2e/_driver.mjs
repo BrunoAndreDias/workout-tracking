@@ -50,6 +50,11 @@ export async function reloadApp(page) {
   await rendered(page)
 }
 
+export async function clickAndReload(page, button) {
+  await Promise.all([page.waitForEvent('load'), button.click()])
+  await rendered(page)
+}
+
 /** Resolves once every change this page made has reached the server. */
 export const synced = (page) =>
   page.waitForFunction((key) => (JSON.parse(localStorage.getItem(key) ?? 'null')?.pending ?? []).length === 0, DEVICE_KEY.sync)

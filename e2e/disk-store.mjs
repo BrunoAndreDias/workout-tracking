@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { STORE_KEY } from '../src/domain/storeKeys.ts'
-import { addGym, appUrl, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
+import { addGym, appUrl, clickAndReload, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const DB = process.env.WORKOUT_DB
@@ -46,9 +46,7 @@ const conflict = a.page.getByRole('alert').filter({ hasText: 'Os dados mudaram n
 await conflict.waitFor()
 assert(gyms() === 'Casa', 'the stale device does not overwrite the other device’s Local')
 await a.page.screenshot({ path: `${S}/disk-store-conflict.png` })
-await conflict.getByRole('button', { name: 'Recarregar' }).click()
-await a.page.waitForLoadState('load')
-await rendered(a.page)
+await clickAndReload(a.page, conflict.getByRole('button', { name: 'Recarregar' }))
 await openWorkoutTab(a.page, 'Material')
 assert(await a.page.getByRole('list', { name: 'Material em Casa' }).count() === 1, 'Recarregar takes the server’s Local')
 assert(await a.page.getByRole('alert').count() === 0, 'the conflict line is gone after Recarregar')
@@ -93,9 +91,7 @@ await download.saveAs(file)
 const restorer = await device()
 await openFresh(restorer.page, URL + '#treino')
 await restorer.page.getByLabel('Ficheiro de dados').setInputFiles(file)
-await restorer.page.getByRole('button', { name: 'Substituir tudo' }).click()
-await restorer.page.waitForLoadState('load')
-await rendered(restorer.page)
+await clickAndReload(restorer.page, restorer.page.getByRole('button', { name: 'Substituir tudo' }))
 await synced(restorer.page)
 const afterImport = await device()
 await afterImport.open()

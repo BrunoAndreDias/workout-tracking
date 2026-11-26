@@ -1,8 +1,8 @@
 import { chromium } from 'playwright'
 import { readFileSync } from 'node:fs'
-import { rendered, seedStored } from './_driver.mjs'
+import { appUrl, rendered, seedStored } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const fixture = JSON.parse(readFileSync('e2e/fixtures/treino-backup.json', 'utf8'))
 

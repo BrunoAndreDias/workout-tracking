@@ -8,6 +8,12 @@ export { toIsoDate }
 
 const STORE_NAMES = Object.keys(STORE_KEY)
 
+export function appUrl() {
+  const url = process.env.APP_URL
+  if (!url) throw new Error('set APP_URL to a test server: run the script with npm run e2e -- <name>')
+  return url
+}
+
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
   constructor(message, fix) {

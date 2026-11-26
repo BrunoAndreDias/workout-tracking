@@ -1,8 +1,8 @@
 import { chromium } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { openFresh, readStored, rendered } from './_driver.mjs'
+import { appUrl, openFresh, readStored, rendered } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const FIXTURE = 'e2e/fixtures/treino-backup.json'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()

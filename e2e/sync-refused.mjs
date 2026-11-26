@@ -1,7 +1,7 @@
 import { chromium } from 'playwright'
-import { addGym, openFresh, openWorkoutTab, rendered, synced } from './_driver.mjs'
+import { addGym, appUrl, openFresh, openWorkoutTab, rendered, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const REFUSED = 'O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.'
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 

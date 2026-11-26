@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { STORE_KEY } from '../src/domain/storeKeys.ts'
-import { addGym, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
+import { addGym, appUrl, createWorkoutPlan, openFresh, openWorkoutTab, rendered, resetServer, synced } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
-const URL = process.env.APP_URL ?? 'http://localhost:5180/'
+const URL = appUrl()
 const DB = process.env.WORKOUT_DB
 const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 if (!DB) throw new Error('set WORKOUT_DB to the test server database (npm run e2e does)')

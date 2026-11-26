@@ -1,4 +1,4 @@
-import { isRecord } from './persistence.ts'
+import { isRecord } from './records.ts'
 import type { RemovableStorage, StorageLike } from './persistence.ts'
 import { saveStore, STORE_NAMES, STORES } from './stores.ts'
 import type { AppData, StoreName } from './stores.ts'

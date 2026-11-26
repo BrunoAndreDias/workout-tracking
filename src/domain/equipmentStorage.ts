@@ -1,6 +1,7 @@
 import { isBuiltIn } from './equipment.ts'
 import type { CustomEquipment, EquipmentId, EquipmentState, Gym } from './equipment.ts'
-import { isId, isRecord } from './persistence.ts'
+import { isId } from './persistence.ts'
+import { isRecord } from './records.ts'
 import type { CustomEquipmentId, GymId } from './types.ts'
 
 export const EQUIPMENT_SCHEMA_VERSION = 1

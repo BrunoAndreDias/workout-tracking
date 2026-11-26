@@ -1,5 +1,5 @@
 import { parseIsoDate, toIsoDate } from './dates.ts'
-import { isRecord } from './persistence.ts'
+import { isRecord } from './records.ts'
 import type { IsoDate, LocalDateTime } from './types.ts'
 
 /** A note the user wrote, never blank: a note cleared to blank is no note at all. */

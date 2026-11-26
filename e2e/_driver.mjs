@@ -14,6 +14,8 @@ export function appUrl() {
   return url
 }
 
+export const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
+
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
   constructor(message, fix) {
@@ -27,6 +29,13 @@ export const readStored = (page) =>
   page.evaluate((keys) => Object.fromEntries(keys.map(([name, key]) => [name, JSON.parse(localStorage.getItem(key) ?? 'null')])), Object.entries(STORE_KEY))
 
 const storesUrl = (url, name) => new URL(name ? `api/stores/${encodeURIComponent(STORE_KEY[name])}` : 'api/stores', url).href
+
+const serverEntry = async (page, url, name) => (await (await page.request.get(storesUrl(url))).json())[STORE_KEY[name]]
+
+export async function readServerStore(page, url, name) {
+  const entry = await serverEntry(page, url, name)
+  return entry ? JSON.parse(entry.doc) : null
+}
 
 /** Empties the server's database. Only a test server (WORKOUT_TEST=1: scripts/e2e.mjs, verify-treino launch.sh) allows it. */
 export async function resetServer(page, url) {
@@ -62,7 +71,7 @@ export const synced = (page) =>
 /** Writes one store on the server as another device would; the page sees it on its next load. */
 export async function putStore(page, url, name, doc) {
   await synced(page)
-  const current = (await (await page.request.get(storesUrl(url))).json())[STORE_KEY[name]]
+  const current = await serverEntry(page, url, name)
   const res = await page.request.put(storesUrl(url, name), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
   if (!res.ok()) throw new FlowError(`the server refused ${name} (${res.status()})`, 'check the server log')
 }
@@ -87,7 +96,9 @@ export const mondayWeeksAgo = (n) => addDays(mondayOf(todayIso()), -7 * n)
 /** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
 export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
-const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+export const noHorizontalScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+
+export const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
 
 /** In the open exercise picker, picks `name`: a catalog Exercise or one of the user's own by name, else a new one. */
 export async function pickExercise(page, name) {
@@ -106,9 +117,22 @@ export async function pickExercise(page, name) {
   await dialog.waitFor({ state: 'detached' })
 }
 
+export async function openPicker(scope, query) {
+  const dialog = scope.page().getByRole('dialog')
+  await scope.getByRole('button', { name: 'Exercício', exact: true }).click()
+  await dialog.waitFor()
+  if (query !== undefined) await dialog.getByLabel('Pesquisar exercício').fill(query)
+}
+
+export async function closePicker(page) {
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
+  await dialog.waitFor({ state: 'detached' })
+}
+
 /** Adds an Exercise to a Workout Day's card or a session's card through its "+ Exercício" picker. */
 export async function addExercise(scope, name) {
-  await scope.getByRole('button', { name: 'Exercício', exact: true }).click()
+  await openPicker(scope)
   await pickExercise(scope.page(), name)
 }
 
@@ -133,6 +157,8 @@ export async function openWorkoutTab(page, name) {
   await tab.click()
   await tab.and(page.locator('[aria-current="page"]')).waitFor()
 }
+
+export const planTabs = (page) => page.getByRole('navigation', { name: 'Planos de treino' }).getByRole('button').allTextContents()
 
 /** On Treino → Material, adds a Gym (it becomes the active one) and ticks each material label in `has`. */
 export async function addGym(page, name, has = []) {

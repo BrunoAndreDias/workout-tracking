@@ -1,9 +1,8 @@
 import { chromium } from 'playwright'
-import { appUrl, createWorkoutPlan, openFresh, workoutDay } from './_driver.mjs'
+import { appUrl, assert, closePicker, createWorkoutPlan, openFresh, openPicker, openWorkoutTab, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
 const W = 390
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: W, height: 844 }, hasTouch: true, isMobile: true })
 const errors = []
@@ -13,21 +12,20 @@ await openFresh(page, URL + '#treino')
 const dialog = page.getByRole('dialog')
 const fits = async (where) => assert(await page.evaluate((w) => document.documentElement.scrollWidth <= w, W), `no horizontal scroll at ${W} px (${where})`)
 
-await page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Plano de treino' }).click()
+await openWorkoutTab(page, 'Plano de treino')
 await createWorkoutPlan(page)
 const push = await workoutDay(page, 'Push')
 await page.screenshot({ path: `${S}/mobile-390-plan.png`, fullPage: true })
 await fits('plan')
 
-await push.getByRole('button', { name: 'Exercício', exact: true }).click()
-await dialog.waitFor()
+await openPicker(push)
 const box = await dialog.boundingBox()
 assert(box.width === W && box.x === 0, 'the exercise picker is full width')
 await page.screenshot({ path: `${S}/mobile-390-picker.png` })
 await fits('exercise picker')
-await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
+await closePicker(page)
 
-await page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Registo' }).click()
+await openWorkoutTab(page, 'Registo')
 await page.getByRole('button', { name: 'Começar Push' }).click()
 await page.screenshot({ path: `${S}/mobile-390-session.png`, fullPage: true })
 await fits('session')

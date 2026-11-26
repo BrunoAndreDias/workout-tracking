@@ -1,8 +1,7 @@
 import { chromium } from 'playwright'
-import { addExercise, appUrl, createWorkoutPlan, openFresh, openWorkoutTab, workoutDay } from './_driver.mjs'
+import { addExercise, appUrl, assert, closePicker, createWorkoutPlan, openFresh, openPicker, openWorkoutTab, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const errors = []
@@ -28,7 +27,7 @@ await openWorkoutTab(page, 'Plano de treino')
 await createWorkoutPlan(page, { name: 'Força', days: 3 })
 const push = await workoutDay(page, 'Push')
 await addExercise(push, 'Supino')
-await push.getByRole('button', { name: 'Exercício', exact: true }).click()
+await openPicker(push)
 
 const catalog = dialog.getByRole('region', { name: 'Catálogo' })
 const names = await catalog.locator('.result-name').allTextContents()
@@ -71,15 +70,13 @@ await page.keyboard.press('Escape')
 await dialog.waitFor({ state: 'detached' })
 assert((await dialog.count()) === 0, 'a second Escape closes the dialog')
 
-await push.getByRole('button', { name: 'Exercício', exact: true }).click()
-await search.fill('incline barbell')
+await openPicker(push, 'incline barbell')
 await openDetail(INCLINE)
 await dialog.getByRole('button', { name: 'Escolher', exact: true }).click()
 await dialog.waitFor({ state: 'detached' })
 assert((await push.locator('.planned-name').allTextContents()).includes(INCLINE), 'Escolher in the detail adds the Exercise to the day')
 
-await push.getByRole('button', { name: 'Exercício', exact: true }).click()
-await search.fill('incline barbell')
+await openPicker(push, 'incline barbell')
 await openDetail(INCLINE)
 const taken = dialog.getByRole('button', { name: 'Já adicionado', exact: true })
 assert((await taken.count()) === 1 && (await taken.isDisabled()), 'a taken Exercise’s detail shows a disabled Já adicionado')
@@ -93,8 +90,7 @@ await openDetail('Dumbbell Lateral Raises')
 assert(await noHorizontalScroll(), 'the detail has no horizontal scroll at 390 px')
 await settled()
 await page.screenshot({ path: `${S}/muscle-map-detail-mobile.png` })
-await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-await dialog.waitFor({ state: 'detached' })
+await closePicker(page)
 
 assert(errors.length === 0, `no console errors (${errors.join(' | ')})`)
 await browser.close()

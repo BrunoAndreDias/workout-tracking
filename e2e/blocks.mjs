@@ -1,8 +1,7 @@
 import { chromium } from 'playwright'
-import { addExercise, appUrl, createWorkoutPlan, mondayWeeksAgo, openFresh, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
+import { addExercise, appUrl, assert, createWorkoutPlan, exactly, mondayWeeksAgo, noHorizontalScroll, openFresh, openWorkoutTab, planTabs, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
 const errors = []
@@ -11,16 +10,14 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
 page.on('dialog', (d) => d.accept())
 await openFresh(page, URL + '#treino')
 
-const tab = (name) => page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name })
 const blocks = page.getByRole('region', { name: 'Blocos' })
-const card = (name) => blocks.locator('.block-card', { has: page.locator('.block-card-name', { hasText: new RegExp(`^${name}$`) }) })
-const noScroll = () => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+const card = (name) => blocks.locator('.block-card', { has: page.locator('.block-card-name', { hasText: exactly(name) }) })
 const startCard = () => page.getByRole('region', { name: /^(Sem treino registado|Registar as séries)$/ })
 const startButtons = () => startCard().locator('.day-start button').allTextContents()
 const names = (day) => day.locator('.planned-name').allTextContents().then((t) => t.join('|'))
 const UPPER_A = 'Flat Barbell Bench Press|Bent Over Barbell Rows|Pull-Ups|Standing Overhead Barbell Press|Standing Barbell Curls|Cable Press-Downs|Cable Crunches|Hanging Leg Raises'
 
-await tab('Plano de treino').click()
+await openWorkoutTab(page, 'Plano de treino')
 await createWorkoutPlan(page, { days: 4 })
 assert((await blocks.locator('.block-card-name').allTextContents()).join('|') === 'Bloco A', 'a new plan has one block, Bloco A')
 assert(await card('Bloco A').locator('.block-card-meta').first().textContent() === '6 semanas', 'which lasts 6 weeks')
@@ -56,7 +53,7 @@ assert(await card('Bloco A').getAttribute('aria-current') === 'true', 'Começar 
 assert((await card('Bloco A').locator('.block-card-meta').allTextContents()).join('|') === '1 semana|Semana 1 de 1', 'in its week 1')
 assert(await blocks.getByText('Ainda não começaste.', { exact: false }).count() === 0, 'and the not-started line goes')
 
-await tab('Registo').click()
+await openWorkoutTab(page, 'Registo')
 assert(await startCard().locator('.block-line').textContent() === 'Bloco A · semana 1 de 1', 'Registo names the block and week')
 assert((await startButtons()).join('|') === 'Começar Upper A|Lower A|Upper B|Lower B|Treino livre', 'and starts from the current block’s days')
 assert(await page.getByRole('region', { name: 'Novo bloco' }).count() === 0, 'the cycle’s first week has no new-block notice')
@@ -82,7 +79,7 @@ assert(await startCard().locator('.block-line').textContent() === 'Bloco B · se
 assert((await startButtons()).join('|') === 'Começar Lower A|Upper A|Upper B|Lower B|Treino livre', 'the rotation carries into Bloco B: after Upper A comes Lower A')
 await page.screenshot({ path: `${S}/blocks-registo-desktop.png`, fullPage: true })
 await page.setViewportSize({ width: 390, height: 844 })
-assert(await noScroll(), 'Registo with the notice has no horizontal scroll at 390 px')
+assert(await noHorizontalScroll(page), 'Registo with the notice has no horizontal scroll at 390 px')
 await page.screenshot({ path: `${S}/blocks-registo-mobile.png`, fullPage: true })
 await startCard().getByRole('button', { name: 'Upper A', exact: true }).click()
 const session = page.getByRole('region', { name: 'Upper A', exact: true })
@@ -101,9 +98,9 @@ await putStore(page, URL, 'workoutSessions', { ...started, sessions: [started.se
 await reloadApp(page)
 assert((await targetChips('Cable Press-Downs')).join(' ') === '3 4 5+', 'its RIR chips highlight every RIR from 3 to 5 or more')
 
-await tab('Plano de treino').click()
+await openWorkoutTab(page, 'Plano de treino')
 assert(await card('Bloco B').getAttribute('aria-current') === 'true', 'the plan marks Bloco B as current')
-assert(await noScroll(), 'Plano de treino with two blocks has no horizontal scroll at 390 px')
+assert(await noHorizontalScroll(page), 'Plano de treino with two blocks has no horizontal scroll at 390 px')
 await page.screenshot({ path: `${S}/blocks-plan-mobile.png`, fullPage: true })
 
 await page.getByRole('button', { name: 'Remover bloco' }).click()
@@ -131,8 +128,8 @@ await seedStored(fresh, URL, {
 })
 await fresh.goto(URL + '#treino')
 await rendered(fresh)
-await fresh.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Plano de treino' }).click()
-assert((await fresh.getByRole('navigation', { name: 'Planos de treino' }).getByRole('button').allTextContents()).join('|') === 'Antigo|+ Novo plano', 'a version 2 plan of 3 days is kept and one of 5 days is dropped')
+await openWorkoutTab(fresh, 'Plano de treino')
+assert((await planTabs(fresh)).join('|') === 'Antigo|+ Novo plano', 'a version 2 plan of 3 days is kept and one of 5 days is dropped')
 assert((await fresh.getByRole('navigation', { name: 'Dias de Bloco A' }).getByRole('button').allTextContents()).join('|') === 'Pernas|Peito|Costas', 'keeping its own day names')
 const pernas = fresh.getByRole('region', { name: 'Pernas', exact: true })
 assert((await pernas.locator('.role-label').allTextContents()).join('|') === 'Principal|Isolamento', 'the first exercise of a day is guessed as the main lift')
@@ -141,7 +138,7 @@ assert(migrated.workoutPlans.version === 4 && migrated.workoutSessions.version =
 assert(migrated.workoutPlans.plans[0].blocks[0].light === false, 'an older block reads as not light')
 assert(JSON.stringify(migrated.workoutSessions.sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
 await fresh.goto(`${URL}#treino/${mondayWeeksAgo(1)}`)
-await fresh.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Registo' }).click()
+await openWorkoutTab(fresh, 'Registo')
 const dropped = fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' })
 await dropped.waitFor()
 assert((await dropped.count()) === 1, 'a session from a dropped plan reads Dia de treino eliminado')

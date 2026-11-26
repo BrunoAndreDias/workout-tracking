@@ -3,10 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { appUrl, openFresh, readStored } from './_driver.mjs'
+import { appUrl, assert, openFresh, readStored } from './_driver.mjs'
 const S = process.env.SHOTS ?? 'e2e/shots'
 const URL = appUrl()
-const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
 const CACHE = 'e2e/.cache/whisper'
 const CLIP = resolve('e2e/fixtures/nota.wav')
 mkdirSync(CACHE, { recursive: true })

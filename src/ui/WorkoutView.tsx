@@ -59,9 +59,9 @@ export function WorkoutView({ state, dispatch, date, today, onDate, equipment, d
   const { block, position } = activePlan ? currentBlock(activePlan, state.sessions, date) : { block: undefined, position: null }
   const next = activePlan && nextDay(activePlan, state.sessions, date)
   const days: readonly WorkoutDay[] = block?.days ?? []
-  const goTo = (next: IsoDate) => {
+  const goTo = (to: IsoDate) => {
     setAdding(false)
-    onDate(next)
+    onDate(to)
   }
   const start = (day: WorkoutDay | null) => {
     dispatch({ type: 'startSession', sessionId: newId<WorkoutSessionId>(), date, day, light: block?.light ?? false })
@@ -123,7 +123,7 @@ export function WorkoutView({ state, dispatch, date, today, onDate, equipment, d
                 <>
                   <p className="muted">
                     {activePlan && next
-                      ? `As séries vêm com o alvo sugerido a partir da última vez. Um toque em ✓ marca cada série feita.`
+                      ? 'As séries vêm com o alvo sugerido a partir da última vez. Um toque em ✓ marca cada série feita.'
                       : 'Ainda não tens plano de treino. Cria um em Plano de treino, ou regista um treino livre.'}
                   </p>
                   <div className="day-start">

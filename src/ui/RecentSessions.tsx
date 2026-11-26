@@ -40,7 +40,7 @@ interface RecentProps {
 }
 
 function Recent({ session, title, date, names, dispatch }: RecentProps) {
-  const today = new Map((session.after ?? []).filter((a) => a.date === date).map((a) => [a.exerciseId, a]))
+  const forDate = new Map((session.after ?? []).filter((a) => a.date === date).map((a) => [a.exerciseId, a]))
   const earlier = (session.after ?? []).filter((a) => a.date !== date)
   const edit = (exerciseId: ExerciseId | null) => (text: string, now: LocalDateTime) =>
     dispatch({ type: 'setAfterEffect', sessionId: session.id, date, exerciseId, text, now })
@@ -55,9 +55,9 @@ function Recent({ session, title, date, names, dispatch }: RecentProps) {
         </span>
       </h3>
       <span className="rating-label" aria-hidden="true">Como está o corpo</span>
-      <TimedNoteField note={today.get(null)?.note} label="Como está o corpo" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
+      <TimedNoteField note={forDate.get(null)?.note} label="Como está o corpo" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
       {session.exercises.map((e) => (
-        <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={doneSets(e)} effect={today.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
+        <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={doneSets(e)} effect={forDate.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
       ))}
       {earlier.length > 0 && (
         <>

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { appendDictation } from './appendDictation'
+import { appendDictation } from './appendDictation.ts'
 
 test('an empty note becomes the text', () => {
   expect(appendDictation('', 'dois ovos')).toBe('dois ovos')

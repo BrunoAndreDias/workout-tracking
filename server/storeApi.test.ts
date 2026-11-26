@@ -10,7 +10,7 @@ import { dbPath, openStores, storeHandler } from './storeApi.ts'
 import type { Stores } from './storeApi.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
-const SLEEP = 'workout-tracking:exercises'
+const EXERCISES = 'workout-tracking:exercises'
 
 let close = () => {}
 afterEach(() => {
@@ -18,18 +18,22 @@ afterEach(() => {
   close = () => {}
 })
 
-/** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
-async function start({ allowReset = false, maxBodyBytes }: { allowReset?: boolean; maxBodyBytes?: number } = {}) {
-  const file = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'workout.sqlite')
-  const clock = { now: new Date(2026, 9, 6, 9, 0) }
-  const stores = openStores(file, () => clock.now)
-  const server = createServer(storeHandler(() => stores, { allowReset, maxBodyBytes }))
+async function listen(stores: Stores, options: { allowReset?: boolean; maxBodyBytes?: number } = {}, cleanup = () => {}): Promise<string> {
+  const server = createServer(storeHandler(() => stores, options))
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   close = () => {
     server.close()
     stores.close()
+    cleanup()
   }
-  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+  return `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+}
+
+/** A real HTTP server on a temp database; `clock.now` is the time each write sees. */
+async function start(options: { allowReset?: boolean; maxBodyBytes?: number } = {}) {
+  const file = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'workout.sqlite')
+  const clock = { now: new Date(2026, 9, 6, 9, 0) }
+  const base = await listen(openStores(file, () => clock.now), options)
   const put = async (key: string, doc: string, baseRev: number | null) => {
     const res = await fetch(`${base}/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify({ doc, baseRev }) })
     return { status: res.status, body: await res.json() }
@@ -67,13 +71,13 @@ describe('store API', () => {
     await api.put(PLANS, '{"version":3}', null)
     const one = async (key: string) => (await fetch(`${api.base}/${encodeURIComponent(key)}`)).json()
     expect(await one(PLANS)).toEqual({ doc: '{"version":3}', rev: 1 })
-    expect(await one(SLEEP)).toEqual({ doc: null, rev: 0 })
+    expect(await one(EXERCISES)).toEqual({ doc: null, rev: 0 })
   })
 
   it('sends a large answer compressed only to a request that accepts it, as the same JSON', async () => {
     const api = await start()
     const doc = JSON.stringify({ version: 1, entries: Array.from({ length: 200 }, (_, i) => ({ date: `2026-01-${i}`, quality: 3 })) })
-    await api.put(SLEEP, doc, null)
+    await api.put(EXERCISES, doc, null)
     const raw = (acceptEncoding: string) =>
       new Promise<{ encoding: string | undefined; body: Buffer }>((resolve, reject) => {
         request(api.base, { headers: { 'accept-encoding': acceptEncoding } }, (res) => {
@@ -84,33 +88,33 @@ describe('store API', () => {
       })
     const gzip = await raw('gzip, deflate')
     expect(gzip.encoding).toBe('gzip')
-    expect(JSON.parse(gunzipSync(gzip.body).toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
+    expect(JSON.parse(gunzipSync(gzip.body).toString())).toEqual({ [EXERCISES]: { doc, rev: 1 } })
     const br = await raw('gzip, deflate, br')
     expect(br.encoding).toBe('br')
-    expect(JSON.parse(brotliDecompressSync(br.body).toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
+    expect(JSON.parse(brotliDecompressSync(br.body).toString())).toEqual({ [EXERCISES]: { doc, rev: 1 } })
     const plain = await raw('identity')
     expect(plain.encoding).toBeUndefined()
-    expect(JSON.parse(plain.body.toString())).toEqual({ [SLEEP]: { doc, rev: 1 } })
+    expect(JSON.parse(plain.body.toString())).toEqual({ [EXERCISES]: { doc, rev: 1 } })
   })
 
   it('answers a stale rev with 409 and the current doc, and changes nothing', async () => {
     const api = await start()
-    await api.put(SLEEP, '{"a":1}', null)
-    await api.put(SLEEP, '{"a":2}', 1)
-    expect(await api.put(SLEEP, '{"a":3}', 1)).toEqual({ status: 409, body: { doc: '{"a":2}', rev: 2 } })
-    expect(await api.put(SLEEP, '{"a":3}', null)).toEqual({ status: 409, body: { doc: '{"a":2}', rev: 2 } })
-    expect(await api.get()).toEqual({ [SLEEP]: { doc: '{"a":2}', rev: 2 } })
+    await api.put(EXERCISES, '{"a":1}', null)
+    await api.put(EXERCISES, '{"a":2}', 1)
+    expect(await api.put(EXERCISES, '{"a":3}', 1)).toEqual({ status: 409, body: { doc: '{"a":2}', rev: 2 } })
+    expect(await api.put(EXERCISES, '{"a":3}', null)).toEqual({ status: 409, body: { doc: '{"a":2}', rev: 2 } })
+    expect(await api.get()).toEqual({ [EXERCISES]: { doc: '{"a":2}', rev: 2 } })
   })
 
   it('accepts a retried write of the current doc at its current rev', async () => {
     const api = await start()
-    await api.put(SLEEP, '{"a":1}', null)
-    expect(await api.put(SLEEP, '{"a":1}', null)).toEqual({ status: 200, body: { rev: 1 } })
+    await api.put(EXERCISES, '{"a":1}', null)
+    expect(await api.put(EXERCISES, '{"a":1}', null)).toEqual({ status: 200, body: { rev: 1 } })
   })
 
   it('answers 409 with no doc for a rev on a store never written', async () => {
     const api = await start()
-    expect(await api.put(SLEEP, '{"a":1}', 4)).toEqual({ status: 409, body: { doc: null, rev: 0 } })
+    expect(await api.put(EXERCISES, '{"a":1}', 4)).toEqual({ status: 409, body: { doc: null, rev: 0 } })
   })
 
   it('rejects an unknown key with 404 and a body that is not { doc: JSON text, baseRev } with 400', async () => {
@@ -186,13 +190,7 @@ describe('a store that throws', () => {
       reset: () => {},
       close: () => {},
     }
-    const server = createServer(storeHandler(() => stores))
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-    close = () => {
-      server.close()
-      error.mockRestore()
-    }
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+    const base = await listen(stores, {}, () => error.mockRestore())
     const failed = await fetch(base)
     expect(failed.status).toBe(500)
     expect(await failed.json()).toEqual({ error: 'internal' })
@@ -207,10 +205,7 @@ describe('a database that does not exist yet', () => {
   it('is not created by a read, only by the first write', async () => {
     const dir = join(mkdtempSync(join(tmpdir(), 'workout-store-')), 'fresh')
     const file = join(dir, 'workout.sqlite')
-    const stores = openStores(file)
-    const server = createServer(storeHandler(() => stores))
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/stores`
+    const base = await listen(openStores(file))
     expect(await (await fetch(base)).json()).toEqual({})
     expect(existsSync(file)).toBe(false)
     expect(existsSync(dir)).toBe(false)
@@ -218,8 +213,6 @@ describe('a database that does not exist yet', () => {
     expect(await put.json()).toEqual({ rev: 1 })
     expect(existsSync(file)).toBe(true)
     expect(await (await fetch(base)).json()).toEqual({ [PLANS]: { doc: '{"version":3}', rev: 1 } })
-    server.close()
-    stores.close()
   })
 })
 

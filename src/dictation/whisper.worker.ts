@@ -1,5 +1,6 @@
-import { pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers'
-import type { WorkerRequest, WorkerResponse } from './protocol'
+import { pipeline } from '@huggingface/transformers'
+import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers'
+import type { WorkerRequest, WorkerResponse } from './protocol.ts'
 
 const send = (message: WorkerResponse) => self.postMessage(message)
 

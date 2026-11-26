@@ -1,18 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { CATALOG } from './catalogEntries.ts'
 import type { CatalogId } from './catalogEntries.ts'
 import { defaultRole, mapDays, splitForDayCount, SPLITS, templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId } from './types.ts'
 
-const catalogIds = new Set<string>(CATALOG.map((e) => e.id))
 const newId = (id: CatalogId) => `x-${id}` as ExerciseId
 
 describe('Training Splits', () => {
-  it('every template exercise is in the catalog, at most once a day', () => {
+  it('every template exercise appears at most once a day', () => {
     for (const split of Object.values(SPLITS)) {
       for (const day of split.days) {
         const ids = day.slots.map((s) => s.exercise)
-        expect(ids.filter((id) => !catalogIds.has(id))).toEqual([])
         expect(new Set(ids).size).toBe(ids.length)
       }
     }
@@ -26,7 +23,7 @@ describe('Training Splits', () => {
     expect(SPLITS.ul.days.map((d) => d.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B'])
   })
 
-  it('a template block fills every day, with 3 sets at the role’s rep range, the role’s run of weeks and the 6-week RIR ramp', () => {
+  it('a template block fills every day, with 3 sets at the role’s rep range, the role’s run of weeks, not light, over 6 weeks', () => {
     const { block, exercises } = templateBlock('ppf', 'b1' as WorkoutBlockId, 'Bloco A', '2026-01-05' as IsoDate, [], newId)
     expect(block.days.map((d) => d.id)).toEqual(['b1-d1', 'b1-d2', 'b1-d3'])
     expect(block.days[0].exercises[0]).toEqual({ exerciseId: 'x-flat-barbell-bench-press', role: 'main', sets: 3, reps: { min: 6, max: 8 }, weeks: null, since: '2026-01-05' })

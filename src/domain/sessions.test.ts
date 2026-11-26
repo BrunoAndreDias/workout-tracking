@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutSessionId } from './types.ts'
 import { loggedCounts } from './workouts.ts'
-import { lastDoneSets, sessionsBefore, startSession } from './sessions.ts'
+import { lastDoneSets, recentSessions, sessionsBefore, startSession } from './sessions.ts'
 import { SUPINO, REMO, date, done, pending, session, PEITO, HISTORY } from './workoutFixtures.ts'
 
 describe('the suggested target', () => {
@@ -20,6 +20,12 @@ describe('the suggested target', () => {
     const sameDay = [...HISTORY, session('s5', '2026-10-03', [])]
     expect(sessionsBefore(sameDay, sameDay[4]).map((s) => s.id)).toEqual(['s1', 's2'])
     expect(sessionsBefore(sameDay, sameDay[1]).map((s) => s.id)).toEqual(['s1'])
+  })
+
+  it('lists the sessions one to three days before a date, newest first', () => {
+    expect(recentSessions(HISTORY, date('2026-10-06')).map((s) => s.id)).toEqual(['s3', 's2'])
+    expect(recentSessions(HISTORY, date('2026-10-04')).map((s) => s.id)).toEqual(['s2', 's1'])
+    expect(recentSessions(HISTORY, date('2026-10-05')).map((s) => s.id)).toEqual(['s2'])
   })
 
   it('a session from a Workout Day fills each planned set, pending, with the suggestion, and keeps it as the target', () => {

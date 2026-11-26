@@ -142,8 +142,9 @@ assert(migrated.workoutPlans.plans[0].blocks[0].light === false, 'an older block
 assert(JSON.stringify(migrated.workoutSessions.sessions[0].exercises[0].sets.map((s) => s.done)) === '[true,false]', 'a set with reps reads as done, one without as pending')
 await fresh.goto(`${URL}#treino/${mondayWeeksAgo(1)}`)
 await fresh.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Registo' }).click()
-await fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' }).waitFor()
-console.log('ok: a session from a dropped plan reads Dia de treino eliminado')
+const dropped = fresh.locator('.session-title', { hasText: 'Dia de treino eliminado' })
+await dropped.waitFor()
+assert((await dropped.count()) === 1, 'a session from a dropped plan reads Dia de treino eliminado')
 
 assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
 await browser.close()

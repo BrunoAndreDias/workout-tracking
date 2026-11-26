@@ -24,7 +24,7 @@ await page.evaluate(() => {
 await addGym(page, 'Casa')
 const full = page.getByRole('alert').filter({ hasText: FULL })
 await full.waitFor()
-assert((await readStored(page)).equipment?.gyms?.length !== 1, 'the Local could not be saved')
+assert(((await readStored(page)).equipment?.gyms ?? []).length === 0, 'the Local could not be saved')
 await page.screenshot({ path: `${S}/storage-full-390.png` })
 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the line fits a 390 px phone')
 

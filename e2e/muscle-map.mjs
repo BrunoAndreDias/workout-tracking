@@ -69,7 +69,7 @@ assert((await search.inputValue()) === 'incline', 'Escape returns to the list wi
 assert(await page.evaluate((n) => document.activeElement?.getAttribute('aria-label') === `Ver músculos de ${n}`, INCLINE), 'and focuses the row it opened')
 await page.keyboard.press('Escape')
 await dialog.waitFor({ state: 'detached' })
-assert(true, 'a second Escape closes the dialog')
+assert((await dialog.count()) === 0, 'a second Escape closes the dialog')
 
 await push.getByRole('button', { name: 'Exercício', exact: true }).click()
 await search.fill('incline barbell')

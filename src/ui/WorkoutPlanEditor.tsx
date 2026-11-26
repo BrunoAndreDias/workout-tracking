@@ -48,7 +48,7 @@ interface Props {
 
 const splitDayNames = (split: Split) => (SPLITS[split].days as readonly { name: string }[]).map((d) => d.name).join(' · ')
 
-function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: IsoDate; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
+function NewPlan({ count, today, onCreate, onCancel }: { count: number; today: IsoDate; onCreate: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
   const defaultName = `Plano de treino ${count + 1}`
   const [name, setName] = useState(defaultName)
   const [split, setSplit] = useState<Split>('ppf')
@@ -74,7 +74,7 @@ function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: I
         <button
           type="button"
           className="primary"
-          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || defaultName, split, today })}
+          onClick={() => onCreate({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || defaultName, split, today })}
         >
           Criar plano
         </button>
@@ -97,7 +97,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
     setCreating(false)
   }
 
-  if (!plan) return <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={null} />
+  if (!plan) return <NewPlan count={state.plans.length} today={today} onCreate={create} onCancel={null} />
 
   const planId = plan.id
   const { block: current, position } = currentBlock(plan, state.sessions, today)
@@ -147,7 +147,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
       </div>
 
       {creating ? (
-        <NewPlan count={state.plans.length} today={today} dispatch={create} onCancel={() => setCreating(false)} />
+        <NewPlan count={state.plans.length} today={today} onCreate={create} onCancel={() => setCreating(false)} />
       ) : (
         <>
           <PlanTitle name={plan.name} onRename={(name) => dispatch({ type: 'renamePlan', planId, name })} />

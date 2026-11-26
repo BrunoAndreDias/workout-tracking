@@ -16,7 +16,7 @@ export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(dat
 /** "3 × 8–12", or "4 × 6" when the range is a single target. */
 export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) => `${sets} × ${rangeText(reps)}`
 
-/** "1 noite", "3 noites" */
+/** "1 série", "3 séries" */
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 /** The Workout Day a session started from, by its current name. */

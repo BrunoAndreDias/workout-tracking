@@ -1,5 +1,6 @@
 import { catalogEntry, exerciseKey } from './exerciseCatalog.ts'
 import type { CatalogId } from './catalogEntries.ts'
+import { newId } from './ids.ts'
 import type { CustomEquipmentId, GymId } from './types.ts'
 
 /** The material the app knows, in the order it lists it. */
@@ -182,6 +183,10 @@ const BUILT_IN = new Map<string, string>(EQUIPMENT.map((e) => [e.id, e.label]))
 const DEFAULTS: Readonly<Record<string, readonly EquipmentId[]>> = DEFAULT_NEEDS
 
 export const isBuiltIn = (id: string): id is BuiltInEquipmentId => BUILT_IN.has(id)
+
+const CUSTOM_PREFIX = 'mat:'
+export const isCustomEquipmentId = (v: unknown): v is CustomEquipmentId => typeof v === 'string' && v.startsWith(CUSTOM_PREFIX) && v.length > CUSTOM_PREFIX.length
+export const newCustomEquipmentId = (): CustomEquipmentId => `${CUSTOM_PREFIX}${newId<string>()}` as CustomEquipmentId
 
 /** Every material the user can mark: the built-in list, then their own. */
 export const allEquipment = (state: EquipmentState): readonly { id: EquipmentId; label: string }[] => [

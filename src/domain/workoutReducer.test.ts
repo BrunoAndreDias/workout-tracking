@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseId, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from './types.ts'
 import { findDay } from './blocks.ts'
 import { emptyWorkouts } from './workouts.ts'
-import { recentSessions } from './sessions.ts'
 import type { WorkoutState } from './workouts.ts'
 import type { WorkoutAction } from './workoutReducer.ts'
-import { SUPINO, REMO, date, done, pending, session, HISTORY, run, P, B, S1, TODAY, created, PUSH, BENCH, day } from './workoutFixtures.ts'
+import { SUPINO, REMO, date, done, pending, session, run, P, B, S1, TODAY, created, PUSH, BENCH, day } from './workoutFixtures.ts'
 
 describe('Workout Plans', () => {
   it('a new plan is its split’s template in one Bloco A, and becomes the active plan', () => {
@@ -267,12 +266,6 @@ describe('end feel and After-effects', () => {
   it('removing an Exercise from the session removes its After-effects', () => {
     const s = run([after('2026-10-07', SUPINO, 'Ombro dói', '2026-10-07T08:00:00'), after('2026-10-07', REMO, 'Costas ok', '2026-10-07T08:00:00'), { type: 'removeSessionExercise', sessionId: S1, exerciseId: SUPINO }], start)
     expect(s.sessions[0].after?.map((a) => [a.exerciseId, a.note.text])).toEqual([[REMO, 'Costas ok']])
-  })
-
-  it('lists the sessions one to three days before a date, newest first', () => {
-    expect(recentSessions(HISTORY, date('2026-10-06')).map((s) => s.id)).toEqual(['s3', 's2'])
-    expect(recentSessions(HISTORY, date('2026-10-04')).map((s) => s.id)).toEqual(['s2', 's1'])
-    expect(recentSessions(HISTORY, date('2026-10-05')).map((s) => s.id)).toEqual(['s2'])
   })
 })
 

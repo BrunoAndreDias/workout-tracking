@@ -12,10 +12,11 @@
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
     "e2e": "node scripts/e2e.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && vite build && npm run e2e",
+    "check": "npm run typecheck && npm run lint && npm test && vite build && npm run perf:smoke && npm run e2e",
     "serve": "npm run build && node server/serve.ts",
     "dev-read": "HOST=0.0.0.0 npm run serve",
     "perf": "node scripts/perf.mjs",
+    "perf:smoke": "node scripts/perf.mjs --no-build --no-write --runs 1 --weeks 2",
     "comments:ratchet": "node scripts/comment-ratchet.mjs"
   },
   "dependencies": {

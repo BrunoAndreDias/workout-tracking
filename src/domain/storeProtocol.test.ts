@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { parsePut, parsePutReply, parseStoreList } from './storeProtocol.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
-const SLEEP = 'workout-tracking:exercises'
+const EXERCISES = 'workout-tracking:exercises'
 
 describe('parsePut', () => {
   it('reads a JSON doc with a positive integer baseRev or null', () => {
@@ -37,11 +37,11 @@ describe('parseStoreList', () => {
 
   it('fills a store sent without its doc from the unchanged copy, and drops it when there is none', () => {
     const unchanged = (key: string, rev: number) => (key === PLANS && rev === 4 ? '{"held":true}' : null)
-    expect(parseStoreList({ [PLANS]: { rev: 4 }, [SLEEP]: { rev: 2 } }, unchanged)).toEqual({ [PLANS]: { doc: '{"held":true}', rev: 4 } })
+    expect(parseStoreList({ [PLANS]: { rev: 4 }, [EXERCISES]: { rev: 2 } }, unchanged)).toEqual({ [PLANS]: { doc: '{"held":true}', rev: 4 } })
   })
 
   it('skips entries without an integer rev or with a non-string doc', () => {
-    expect(parseStoreList({ [PLANS]: { doc: '{}', rev: 1.5 }, [SLEEP]: { doc: null, rev: 1 } }, none)).toEqual({})
+    expect(parseStoreList({ [PLANS]: { doc: '{}', rev: 1.5 }, [EXERCISES]: { doc: null, rev: 1 } }, none)).toEqual({})
   })
 
   it('refuses a body that is not an object', () => {

@@ -56,7 +56,7 @@ async function seed(browser, url) {
   const sessions = []
   let n = 0
   for (let week = 0; week < HISTORY_WEEKS; week++) {
-    const block = plan.blocks[Math.floor(week / plan.blocks[0].rir.length) % plan.blocks.length]
+    const block = plan.blocks[Math.floor(week / plan.blocks[0].weeks) % plan.blocks.length]
     for (const [k, offset] of [0, 1, 3, 4].entries()) {
       const d = new Date(start); d.setDate(d.getDate() + week * 7 + offset)
       if (toIsoDate(d) >= todayIso()) continue

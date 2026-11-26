@@ -71,6 +71,7 @@ npm run typecheck
 npm run lint
 npm run e2e              # every e2e/*.mjs against its own dev server (a free port per run, or `E2E_PORT`); screenshots in e2e/shots/
 npm run e2e -- workout   # one script
+npm run perf:smoke       # one perf run on two weeks of history against dist/; writes nothing
 npm run check            # all of the above plus vite build: run before every commit
 ```
 

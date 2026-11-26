@@ -2,7 +2,7 @@
 
 A single-user workout log in European Portuguese: Workout Plans, the sets of each session, and Material. `CONTEXT.md` holds the domain vocabulary. Use its terms in code. `README.md` covers running the app and reaching it from the iPhone.
 
-Run `npm run check` before every commit. It runs typecheck, lint, unit tests, `vite build` and every `e2e/*.mjs` against its own dev server. The `.githooks/pre-push` hook runs the same command before every push; `npm install` turns the hooks on through the `prepare` script. There is no CI.
+Run `npm run check` before every commit. It runs typecheck, lint, unit tests, `vite build`, a two-week `perf.mjs` smoke run that writes nothing, and every `e2e/*.mjs` against its own dev server. The `.githooks/pre-push` hook runs the same command before every push; `npm install` turns the hooks on through the `prepare` script. There is no CI.
 
 `npm run perf` measures load and interaction times on a year of history and rewrites `perf/STATUS.md`. Run it after a change that could affect speed, and commit `perf/` with the change (README, Performance).
 

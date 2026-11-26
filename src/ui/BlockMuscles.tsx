@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { REGIONS } from '../domain/anatomy.ts'
-import type { Region, Side } from '../domain/anatomy.ts'
+import type { Side } from '../domain/anatomy.ts'
 import { MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import type { Muscle } from '../domain/exerciseCatalog.ts'
 import { blockMuscles } from '../domain/muscles.ts'
@@ -11,12 +11,10 @@ import { rankedVolumes, REFERENCE_RANGE, volumeNotes, volumeZone } from '../doma
 import type { VolumeNote, VolumeZone } from '../domain/volume.ts'
 import { nameLookup } from '../domain/workouts.ts'
 import type { WorkoutDay, WorkoutState } from '../domain/workouts.ts'
-import { BACK } from './bodyBack.ts'
-import { FRONT } from './bodyFront.ts'
+import { HALVES, regionsOf } from './bodyHalves.ts'
 import { FIGURE_BOX, MIRROR, SIDE_LABEL } from './bodyShape.ts'
 import { plural } from './format.ts'
 
-const HALVES = { front: FRONT, back: BACK } as const
 const ZONE_LABEL: Record<VolumeZone, string> = { below: 'abaixo', within: 'na zona', above: 'acima' }
 const sets = (n: number) => plural(n, 'série', 'séries')
 const percent = (n: number, of: number) => `${Math.round((n / of) * 100)}%`
@@ -28,7 +26,7 @@ interface Selection {
 
 /** One side of the body, each region as dark as its group's share of the most-trained group's sets. Both halves are drawn, so either takes a tap. */
 function VolumeFigure({ side, sets: setsOf, most, selected, onSelect }: Selection & { side: Side; sets: Readonly<Record<Muscle, number>>; most: number }) {
-  const regions = Object.entries(HALVES[side].regions) as [Region, string][]
+  const regions = regionsOf(side)
   const half = (transform?: string) => (
     <g transform={transform}>
       <path className="bm-base" d={HALVES[side].outline} />

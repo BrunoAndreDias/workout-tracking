@@ -35,9 +35,12 @@ function parseExercise(raw: unknown): Exercise | null {
   return { id: raw.id as ExerciseId, name: raw.name }
 }
 
-/** The current version only; null for anything else, including one bad exercise or two with the same id or name. */
+const EXERCISE_VERSIONS = [1] as const
+
+/** Version 1; null for anything else, including one bad exercise or two with the same id or name. */
 export function parseExercises(raw: unknown): Exercise[] | null {
-  if (!isRecord(raw) || raw.version !== EXERCISES_SCHEMA_VERSION) return null
+  const version = isRecord(raw) ? EXERCISE_VERSIONS.find((v) => v === raw.version) : undefined
+  if (!isRecord(raw) || version === undefined) return null
   const exercises = parseList(raw.exercises, parseExercise, (e) => e.id)
   return exercises && new Set(exercises.map((e) => exerciseKey(e.name))).size === exercises.length ? exercises : null
 }

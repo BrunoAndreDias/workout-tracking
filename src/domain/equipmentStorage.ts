@@ -8,9 +8,12 @@ export const EQUIPMENT_SCHEMA_VERSION = 1
 const isCustomId = (v: unknown): v is CustomEquipmentId => typeof v === 'string' && v.startsWith('mat:') && v.length > 4
 const isName = (v: unknown): v is string => typeof v === 'string' && v.trim() !== ''
 
-/** The current version only; null for one bad row, an id twice, or material no list holds. */
+const EQUIPMENT_VERSIONS = [1] as const
+
+/** Version 1; null for anything else, one bad row, an id twice, or material no list holds. */
 export function parseEquipment(raw: unknown): EquipmentState | null {
-  if (!isRecord(raw) || raw.version !== EQUIPMENT_SCHEMA_VERSION) return null
+  const version = isRecord(raw) ? EQUIPMENT_VERSIONS.find((v) => v === raw.version) : undefined
+  if (!isRecord(raw) || version === undefined) return null
   const { custom: rawCustom, gyms: rawGyms, activeGymId, needs: rawNeeds } = raw
   if (!Array.isArray(rawCustom) || !Array.isArray(rawGyms) || !isRecord(rawNeeds)) return null
 

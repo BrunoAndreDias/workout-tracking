@@ -46,8 +46,11 @@ interface Props {
   today: IsoDate
 }
 
+const splitDayNames = (split: Split) => (SPLITS[split].days as readonly { name: string }[]).map((d) => d.name).join(' · ')
+
 function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: IsoDate; dispatch: Dispatch<WorkoutAction>; onCancel: (() => void) | null }) {
-  const [name, setName] = useState(`Plano de treino ${count + 1}`)
+  const defaultName = `Plano de treino ${count + 1}`
+  const [name, setName] = useState(defaultName)
   const [split, setSplit] = useState<Split>('ppf')
   return (
     <section className="card new-plan" aria-labelledby="novo-plano-treino">
@@ -62,7 +65,7 @@ function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: I
         {SPLIT_IDS.map((s) => (
           <button key={s} type="button" className="tile split-tile" aria-pressed={split === s} onClick={() => setSplit(s)}>
             <span className="split-tile-label">{SPLITS[s].label}</span>
-            <span className="tile-sub">{(SPLITS[s].days as readonly { name: string }[]).map((d) => d.name).join(' · ')}</span>
+            <span className="tile-sub">{splitDayNames(s)}</span>
           </button>
         ))}
       </div>
@@ -71,7 +74,7 @@ function NewPlan({ count, today, dispatch, onCancel }: { count: number; today: I
         <button
           type="button"
           className="primary"
-          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || `Plano de treino ${count + 1}`, split, today })}
+          onClick={() => dispatch({ type: 'createPlan', planId: newId<WorkoutPlanId>(), blockId: newId<WorkoutBlockId>(), name: name.trim() || defaultName, split, today })}
         >
           Criar plano
         </button>
@@ -149,7 +152,7 @@ export function WorkoutPlanEditor({ state, dispatch, today }: Props) {
         <>
           <PlanTitle name={plan.name} onRename={(name) => dispatch({ type: 'renamePlan', planId, name })} />
           <p className="muted workout-plan-note">
-            {SPLITS[plan.split].label}: {(SPLITS[plan.split].days as readonly { name: string }[]).map((d) => d.name).join(' · ')}. O plano ativo é o que aparece ao começar um treino.
+            {SPLITS[plan.split].label}: {splitDayNames(plan.split)}. O plano ativo é o que aparece ao começar um treino.
           </p>
 
           <section className="card workout-blocks" aria-labelledby="blocos-treino">

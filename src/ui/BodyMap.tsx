@@ -1,13 +1,8 @@
 import type { CSSProperties } from 'react'
 import { involvement, mainSide, REGIONS, workedOn } from '../domain/anatomy.ts'
 import type { Activation, Region, Side } from '../domain/anatomy.ts'
-import { BACK } from './bodyBack.ts'
-import { FRONT } from './bodyFront.ts'
+import { HALVES, regionsOf } from './bodyHalves.ts'
 import { FIGURE_BOX, MIRROR, SIDE_LABEL } from './bodyShape.ts'
-
-const HALVES = { front: FRONT, back: BACK } as const
-
-const regionsOf = (side: Side) => Object.entries(HALVES[side].regions) as [Region, string][]
 
 /** Each region reads its fill from a custom property, so one set of shapes serves every figure. */
 const regionFill = (region: Region): CSSProperties => ({ fill: `var(--bm-${region}, var(--bm-idle))` })

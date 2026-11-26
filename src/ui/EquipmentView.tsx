@@ -4,6 +4,7 @@ import type { EquipmentId } from '../domain/equipment.ts'
 import { CATALOG } from '../domain/catalogEntries.ts'
 import { catalogEntry, exerciseKey, MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
+import { MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
 import type { GymId } from '../domain/types.ts'
 import type { Exercise } from '../domain/workouts.ts'
@@ -227,7 +228,7 @@ function ExerciseList({ exercises }: { exercises: readonly Exercise[] }) {
       <div className="filter-chips" role="group" aria-label="Mostrar">
         {chip('changed', 'Alterados')}
         {exercises.some((e) => !catalogEntry(e.name)) && chip('own', 'Os teus')}
-        {(Object.keys(MUSCLE_LABEL) as Muscle[]).map((m) => chip(m, MUSCLE_LABEL[m]))}
+        {MUSCLES.map((m) => chip(m, MUSCLE_LABEL[m]))}
       </div>
       <ul className="equipment-exercises">
         {own.map((e) => (

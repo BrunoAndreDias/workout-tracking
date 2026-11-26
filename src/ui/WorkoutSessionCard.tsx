@@ -116,6 +116,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
 }
 
 const RIR_CHIPS = [0, 1, 2, 3, 4, 5] as const
+const TOP_RIR = RIR_CHIPS[RIR_CHIPS.length - 1]
 
 interface LiftProps {
   sessionId: WorkoutSessionId
@@ -209,10 +210,10 @@ function Lift({ sessionId, exercise, name, plan, note, current, dispatch }: Lift
               type="button"
               className={target && inTarget(r, aimedAt(target)) ? 'filter-chip rir-chip rir-target' : 'filter-chip rir-chip'}
               aria-pressed={sets[active].rir === r}
-              aria-label={`RIR ${r === 5 ? '5 ou mais' : r} na série ${active + 1} de ${name}`}
+              aria-label={`RIR ${r === TOP_RIR ? `${TOP_RIR} ou mais` : r} na série ${active + 1} de ${name}`}
               onClick={() => edit(active, { kg: sets[active].kg, reps: sets[active].reps, rir: sets[active].rir === r ? null : r })}
             >
-              {r === 5 ? '5+' : r}
+              {r === TOP_RIR ? `${TOP_RIR}+` : r}
             </button>
           ))}
         </div>

@@ -3,6 +3,7 @@ import { activationByName } from '../domain/anatomy.ts'
 import { activeGym, missingAt, needsOf, readyFirst } from '../domain/equipment.ts'
 import { catalogEntry, exerciseKey, MUSCLE_LABEL, pickerList } from '../domain/exerciseCatalog.ts'
 import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
+import { MUSCLES } from '../domain/muscles.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'
 import { materialText } from './format.ts'
@@ -22,8 +23,6 @@ interface Props {
   onPick: (name: string) => void
   onClose: () => void
 }
-
-const MUSCLES = Object.keys(MUSCLE_LABEL) as Muscle[]
 
 /**
  * One tap picks a catalog Exercise, one of the user's own, or a new name. With an active Gym, what it has the material

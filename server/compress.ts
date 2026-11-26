@@ -9,9 +9,9 @@ const TEXT = /^(text\/|application\/(json|manifest\+json)|image\/svg)/
  * Ends `res` with `body`, compressed with brotli or gzip when the request accepts it: a year of stores is about 2.6 MB
  * of JSON, which the phone fetches from the Mac on every open.
  */
-export function endCompressed(req: IncomingMessage | undefined, res: ServerResponse, status: number, headers: Record<string, string>, body: string | Buffer): void {
+export function endCompressed(req: IncomingMessage, res: ServerResponse, status: number, headers: Record<string, string>, body: string | Buffer): void {
   const raw = typeof body === 'string' ? Buffer.from(body) : body
-  const accepted = new Set((req?.headers['accept-encoding'] ?? '').split(',').map((e) => e.split(';')[0].trim()))
+  const accepted = new Set((req.headers['accept-encoding'] ?? '').split(',').map((e) => e.split(';')[0].trim()))
   const encoding = raw.length < MIN_BYTES || !TEXT.test(headers['content-type'] ?? '') ? null : accepted.has('br') ? 'br' : accepted.has('gzip') ? 'gzip' : null
   if (!encoding) {
     res.writeHead(status, { ...headers, vary: 'accept-encoding' }).end(raw)

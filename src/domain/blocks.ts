@@ -1,6 +1,6 @@
 import { mondayOf } from './dates.ts'
 import type { ExerciseId, IsoDate, WorkoutDayId } from './types.ts'
-import { isDone, MAX_BLOCK_WEEKS } from './workouts.ts'
+import { isBlockWeeks, isDone, MAX_BLOCK_WEEKS } from './workouts.ts'
 import type { PlannedExercise, WorkoutBlock, WorkoutDay, WorkoutPlan, WorkoutSession } from './workouts.ts'
 
 const blockDays = (block: WorkoutBlock): readonly WorkoutDay[] => block.days
@@ -49,7 +49,7 @@ export function weeksRun(planned: PlannedExercise, sessions: readonly WorkoutSes
 
 export const isRunDue = (weeks: number | null, done: number): boolean => weeks !== null && done >= weeks
 
-export const isRunWeeks = (weeks: unknown): weeks is number | null => weeks === null || (Number.isInteger(weeks) && (weeks as number) >= 1 && (weeks as number) <= MAX_BLOCK_WEEKS)
+export const isRunWeeks = (weeks: unknown): weeks is number | null => weeks === null || isBlockWeeks(weeks)
 
 /** One Exercise's run across the days of a block it is planned in. */
 export interface ExerciseRun {

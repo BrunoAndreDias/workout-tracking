@@ -5,7 +5,7 @@ import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { isRunWeeks } from './blocks.ts'
 import { lastDoneSets, startSession } from './sessions.ts'
-import { EMPTY_SET, MAX_BLOCK_WEEKS } from './workouts.ts'
+import { EMPTY_SET, isBlockWeeks } from './workouts.ts'
 import type { BlockOf, Exercise, LoggedSet, PendingSet, PlannedExercise, PlanOf, Role, SessionExercise, Split, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 /** What the user types or taps into a set; whether it is done is set apart. */
@@ -175,7 +175,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'renameBlock':
       return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, name: action.name }))
     case 'setBlockWeeks':
-      if (!Number.isInteger(action.weeks) || action.weeks < 1 || action.weeks > MAX_BLOCK_WEEKS) return state
+      if (!isBlockWeeks(action.weeks)) return state
       return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, weeks: action.weeks }))
     case 'setBlockLight':
       return updateBlock(state, action.planId, action.blockId, (b) => ({ ...b, light: action.light }))

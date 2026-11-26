@@ -7,7 +7,7 @@ import { isRecord } from './records.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { exerciseKey } from './exerciseCatalog.ts'
 import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
-import { MAX_BLOCK_WEEKS, MAX_RIR } from './workouts.ts'
+import { isBlockWeeks, MAX_RIR } from './workouts.ts'
 import { isRunWeeks } from './blocks.ts'
 import type { AfterEffect, CycleStart, Exercise, LoggedSet, PlannedExercise, Role, SessionExercise, SetTarget, Split, WorkoutDay, WorkoutPlan, WorkoutPlanState, WorkoutSession } from './workouts.ts'
 
@@ -89,7 +89,7 @@ interface ReadPlan {
 }
 
 function parseBlock(raw: unknown, version: 2 | 3 | 4): ReadBlock | null {
-  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isCount(raw.weeks) || raw.weeks < 1 || raw.weeks > MAX_BLOCK_WEEKS) return null
+  if (!isRecord(raw) || !isId(raw.id) || typeof raw.name !== 'string' || !isBlockWeeks(raw.weeks)) return null
   if (version === 4 && typeof raw.light !== 'boolean') return null
   const days = parseList(raw.days, (r) => parseDay(r, version === 2))
   return days && { id: raw.id as WorkoutBlockId, name: raw.name, weeks: raw.weeks, light: raw.light === true && version === 4, days }

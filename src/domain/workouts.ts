@@ -172,3 +172,5 @@ export function loggedCounts(session: WorkoutSession): { exercises: number; sets
 export const emptyWorkouts = (): WorkoutState => ({ exercises: [], plans: [], activePlanId: null, sessions: [] })
 
 export const MAX_BLOCK_WEEKS = 52
+
+export const isBlockWeeks = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_BLOCK_WEEKS

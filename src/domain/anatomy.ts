@@ -58,7 +58,7 @@ export const REGIONS: Readonly<Record<Region, RegionInfo>> = {
   calves: { label: 'Gémeos', group: 'calves', sides: ['front', 'back'] },
 }
 
-export const REGION_ORDER = Object.keys(REGIONS) as Region[]
+const REGION_ORDER = Object.keys(REGIONS) as Region[]
 
 /**
  * What an Exercise works: `target`, the regions the user should feel it in most, and `assist`, the ones that help.
@@ -70,8 +70,6 @@ export interface Activation {
 }
 
 export type Involvement = 'target' | 'assist'
-
-export const activationOf = (id: CatalogId): Activation => CATALOG_MUSCLES[id]
 
 /** The Activation of a catalog Exercise by its name, ignoring case; undefined for the user's own names. */
 export function activationByName(name: string): Activation | undefined {

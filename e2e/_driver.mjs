@@ -87,19 +87,6 @@ export const mondayWeeksAgo = (n) => addDays(mondayOf(todayIso()), -7 * n)
 /** The app's long date, "quarta-feira, 7 de outubro": `longDate.format(date)`. */
 export const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
-/** The ARIA snapshot of the named region (a Workout Day card, a session card, …), or of `main`. */
-export async function regionAria(page, region) {
-  if (region === undefined) return page.locator('main').ariaSnapshot()
-  const target = page.getByRole('region', { name: region, exact: true })
-  try {
-    await target.waitFor()
-  } catch {
-    const names = await page.locator('section[aria-label], section[aria-labelledby]').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? document.getElementById(e.getAttribute('aria-labelledby'))?.textContent))
-    throw new FlowError(`no region named "${region}"`, `regions on the page: ${names.filter(Boolean).join(', ')}`)
-  }
-  return target.ariaSnapshot()
-}
-
 const exactly = (text) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
 
 /** In the open exercise picker, picks `name`: a catalog Exercise or one of the user's own by name, else a new one. */

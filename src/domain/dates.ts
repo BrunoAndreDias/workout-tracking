@@ -29,11 +29,6 @@ export function addDays(date: IsoDate, n: number): IsoDate {
   return toIsoDate(d)
 }
 
-export const dayOfMonth = (date: IsoDate): number => Number(date.slice(8))
-
-/** The first and last dates of a month, `month` 1 to 12. */
-export const monthBounds = (year: number, month: number): readonly [IsoDate, IsoDate] => [toIsoDate(new Date(year, month - 1, 1)), toIsoDate(new Date(year, month, 0))]
-
 /** 0 for Monday through 6 for Sunday. */
 export const weekdayOf = (date: IsoDate): number => (fromIsoDate(date).getDay() + 6) % 7
 

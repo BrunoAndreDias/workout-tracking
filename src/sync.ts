@@ -1,5 +1,6 @@
 import { preserveCopy } from './domain/persistence.ts'
 import type { BrowserStorage } from './domain/persistence.ts'
+import { isRecord } from './domain/records.ts'
 import { DEVICE_KEY, isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
 import { parsePutReply, parseStoreList } from './domain/storeProtocol.ts'
@@ -62,19 +63,21 @@ async function requestJson<T>(request: typeof fetch, url: string, init: RequestI
   }
 }
 
+const emptyMeta = (): SyncMeta => ({ revs: {}, pending: [], fresh: [] })
+
 function readMeta(storage: BrowserStorage): SyncMeta {
   try {
     const raw: unknown = JSON.parse(storage.getItem(DEVICE_KEY.sync) ?? 'null')
-    if (typeof raw !== 'object' || raw === null) return { revs: {}, pending: [], fresh: [] }
-    const { revs, pending, fresh } = raw as Record<string, unknown>
+    if (!isRecord(raw)) return emptyMeta()
+    const { revs, pending, fresh } = raw
     const keys = (list: unknown) => (Array.isArray(list) ? list.filter(isStoreKey) : [])
     const meta: SyncMeta = { revs: {}, pending: keys(pending), fresh: keys(fresh) }
-    if (typeof revs === 'object' && revs !== null) {
-      for (const [key, rev] of Object.entries(revs)) if (isStoreKey(key) && Number.isInteger(rev)) meta.revs[key] = rev as number
+    if (isRecord(revs)) {
+      for (const [key, rev] of Object.entries(revs)) if (isStoreKey(key) && typeof rev === 'number' && Number.isInteger(rev)) meta.revs[key] = rev
     }
     return meta
   } catch {
-    return { revs: {}, pending: [], fresh: [] }
+    return emptyMeta()
   }
 }
 

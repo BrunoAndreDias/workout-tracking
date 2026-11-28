@@ -3,18 +3,18 @@ import type { BrowserStorage } from './domain/persistence.ts'
 import { isRecord } from './domain/records.ts'
 import { DEVICE_KEY, isStoreKey, STORE_KEYS } from './domain/storeKeys.ts'
 import type { StoreKey } from './domain/storeKeys.ts'
-import { parsePutReply, parseStoreList } from './domain/storeProtocol.ts'
-import type { PutBody, Stored, StoreList } from './domain/storeProtocol.ts'
+import { formatHave, parsePutReply, parseStoreList } from './domain/storeProtocol.ts'
+import type { PutBody, Stored, StoreList, StoreRevs } from './domain/storeProtocol.ts'
 
 /**
- * `ligado`: every change made here has reached the server or is on its way. `offline`: the server did not answer, it
- * failed (5xx), or its answer was not the expected JSON, and changes wait in this browser. `conflito`: another device
+ * `connected`: every change made here has reached the server or is on its way. `offline`: the server did not answer, it
+ * failed (5xx), or its answer was not the expected JSON, and changes wait in this browser. `conflict`: another device
  * wrote a store this browser also changed (409), so this browser stops sending it until the user reloads the server's
- * copy. `recusado`: the server refused a change (any other 4xx), so this browser keeps it pending and stops sending
+ * copy. `refused`: the server refused a change (any other 4xx), so this browser keeps it pending and stops sending
  * that store until the next start ([ADR-0008](../docs/adr/0008-refused-changes-and-the-crash-page.md)). Only a reload
- * leaves `conflito` or `recusado`, and either outranks `offline`.
+ * leaves `conflict` or `refused`, and either outranks `offline`.
  */
-export type SyncStatus = 'ligado' | 'offline' | 'conflito' | 'recusado'
+export type SyncStatus = 'connected' | 'offline' | 'conflict' | 'refused'
 
 /**
  * Device-local bookkeeping: the server rev each store was last in step with, the stores changed here since, and the
@@ -49,7 +49,9 @@ interface SyncOptions {
 
 type Answer<T> = { kind: 'ok'; body: T } | { kind: 'conflict' } | { kind: 'refused' } | { kind: 'offline' }
 
-const STICKY: readonly SyncStatus[] = ['recusado', 'conflito']
+const RANK: Record<SyncStatus, number> = { connected: 0, offline: 1, refused: 2, conflict: 3 }
+
+const worst = (statuses: readonly SyncStatus[]): SyncStatus => statuses.reduce((a, b) => (RANK[b] > RANK[a] ? b : a), 'connected')
 
 async function requestJson<T>(request: typeof fetch, url: string, init: RequestInit, check: (body: unknown) => T | null, timeoutMs: number): Promise<Answer<T>> {
   try {
@@ -96,7 +98,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
   const conflicts = new Set<StoreKey>()
   const refused = new Set<StoreKey>()
   const listeners = new Set<() => void>()
-  let status: SyncStatus = 'ligado'
+  let status: SyncStatus = 'connected'
   let retry: ReturnType<typeof setTimeout> | undefined
 
   const saveMeta = () => {
@@ -107,7 +109,7 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     }
   }
   const setStatus = (next: SyncStatus) => {
-    if (STICKY.includes(status) && STICKY.indexOf(next) <= STICKY.indexOf(status)) return
+    if (RANK[status] > RANK.offline && RANK[next] <= RANK[status]) return
     clearTimeout(retry)
     if (next === 'offline') retry = setTimeout(() => void flush(), retryMs)
     if (status === next) return
@@ -118,11 +120,11 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     meta.pending = meta.pending.filter((k) => k !== key)
   }
 
-  async function push(key: StoreKey): Promise<'sent' | 'offline' | 'conflict' | 'refused'> {
+  async function push(key: StoreKey): Promise<SyncStatus> {
     const doc = storage.getItem(key)
     if (doc === null) {
       unpend(key)
-      return 'sent'
+      return 'connected'
     }
     const init = { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ doc, baseRev: meta.revs[key] ?? null } satisfies PutBody) }
     const answer = await requestJson(request, `${base}/${encodeURIComponent(key)}`, init, parsePutReply, pushTimeoutMs)
@@ -131,19 +133,19 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
     if (answer.kind !== 'ok') return answer.kind
     meta.revs[key] = answer.body.rev
     if (storage.getItem(key) === doc) unpend(key)
-    return 'sent'
+    return 'connected'
   }
 
   async function pushPending() {
     const keys = meta.pending.filter((k) => !conflicts.has(k) && !refused.has(k))
     if (keys.length === 0) {
-      if (status === 'offline') setStatus((await fetchRemote()) ? 'ligado' : 'offline')
+      if (status === 'offline') setStatus((await fetchRemote()) ? 'connected' : 'offline')
       return
     }
-    const outcomes = []
+    const outcomes: SyncStatus[] = []
     for (const key of keys) outcomes.push(await push(key))
     saveMeta()
-    setStatus(outcomes.includes('conflict') ? 'conflito' : outcomes.includes('refused') ? 'recusado' : outcomes.includes('offline') ? 'offline' : 'ligado')
+    setStatus(worst(outcomes))
   }
 
   let queue = Promise.resolve()
@@ -159,8 +161,10 @@ export async function startSync({ storage, fetch: request = globalThis.fetch, ba
   }
 
   async function fetchRemote(): Promise<StoreList | null> {
-    const held = STORE_KEYS.filter((key) => meta.revs[key] !== undefined && storage.getItem(key) !== null)
-    const url = held.length === 0 ? base : `${base}?have=${encodeURIComponent(held.map((key) => `${key}:${meta.revs[key]}`).join(','))}`
+    const held: StoreRevs = {}
+    for (const key of STORE_KEYS) if (meta.revs[key] !== undefined && storage.getItem(key) !== null) held[key] = meta.revs[key]
+    const have = formatHave(held)
+    const url = have === '' ? base : `${base}?have=${encodeURIComponent(have)}`
     const answer = await requestJson(request, url, {}, (body) => parseStoreList(body, (key, rev) => (meta.revs[key] === rev ? storage.getItem(key) : null)), pullTimeoutMs)
     return answer.kind === 'ok' ? answer.body : null
   }

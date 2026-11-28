@@ -1,4 +1,5 @@
-import { catalogEntry, exerciseKey } from './exerciseCatalog.ts'
+import { catalogEntry } from './exerciseCatalog.ts'
+import { nameKey } from './names.ts'
 import type { CatalogId } from './catalogEntries.ts'
 import { newId } from './ids.ts'
 import type { CustomEquipmentId, GymId } from './types.ts'
@@ -173,7 +174,7 @@ export interface EquipmentState {
   readonly custom: readonly CustomEquipment[]
   readonly gyms: readonly Gym[]
   readonly activeGymId: GymId | null
-  /** The user's corrections, by exerciseKey(name). A key present replaces the default, even with []. */
+  /** The user's corrections, by nameKey(name). A key present replaces the default, even with []. */
   readonly needs: Readonly<Record<string, readonly EquipmentId[]>>
 }
 
@@ -207,9 +208,9 @@ const defaultNeeds = (name: string): readonly EquipmentId[] => {
 }
 
 /** What the Exercise needs: the user's correction, else the catalog's guess, else nothing. */
-export const needsOf = (state: EquipmentState, name: string): readonly EquipmentId[] => state.needs[exerciseKey(name)] ?? defaultNeeds(name)
+export const needsOf = (state: EquipmentState, name: string): readonly EquipmentId[] => state.needs[nameKey(name)] ?? defaultNeeds(name)
 
-export const isChanged = (state: EquipmentState, name: string): boolean => exerciseKey(name) in state.needs
+export const isChanged = (state: EquipmentState, name: string): boolean => nameKey(name) in state.needs
 
 export const activeGym = (state: EquipmentState): Gym | undefined => state.gyms.find((g) => g.id === state.activeGymId)
 
@@ -269,11 +270,11 @@ export function equipmentReducer(state: EquipmentState, action: EquipmentAction)
     case 'clearHas':
       return editGym(action.gymId, (g) => ({ ...g, has: [] }))
     case 'addCustom': {
-      const taken = allEquipment(state).some((e) => e.id === action.id || exerciseKey(e.label) === exerciseKey(name))
+      const taken = allEquipment(state).some((e) => e.id === action.id || nameKey(e.label) === nameKey(name))
       return !name || taken || !isCustomEquipmentId(action.id) ? state : { ...state, custom: [...state.custom, { id: action.id, name }] }
     }
     case 'renameCustom': {
-      const taken = allEquipment(state).some((e) => e.id !== action.id && exerciseKey(e.label) === exerciseKey(name))
+      const taken = allEquipment(state).some((e) => e.id !== action.id && nameKey(e.label) === nameKey(name))
       return !name || taken ? state : { ...state, custom: state.custom.map((c) => (c.id === action.id ? { ...c, name } : c)) }
     }
     case 'removeCustom': {
@@ -287,14 +288,14 @@ export function equipmentReducer(state: EquipmentState, action: EquipmentAction)
     }
     case 'setNeeds': {
       if (!action.needs.every((id) => isKnownEquipment(state.custom, id))) return state
-      const key = exerciseKey(action.name)
+      const key = nameKey(action.name)
       const needs = [...new Set(action.needs)]
       // Back to the default is no correction, so "Alterado" only marks a real difference.
       if (sameSet(needs, defaultNeeds(action.name))) return key in state.needs ? { ...state, needs: withoutKey(state.needs, key) } : state
       return { ...state, needs: { ...state.needs, [key]: needs } }
     }
     case 'resetNeeds':
-      return { ...state, needs: withoutKey(state.needs, exerciseKey(action.name)) }
+      return { ...state, needs: withoutKey(state.needs, nameKey(action.name)) }
   }
 }
 

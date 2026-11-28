@@ -4,7 +4,7 @@ import { saveStore, STORE_NAMES, STORES } from './stores.ts'
 import type { AppData, StoreName } from './stores.ts'
 import type { ExerciseId } from './types.ts'
 import { mergeEquipment } from './equipment.ts'
-import { findExercise } from './exerciseCatalog.ts'
+import { findExercise } from './names.ts'
 import { mapPlanDays } from './workoutReducer.ts'
 import { afterEffectKey } from './workouts.ts'
 
@@ -13,7 +13,6 @@ const BACKUP_VERSION = 1
 
 export type ParsedBackup = { ok: true; data: AppData } | { ok: false; error: string }
 
-/** Each store is the document the app saves under its own key, so it keeps its own schema version. */
 export interface BackupFile {
   readonly app: typeof BACKUP_APP
   readonly version: typeof BACKUP_VERSION
@@ -21,10 +20,26 @@ export interface BackupFile {
   readonly stores: Readonly<Partial<Record<StoreName, unknown>>>
 }
 
-/** `skipped` names the stores that hold a document the app can no longer read: they are not in the file. A store never saved is not skipped. */
 export interface Exported {
   readonly file: BackupFile
   readonly skipped: readonly StoreName[]
+}
+
+function readKey(storage: StorageLike, key: string): string | null {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function readDocument(text: string, parse: (doc: unknown) => unknown): { doc: unknown } | null {
+  try {
+    const doc: unknown = JSON.parse(text)
+    return parse(doc) === null ? null : { doc }
+  } catch {
+    return null
+  }
 }
 
 export function exportBackup(storage: StorageLike, now: Date = new Date()): Exported {
@@ -32,28 +47,15 @@ export function exportBackup(storage: StorageLike, now: Date = new Date()): Expo
   const skipped: StoreName[] = []
   for (const name of STORE_NAMES) {
     const { key, parse } = STORES[name]
-    let text: string | null = null
-    try {
-      text = storage.getItem(key)
-    } catch {
-      // blocked storage reads as empty
-    }
+    const text = readKey(storage, key)
     if (!text) continue
-    try {
-      const doc: unknown = JSON.parse(text)
-      if (parse(doc) !== null) {
-        stores[name] = doc
-        continue
-      }
-    } catch {
-      // corrupt JSON is skipped like any other unreadable document
-    }
-    skipped.push(name)
+    const read = readDocument(text, parse)
+    if (read) stores[name] = read.doc
+    else skipped.push(name)
   }
   return { file: { app: BACKUP_APP, version: BACKUP_VERSION, exportedAt: now.toISOString(), stores }, skipped }
 }
 
-/** Rejects the whole file when any store this app keeps fails its own parser. Stores it does not keep are ignored. */
 export function parseBackup(raw: unknown): ParsedBackup {
   if (!isRecord(raw) || raw.app !== BACKUP_APP) return { ok: false, error: 'Este ficheiro não é uma cópia de segurança do Treino.' }
   if (raw.version !== BACKUP_VERSION) return { ok: false, error: 'Esta cópia de segurança é de uma versão que a app não conhece.' }
@@ -72,11 +74,6 @@ export function parseBackup(raw: unknown): ParsedBackup {
 
 const uniqueBy = <T>(items: readonly T[], key: (item: T) => string): T[] => items.filter((item, i) => items.findIndex((other) => key(other) === key(item)) === i)
 
-/**
- * Workout stores are added by id; what is already there wins, and a session brings its end feel and After-effects with it.
- * An incoming Exercise named like one the user has becomes that one, so its sets keep one history; a day or session that
- * then lists it twice keeps the first.
- */
 function mergeWorkouts(current: AppData, incoming: AppData): Pick<AppData, 'exercises' | 'workoutPlans' | 'workoutSessions'> {
   const exercises = [...current.exercises]
   const same = new Map<ExerciseId, ExerciseId>()
@@ -115,7 +112,6 @@ function mergeWorkouts(current: AppData, incoming: AppData): Pick<AppData, 'exer
   }
 }
 
-/** Material merges as `mergeEquipment` says. */
 export function mergeBackup(current: AppData, incoming: AppData): AppData {
   return {
     ...mergeWorkouts(current, incoming),
@@ -128,10 +124,6 @@ export type ApplyResult = { ok: true } | { ok: false; error: string }
 const APPLY_FAILED = 'Não foi possível guardar os dados: o armazenamento do navegador não tem espaço. Não foi alterado nada.'
 const RESTORE_FAILED = 'Não foi possível guardar os dados e também não foi possível repor os anteriores. Exporte uma cópia antes de recarregar.'
 
-/**
- * Every store or none: the raw value of every key is kept first, and any failed write puts every key back
- * (removing the ones that did not exist), so a full storage cannot leave plans from one file next to sessions from another.
- */
 export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult {
   const snapshot = STORE_NAMES.map((name) => [STORES[name].key, storage.getItem(STORES[name].key)] as const)
   if (STORE_NAMES.every((name) => saveStore<unknown>(STORES[name], data[name], storage))) return { ok: true }
@@ -145,14 +137,4 @@ export function writeAll(data: AppData, storage: RemovableStorage): ApplyResult 
     }
   }
   return { ok: false, error: restored ? APPLY_FAILED : RESTORE_FAILED }
-}
-
-/** "1 plano de treino, 3 treinos, 2 locais de treino" */
-export function describeBackup({ workoutPlans, workoutSessions, equipment }: AppData): string {
-  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
-  return [
-    count(workoutPlans.plans.length, 'plano de treino', 'planos de treino'),
-    count(workoutSessions.length, 'treino', 'treinos'),
-    count(equipment.gyms.length, 'local de treino', 'locais de treino'),
-  ].join(', ')
 }

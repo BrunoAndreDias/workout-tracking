@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { freshEquipment } from '../domain/equipment.ts'
+import type { AppData } from '../domain/stores.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
-import { formatAfterDay, formatDaysAgo, formatNoteTimes, formatPlanned } from './format.ts'
+import { CASA, created, material, P, trained } from '../domain/workoutFixtures.ts'
+import { describeBackup, formatAfterDay, formatDaysAgo, formatNoteTimes, formatPlanned } from './format.ts'
 
 describe('pt-PT formatting', () => {
   it('writes a planned exercise', () => {
@@ -33,5 +36,18 @@ describe('After-effect days', () => {
 
   it('says how long before a date a session was, across a month', () => {
     expect([d('2026-09-30'), d('2026-09-29')].map((on) => formatDaysAgo(on, d('2026-10-01')))).toEqual(['ontem', 'há 2 dias'])
+  })
+})
+
+describe('Backup summary', () => {
+  const empty: AppData = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], equipment: freshEquipment() }
+
+  it('counts one of each in the singular', () => {
+    const data: AppData = { ...empty, workoutPlans: { plans: created.plans, activePlanId: P }, workoutSessions: [trained('2026-05-01')], equipment: material({ type: 'addGym', gymId: CASA, name: 'Casa' }) }
+    expect(describeBackup(data)).toBe('1 plano de treino, 1 treino, 1 local de treino')
+  })
+
+  it('counts none in the plural', () => {
+    expect(describeBackup(empty)).toBe('0 planos de treino, 0 treinos, 0 locais de treino')
   })
 })

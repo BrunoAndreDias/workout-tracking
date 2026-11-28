@@ -1,5 +1,5 @@
 import type { Rating } from './rating.ts'
-import { resolveExercise } from './exerciseCatalog.ts'
+import { resolveExercise } from './names.ts'
 import { editNote } from './notes.ts'
 import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock } from './splits.ts'
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'

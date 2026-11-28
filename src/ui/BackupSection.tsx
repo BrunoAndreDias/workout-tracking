@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
-import { describeBackup, mergeBackup, parseBackup, writeAll } from '../domain/backup.ts'
+import { mergeBackup, parseBackup, writeAll } from '../domain/backup.ts'
 import { defaultStorage } from '../domain/persistence.ts'
-import { loadAll, STORES } from '../domain/stores.ts'
+import { loadAll } from '../domain/stores.ts'
 import type { AppData } from '../domain/stores.ts'
-import { downloadBackup } from './exportFile.ts'
+import { downloadBackup, exportProblem } from './exportFile.ts'
+import { describeBackup } from './format.ts'
 import { Notice } from './Notice.tsx'
 import { Panel } from './Panel.tsx'
 
@@ -16,13 +17,11 @@ const reloadApp = () => window.location.reload()
 export function BackupSection() {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const [warning, setWarning] = useState<string | null>(null)
   const [incoming, setIncoming] = useState<AppData | null>(null)
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
     setError(null)
-    setWarning(null)
     try {
       const result = parseBackup(JSON.parse(await file.text()))
       if (result.ok) setIncoming(result.data)
@@ -35,8 +34,7 @@ export function BackupSection() {
   const exportData = () => {
     const storage = defaultStorage()
     if (!storage) return setError('O armazenamento do navegador não está disponível.')
-    const skipped = downloadBackup(storage)
-    setWarning(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map((name) => STORES[name].label).join(', ')}. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.` : null)
+    setError(exportProblem(downloadBackup(storage)))
   }
 
   const apply = (mode: 'merge' | 'replace') => {
@@ -71,7 +69,6 @@ export function BackupSection() {
         />
       </div>
       {error && <Notice tone="error">{error}</Notice>}
-      {warning && <Notice tone="warning">{warning}</Notice>}
       {incoming && (
         <Panel eyebrow="Importar dados" title="Cópia de segurança" onClose={() => setIncoming(null)}>
           <div className="panel-body">

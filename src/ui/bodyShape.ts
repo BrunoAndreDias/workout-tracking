@@ -1,4 +1,5 @@
-import type { Region, Side } from '../domain/anatomy.ts'
+import type { Side } from '../domain/anatomy.ts'
+import type { Region } from '../domain/catalogMuscles.ts'
 
 /** One half of a figure in a 120 × 256 box, drawn left of the centre line x = 60. */
 export interface FigureHalf {

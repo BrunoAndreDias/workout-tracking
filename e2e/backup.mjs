@@ -1,10 +1,10 @@
 import { chromium } from 'playwright'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { appUrl, assert, clickAndReload, openFresh, openPage, readStored, SHOTS } from './_driver.mjs'
 const URL = appUrl()
 const FIXTURE = 'e2e/fixtures/treino-backup.json'
 const browser = await chromium.launch()
-const { page, noErrors } = await openPage(browser, { mobile: true })
+const { page, noErrors } = await openPage(browser, { mobile: true, acceptDownloads: true })
 await openFresh(page, URL)
 
 const data = page.getByRole('region', { name: 'Dados' })
@@ -31,6 +31,25 @@ assert(stored.equipment.gyms.map((g) => g.name).join() === 'Casa', 'the material
 await page.goto(`${URL}#treino/2026-05-01`)
 await page.getByRole('heading', { name: 'Push' }).first().waitFor()
 await page.screenshot({ path: `${SHOTS}/backup-import-session.png`, fullPage: true })
+
+await page.goto(URL)
+await data.waitFor()
+await page.evaluate(() => localStorage.setItem('workout-tracking:workout-plans', JSON.stringify({ version: 99, plans: [] })))
+const [partial] = await Promise.all([page.waitForEvent('download'), data.getByRole('button', { name: 'Exportar dados' }).click()])
+const exported = JSON.parse(readFileSync(await partial.path(), 'utf8'))
+const skipped = data.getByRole('alert')
+await skipped.waitFor()
+assert(await skipped.textContent() === 'Não foi possível exportar: planos de treino. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.', 'the export names the store it left out')
+assert(!('workoutPlans' in exported.stores) && 'workoutSessions' in exported.stores, 'the file leaves out only the store that does not parse')
+
+await page.evaluate(() => {
+  URL.createObjectURL = () => {
+    throw new Error('export test')
+  }
+})
+await data.getByRole('button', { name: 'Exportar dados' }).click()
+await data.getByText('Não foi possível exportar os dados.').waitFor()
+assert(await data.getByRole('alert').textContent() === 'Não foi possível exportar os dados.', 'a failed export shows a message instead of nothing')
 
 noErrors()
 await browser.close()

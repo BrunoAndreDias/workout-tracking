@@ -151,7 +151,7 @@
 .bm[data-picked] .bm-region:not([data-selected]) { opacity: 0.25; }
 .volume-region[data-selected] { stroke: var(--ink); stroke-width: 1.4; }
 .volume-legend { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; }
-.volume-scale { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(to right, color-mix(in srgb, var(--accent) 22%, var(--border)), var(--accent)); }
+.volume-scale { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(to right, color-mix(in srgb, var(--accent) var(--volume-floor), var(--border)), var(--accent)); }
 .volume-untrained-key { width: 14px; height: 10px; margin-left: 8px; border-radius: 3px; border: 1.5px dashed var(--under); }
 .volume-hint { margin: 0; font-size: 13px; }
 .volume-lists { flex: 1 1 340px; min-width: 0; display: grid; gap: 8px; }

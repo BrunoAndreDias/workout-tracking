@@ -343,7 +343,7 @@ function DayEditor({ planId, blockId, day, before, exercises, runs, today, dispa
             return (
               <li key={p.exerciseId} className="planned">
                 <span className="planned-main">
-                  <span className={`role-pick role-${p.role}`}>
+                  <span className="role-pick">
                     <span className="role-label">{ROLE_LABEL[p.role]}</span>
                     <span className="stepper-caret" aria-hidden="true">
                       ▾

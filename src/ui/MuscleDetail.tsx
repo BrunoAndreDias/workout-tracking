@@ -91,7 +91,7 @@ export function MuscleDetail({ activation, sub, missing, taken, onPick }: Props)
           )
         })}
       </div>
-      <div className="panel-foot md-foot">
+      <div className="panel-foot">
         <button type="button" className="primary md-pick" disabled={taken} onClick={onPick}>
           {taken ? 'Já adicionado' : 'Escolher'}
         </button>

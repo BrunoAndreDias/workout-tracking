@@ -18,6 +18,7 @@ import { plural } from './format.ts'
 const ZONE_LABEL: Record<VolumeZone, string> = { below: 'abaixo', within: 'na zona', above: 'acima' }
 const sets = (n: number) => plural(n, 'série', 'séries')
 const percent = (n: number, of: number) => `${Math.round((n / of) * 100)}%`
+const VOLUME_FLOOR = 22
 
 interface Selection {
   selected: Muscle | null
@@ -34,7 +35,7 @@ function VolumeFigure({ side, sets: setsOf, most, selected, onSelect }: Selectio
         const group = REGIONS[region].group
         if (!group) return <path key={region} className="bm-region" d={d} />
         const n = setsOf[group]
-        const style = n > 0 ? ({ '--volume': `${Math.round(22 + (n / most) * 78)}%` } as CSSProperties) : undefined
+        const style = n > 0 ? ({ '--volume': `${Math.round(VOLUME_FLOOR + (n / most) * (100 - VOLUME_FLOOR))}%` } as CSSProperties) : undefined
         return (
           <path
             key={region}
@@ -138,7 +139,7 @@ export function BlockMuscles({ days, exercises }: { days: readonly WorkoutDay[];
             <VolumeFigure side="back" sets={setsOf} most={most || 1} {...pick} />
           </div>
           <p className="volume-legend muted">
-            Menos <span className="volume-scale" aria-hidden="true" /> Mais <span className="volume-untrained-key" aria-hidden="true" /> Sem séries
+            Menos <span className="volume-scale" aria-hidden="true" style={{ '--volume-floor': `${VOLUME_FLOOR}%` } as CSSProperties} /> Mais <span className="volume-untrained-key" aria-hidden="true" /> Sem séries
           </p>
           <p className="muted volume-hint">Toca num músculo para o ver na lista.</p>
         </div>

@@ -69,7 +69,7 @@ export default function App({ sync }: { sync: Sync | null }) {
   }, [])
 
   return (
-    <div className="app">
+    <div>
       <div className="page">
         <SyncLine sync={sync} />
 

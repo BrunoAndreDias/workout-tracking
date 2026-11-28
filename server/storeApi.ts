@@ -7,7 +7,7 @@ import { endCompressed } from './compress.ts'
 import { toIsoDate } from '../src/domain/dates.ts'
 import { isStoreKey, STORE_KEYS } from '../src/domain/storeKeys.ts'
 import type { StoreKey } from '../src/domain/storeKeys.ts'
-import { parsePut } from '../src/domain/storeProtocol.ts'
+import { parseHave, parsePut } from '../src/domain/storeProtocol.ts'
 import type { CurrentReply, PutReply, Stored, StoreList, StoreListReply } from '../src/domain/storeProtocol.ts'
 
 /** `current` is null when the store has never been written. */
@@ -112,8 +112,8 @@ const MAX_BODY_BYTES = 64 * 1024 * 1024
  * with nothing new downloads none of the year of stores it already holds.
  */
 function unchangedWithoutDoc(all: StoreList, have: string | null): StoreListReply {
-  const revs = new Map((have ?? '').split(',').map((pair) => [pair.slice(0, pair.lastIndexOf(':')), Number(pair.slice(pair.lastIndexOf(':') + 1))]))
-  return Object.fromEntries(Object.entries(all).map(([key, stored]) => [key, revs.get(key) === stored.rev ? ({ rev: stored.rev } satisfies PutReply) : stored]))
+  const revs: Partial<Record<string, number>> = parseHave(have)
+  return Object.fromEntries(Object.entries(all).map(([key, stored]) => [key, revs[key] === stored.rev ? ({ rev: stored.rev } satisfies PutReply) : stored]))
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {

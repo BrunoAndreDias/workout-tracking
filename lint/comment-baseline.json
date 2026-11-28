@@ -49,7 +49,6 @@
   "src/ui/bodyFront.ts": 1,
   "src/ui/BodyMap.tsx": 6,
   "src/ui/bodyShape.ts": 3,
-  "src/ui/CountField.tsx": 3,
   "src/ui/DateStepper.tsx": 1,
   "src/ui/EquipmentView.tsx": 3,
   "src/ui/ExercisePicker.tsx": 4,
@@ -62,7 +61,6 @@
   "src/ui/RecentSessions.tsx": 1,
   "src/ui/SyncLine.tsx": 1,
   "src/ui/TimedNoteField.tsx": 2,
-  "src/ui/WorkoutPlanEditor.tsx": 3,
   "src/ui/WorkoutSessionCard.tsx": 4,
   "vite.config.ts": 4
 }

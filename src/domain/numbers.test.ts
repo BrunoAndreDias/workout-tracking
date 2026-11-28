@@ -40,6 +40,13 @@ describe('typed numbers', () => {
     expect(parseTyped('8,5', false)).toBeUndefined()
     expect(parseTyped('8.0', false)).toBeUndefined()
   })
+
+  it('ignores a typed number under the minimum, such as 0 sets', () => {
+    expect(parseTyped('0', false, 1)).toBeUndefined()
+    expect(parseTyped('1', false, 1)).toBe(1)
+    expect(parseTyped('0', false)).toBe(0)
+    expect(parseTyped('', false, 1)).toBeNull()
+  })
 })
 
 describe('ranges and ratios', () => {

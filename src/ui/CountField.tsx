@@ -1,22 +1,27 @@
-import { useState } from 'react'
 import { decimalText, parseTyped } from '../domain/numbers.ts'
+import { useDraftText } from './useDraftText.ts'
 
-interface Props {
-  value: number | null
-  /** Called with null when the box is emptied, unless `required`. */
-  onCommit: (value: number | null) => void
+type Props = {
   label: string
-  /** Allows kg decimals, typed with a comma or a point and rounded to two places. */
   decimal?: boolean
-  required?: boolean
+  min?: number
   placeholder?: string
   className?: string
-}
+} & ({ required: true; value: number; onCommit: (value: number) => void } | { required?: false; value: number | null; onCommit: (value: number | null) => void })
 
-// Keeps the raw text while typing, as RangeField does, so "62," is not rewritten under the cursor.
-export function CountField({ value, onCommit, label, decimal = false, required = false, placeholder, className = 'count-input' }: Props) {
-  const [text, setText] = useState<string | null>(null)
-  const shown = text ?? (value === null ? '' : decimalText(value))
+const countText = (value: number | null) => (value === null ? '' : decimalText(value))
+
+export function CountField(props: Props) {
+  const { label, decimal = false, min = 0, placeholder, className = 'count-input' } = props
+  const parse = (text: string) => {
+    const n = parseTyped(text, decimal, min)
+    return n === null && props.required ? undefined : n
+  }
+  const commit = (n: number | null) => {
+    if (!props.required) props.onCommit(n)
+    else if (n !== null) props.onCommit(n)
+  }
+  const draft = useDraftText(props.value, countText, parse, commit)
   return (
     <input
       className={className}
@@ -24,14 +29,8 @@ export function CountField({ value, onCommit, label, decimal = false, required =
       inputMode={decimal ? 'decimal' : 'numeric'}
       aria-label={label}
       placeholder={placeholder}
-      value={shown}
       onFocus={(e) => e.currentTarget.select()}
-      onChange={(e) => {
-        setText(e.target.value)
-        const n = parseTyped(e.target.value, decimal)
-        if (n !== undefined && (n !== null || !required)) onCommit(n)
-      }}
-      onBlur={() => setText(null)}
+      {...draft}
     />
   )
 }

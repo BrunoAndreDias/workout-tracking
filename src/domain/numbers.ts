@@ -16,10 +16,10 @@ export const rangeText = ({ min, max }: { readonly min: number; readonly max: nu
 const DECIMAL = /^(\d+([.,]\d*)?|[.,]\d+)$/
 const INTEGER = /^\d+$/
 
-export function parseTyped(raw: string, allowDecimals: boolean): number | null | undefined {
+export function parseTyped(raw: string, allowDecimals: boolean, min = 0): number | null | undefined {
   const text = raw.trim()
   if (text === '') return null
   if (!(allowDecimals ? DECIMAL : INTEGER).test(text)) return undefined
   const n = roundKg(Number(text.replace(',', '.')))
-  return n <= MAX_TYPED ? n : undefined
+  return n >= min && n <= MAX_TYPED ? n : undefined
 }

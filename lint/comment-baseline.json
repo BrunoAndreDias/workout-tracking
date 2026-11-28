@@ -31,7 +31,7 @@
   "src/domain/equipmentStorage.ts": 1,
   "src/domain/exerciseCatalog.ts": 6,
   "src/domain/muscles.ts": 13,
-  "src/domain/notes.ts": 7,
+  "src/domain/notes.ts": 6,
   "src/domain/persistence.ts": 6,
   "src/domain/progression.ts": 1,
   "src/domain/rating.ts": 2,

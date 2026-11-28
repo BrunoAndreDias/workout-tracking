@@ -43,7 +43,7 @@ describe('material an Exercise needs', () => {
 
 describe('what the active Gym lacks', () => {
   it('judges nothing with no Gym', () => {
-    expect(missingAt(freshEquipment(), 'Flat Barbell Bench Press')).toBeNull()
+    expect(missingAt(freshEquipment(), 'Flat Barbell Bench Press')).toEqual([])
   })
 
   it('lists the needed material the active Gym does not have', () => {

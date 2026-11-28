@@ -5,7 +5,7 @@ import { doneMuscleSets, MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
 import { ROLE_REPS } from '../domain/splits.ts'
 import type { ExerciseId, WorkoutSessionId } from '../domain/types.ts'
-import { aimedAt, doneSets, inTarget, nameLookup } from '../domain/workouts.ts'
+import { aimedAt, doneSets, inTarget, loggedCounts, nameLookup } from '../domain/workouts.ts'
 import { suggestion } from '../domain/sessions.ts'
 import type { Exercise, PlannedExercise, SessionExercise, WorkoutDay, WorkoutSession } from '../domain/workouts.ts'
 import type { SetValues, WorkoutAction } from '../domain/workoutReducer.ts'
@@ -37,7 +37,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
   const planned = new Map<ExerciseId, PlannedExercise>(day?.exercises.map((p) => [p.exerciseId, p]))
   const sessionId = session.id
   const total = session.exercises.reduce((n, e) => n + e.sets.length, 0)
-  const done = session.exercises.reduce((n, e) => n + doneSets(e), 0)
+  const done = loggedCounts(session).sets
   const current = session.exercises.find((e) => e.sets.some((s) => !s.done))?.exerciseId
   return (
     <section className="card session" aria-label={title}>

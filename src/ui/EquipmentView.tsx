@@ -135,7 +135,7 @@ function OwnEquipment() {
 function ExerciseNeeds({ name, sub }: { name: string; sub: string }) {
   const { state, dispatch } = useContext(EquipmentContext)
   const needs = needsOf(state, name)
-  const missing = missingAt(state, name) ?? []
+  const missing = missingAt(state, name)
   const set = (next: readonly EquipmentId[]) => dispatch({ type: 'setNeeds', name, needs: next })
   const addable = allEquipment(state).filter((e) => !needs.includes(e.id))
   return (

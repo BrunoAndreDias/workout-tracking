@@ -1,7 +1,7 @@
 const decimal = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2, useGrouping: false })
 const oneDecimal = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false })
 
-const MAX_TYPED = 9999
+export const MAX_TYPED = 9999
 
 export const roundKg = (kg: number) => Math.round(kg * 100) / 100
 

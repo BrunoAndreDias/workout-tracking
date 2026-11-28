@@ -1,23 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { memoryStorage } from './domain/memoryStorage.ts'
 import { startSync } from './sync.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
 const EXERCISES = 'workout-tracking:exercises'
 const THEME = 'workout-tracking:theme'
-
-function memoryStorage(initial: Record<string, string> = {}) {
-  const data: Record<string, string> = { ...initial }
-  return {
-    data,
-    getItem: (k: string) => data[k] ?? null,
-    setItem: (k: string, v: string) => void (data[k] = v),
-    removeItem: (k: string) => void delete data[k],
-    key: (i: number) => Object.keys(data)[i] ?? null,
-    get length() {
-      return Object.keys(data).length
-    },
-  }
-}
+const EQUIPMENT = 'workout-tracking:equipment'
 
 /** The store API's rules over a map: a write needs the current rev, and `up: false` refuses every request. */
 function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) {
@@ -68,7 +56,7 @@ describe('startSync', () => {
     const sync = await startSync({ storage, fetch: server.fetch })
     expect(storage.data[PLANS]).toBe('{"v":"server"}')
     expect(server.stores.get(PLANS)).toEqual({ doc: '{"v":"server"}', rev: 3 })
-    expect(sync.status()).toBe('ligado')
+    expect(sync.status()).toBe('connected')
   })
 
   it('keeps a never-synced browser’s own copy aside, unsent, before taking the server’s', async () => {
@@ -157,7 +145,7 @@ describe('startSync', () => {
     const second = await startSync({ storage, fetch: server.fetch })
     expect(storage.data[EXERCISES]).toBe('"offline edit"')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"offline edit"', rev: 2 })
-    expect(second.status()).toBe('ligado')
+    expect(second.status()).toBe('connected')
   })
 
   it('stops at a conflict, and after dropConflicts the next start takes the other device’s copy', async () => {
@@ -167,7 +155,7 @@ describe('startSync', () => {
     server.stores.set(EXERCISES, { doc: '"other device"', rev: 2 })
     sync.storage.setItem(EXERCISES, '"here"')
     await sync.flush()
-    expect(sync.status()).toBe('conflito')
+    expect(sync.status()).toBe('conflict')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"other device"', rev: 2 })
     sync.dropConflicts()
     await startSync({ storage, fetch: server.fetch })
@@ -197,7 +185,7 @@ describe('startSync', () => {
     expect(sync.status()).toBe('offline')
     broken = false
     await sync.flush()
-    expect(sync.status()).toBe('ligado')
+    expect(sync.status()).toBe('connected')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"local"', rev: 1 })
   })
 
@@ -216,7 +204,7 @@ describe('startSync', () => {
     }
     answer = undefined
     await sync.flush()
-    expect(sync.status()).toBe('ligado')
+    expect(sync.status()).toBe('connected')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"b"', rev: 2 })
   })
 
@@ -244,12 +232,12 @@ describe('startSync', () => {
     expect(sync.status()).toBe('offline')
     server.up = true
     await vi.advanceTimersByTimeAsync(1000)
-    expect(sync.status()).toBe('ligado')
+    expect(sync.status()).toBe('connected')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"b"', rev: 2 })
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('after a failed start, retries until the server answers, then says ligado', async () => {
+  it('after a failed start, retries until the server answers, then says connected', async () => {
     const server = fakeServer({ [EXERCISES]: { doc: '"a"', rev: 1 } })
     server.up = false
     const storage = memoryStorage()
@@ -259,12 +247,12 @@ describe('startSync', () => {
     sync.subscribe(() => seen.push(sync.status()))
     server.up = true
     await vi.advanceTimersByTimeAsync(1000)
-    expect(seen).toEqual(['ligado'])
+    expect(seen).toEqual(['connected'])
     expect(storage.data[EXERCISES]).toBeUndefined()
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it.each([400, 404])('says recusado on a %i to a change and never sends that store again until the next start', async (code) => {
+  it.each([400, 404])('says refused on a %i to a change and never sends that store again until the next start', async (code) => {
     const server = fakeServer({ [EXERCISES]: { doc: '"a"', rev: 1 }, [PLANS]: { doc: '"p"', rev: 1 } })
     const puts: string[] = []
     const request = (url: string | URL | Request, init?: RequestInit) => {
@@ -276,7 +264,7 @@ describe('startSync', () => {
     const sync = await startSync({ storage, fetch: request, debounceMs: 10, retryMs: 1000 })
     sync.storage.setItem(EXERCISES, '"b"')
     await vi.advanceTimersByTimeAsync(10)
-    expect(sync.status()).toBe('recusado')
+    expect(sync.status()).toBe('refused')
     expect(puts).toHaveLength(1)
     sync.storage.setItem(EXERCISES, '"c"')
     await vi.advanceTimersByTimeAsync(5000)
@@ -286,16 +274,16 @@ describe('startSync', () => {
     sync.storage.setItem(PLANS, '"q"')
     await vi.advanceTimersByTimeAsync(10)
     expect(server.stores.get(PLANS)).toEqual({ doc: '"q"', rev: 2 })
-    expect(sync.status()).toBe('recusado')
+    expect(sync.status()).toBe('refused')
     server.up = false
     sync.storage.setItem(PLANS, '"r"')
     await vi.advanceTimersByTimeAsync(10)
-    expect(sync.status()).toBe('recusado')
+    expect(sync.status()).toBe('refused')
     expect(vi.getTimerCount()).toBe(0)
     server.up = true
     const again = await startSync({ storage, fetch: request })
     expect(puts.filter((url) => url.endsWith(encodeURIComponent(EXERCISES)))).toHaveLength(2)
-    expect(again.status()).toBe('recusado')
+    expect(again.status()).toBe('refused')
   })
 
   it('goes offline on a 503 and retries until the server takes the change', async () => {
@@ -308,8 +296,26 @@ describe('startSync', () => {
     expect(sync.status()).toBe('offline')
     failing = false
     await vi.advanceTimersByTimeAsync(1000)
-    expect(sync.status()).toBe('ligado')
+    expect(sync.status()).toBe('connected')
     expect(server.stores.get(EXERCISES)).toEqual({ doc: '"b"', rev: 2 })
+  })
+
+  it.each([
+    [[409, 413, 503], 'conflict'],
+    [[413, 503], 'refused'],
+    [[503, 200], 'offline'],
+    [[200], 'connected'],
+  ] as const)('ranks the answers %j to one send as %s', async (codes, status) => {
+    const keys = [EXERCISES, PLANS, EQUIPMENT]
+    const server = fakeServer(Object.fromEntries(keys.map((key) => [key, { doc: '"a"', rev: 1 }])))
+    const request = (url: string | URL | Request, init?: RequestInit) => {
+      const code = init?.method === 'PUT' ? codes[keys.findIndex((key) => String(url).endsWith(encodeURIComponent(key)))] : undefined
+      return code === undefined || code === 200 ? server.fetch(url, init) : Promise.resolve(new Response(null, { status: code }))
+    }
+    const sync = await startSync({ storage: memoryStorage(), fetch: request, debounceMs: 60_000 })
+    codes.forEach((_code, i) => sync.storage.setItem(keys[i], '"b"'))
+    await sync.flush()
+    expect(sync.status()).toBe(status)
   })
 
   it('shows a conflict over a refused change, and either over offline', async () => {
@@ -319,10 +325,10 @@ describe('startSync', () => {
     const sync = await startSync({ storage: memoryStorage(), fetch: request, debounceMs: 60_000 })
     sync.storage.setItem(PLANS, '"q"')
     await sync.flush()
-    expect(sync.status()).toBe('recusado')
+    expect(sync.status()).toBe('refused')
     server.stores.set(EXERCISES, { doc: '"other device"', rev: 2 })
     sync.storage.setItem(EXERCISES, '"here"')
     await sync.flush()
-    expect(sync.status()).toBe('conflito')
+    expect(sync.status()).toBe('conflict')
   })
 })

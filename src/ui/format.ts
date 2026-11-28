@@ -3,6 +3,7 @@ import { equipmentLabel } from '../domain/equipment.ts'
 import type { EquipmentId, EquipmentState } from '../domain/equipment.ts'
 import type { TimedNote } from '../domain/notes.ts'
 import type { IsoDate, LocalDateTime } from '../domain/types.ts'
+import type { AppData } from '../domain/stores.ts'
 import { AFTER_EFFECT_DAYS } from '../domain/sessions.ts'
 import { findDay } from '../domain/blocks.ts'
 import { rangeText } from '../domain/numbers.ts'
@@ -18,6 +19,13 @@ export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: numbe
 
 /** "1 série", "3 séries" */
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+export const describeBackup = ({ workoutPlans, workoutSessions, equipment }: AppData): string =>
+  [
+    plural(workoutPlans.plans.length, 'plano de treino', 'planos de treino'),
+    plural(workoutSessions.length, 'treino', 'treinos'),
+    plural(equipment.gyms.length, 'local de treino', 'locais de treino'),
+  ].join(', ')
 
 /** The Workout Day a session started from, by its current name. */
 export function sessionTitle(session: WorkoutSession, plans: readonly WorkoutPlan[]): string {

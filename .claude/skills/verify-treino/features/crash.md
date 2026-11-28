@@ -6,7 +6,7 @@ When the app fails to start, or a render throws, the page shows `Algo correu mal
 
 - `crash-start` shows the crash page when starting fails: the sync start or loading the app's code (`main.tsx`).
 - `crash-render` shows it when any component throws while rendering (`RootErrorBoundary`).
-- `crash-export` downloads the Backup from localStorage; a store left out is named in an inline `alert`.
+- `crash-export` downloads the Backup from localStorage. A store left out, or an export that throws, shows the same inline `alert` as the export at the bottom of `Treino` (`backup.md`).
 - `crash-reload` reloads the page.
 
 ## How to get to it (user POV)
@@ -20,7 +20,8 @@ Preconditions: a fresh `openApp`, or a server seeded with `e2e/fixtures/treino-b
 - **Failed start.** `openApp` has already loaded the app, so add `page.route('**/src/App.tsx*', (r) => r.abort())`, then `page.reload()` and wait for the heading `Algo correu mal no Treino.`.
 - **Render throws.** `page.route('**/src/ui/SyncLine.tsx*', (r) => r.fulfill({ contentType: 'text/javascript', body: "export function SyncLine() { throw new Error('x') }" }))` and reload: the same heading shows.
 - **Export.** `app.download(page.getByRole('button', { name: 'Exportar dados' }))`: `treino-<today>.json`, and its `stores` equal what the server held. `e2e/crash.mjs` drives all of this, but not the skipped store.
-- **Skipped store.** `putStore(page, APP_URL, 'equipment', { version: 999 })`, then the failed start and `Exportar dados`: `getByRole('alert')` reads `Não foi possível exportar: material.`, and the file has no `equipment`.
+- **Skipped store.** `putStore(page, APP_URL, 'equipment', { version: 999 })`, then the failed start and `Exportar dados`: `getByRole('alert')` reads `Não foi possível exportar: material. Os dados guardados no navegador não são válidos e ficaram de fora do ficheiro.`, and the file has no `equipment`.
+- **Failed export.** `page.evaluate(() => { URL.createObjectURL = () => { throw new Error('x') } })`, then `Exportar dados`: `getByRole('alert')` reads `Não foi possível exportar os dados.` `e2e/crash.mjs` drives this.
 
 ## Gotchas
 

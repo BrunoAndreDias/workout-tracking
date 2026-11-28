@@ -1,8 +1,7 @@
 import { Component, useState } from 'react'
 import type { ReactNode } from 'react'
 import { defaultStorage } from '../domain/persistence.ts'
-import { STORES } from '../domain/stores.ts'
-import { downloadBackup } from './exportFile.ts'
+import { downloadBackup, exportProblem } from './exportFile.ts'
 import { Notice } from './Notice.tsx'
 
 export function CrashPage() {
@@ -11,12 +10,7 @@ export function CrashPage() {
   const exportData = () => {
     const storage = defaultStorage()
     if (!storage) return setProblem('O armazenamento do navegador não está disponível.')
-    try {
-      const skipped = downloadBackup(storage)
-      setProblem(skipped.length > 0 ? `Não foi possível exportar: ${skipped.map((name) => STORES[name].label).join(', ')}.` : null)
-    } catch {
-      setProblem('Não foi possível exportar os dados.')
-    }
+    setProblem(exportProblem(downloadBackup(storage)))
   }
 
   return (

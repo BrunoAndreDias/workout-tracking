@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeBackup, exportBackup, mergeBackup, parseBackup, writeAll } from './backup.ts'
+import { exportBackup, mergeBackup, parseBackup, writeAll } from './backup.ts'
 import { freshEquipment, needsOf } from './equipment.ts'
 import type { EquipmentAction } from './equipment.ts'
 import type { AppData } from './stores.ts'
@@ -9,7 +9,6 @@ import { loadAll, saveStore, STORES } from './stores.ts'
 import { memoryStorage } from './memoryStorage.ts'
 import { CASA, ELASTICOS, SUPINO, material, note } from './workoutFixtures.ts'
 
-/** Fails like a full localStorage: the nth write throws. */
 function quotaStorage(initial: Record<string, string>, failOn: number) {
   const storage = memoryStorage(initial)
   const write = storage.setItem
@@ -64,13 +63,12 @@ describe('backup', () => {
     expect(file.stores.workoutSessions).toEqual(JSON.parse(storage.data[STORES.workoutSessions.key]))
     const data = parsed(JSON.parse(JSON.stringify(file)))
     expect(data).toEqual(loadAll(storage))
-    expect(describeBackup(data)).toBe('1 plano de treino, 1 treino, 1 local de treino')
   })
 
   it('leaves out stores that are missing and accepts them missing', () => {
     const { file } = exportBackup(memoryStorage())
     expect(file.stores).toEqual({})
-    expect(describeBackup(parsed(file))).toBe('0 planos de treino, 0 treinos, 0 locais de treino')
+    expect(parsed(file)).toEqual(loadAll(memoryStorage()))
   })
 
   it('imports a Backup from before the Apple Watch was removed, ignoring its watch stores', () => {
@@ -155,7 +153,6 @@ describe('backup', () => {
 
   describe('applying is all or nothing', () => {
     const FAILED = { ok: false, error: 'Não foi possível guardar os dados: o armazenamento do navegador não tem espaço. Não foi alterado nada.' }
-    // Exercises are absent, so the failed import must also remove the key it had already created.
     const before = () => {
       const storage = filled()
       delete storage.data[STORES.exercises.key]

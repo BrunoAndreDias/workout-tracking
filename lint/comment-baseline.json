@@ -21,8 +21,6 @@
   "src/dictation/useDictation.ts": 4,
   "src/dictation/whisper.worker.ts": 2,
   "src/domain/anatomy.ts": 9,
-  "src/domain/backup.test.ts": 2,
-  "src/domain/backup.ts": 9,
   "src/domain/blocks.ts": 8,
   "src/domain/catalogEntries.ts": 1,
   "src/domain/catalogMuscles.ts": 1,

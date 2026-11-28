@@ -1,4 +1,4 @@
-import { kgText, rangeText, roundKg } from './numbers.ts'
+import { kgText, MAX_TYPED, rangeText, roundKg } from './numbers.ts'
 import { inTarget, LOAD_INCREMENT, SMALL_LOAD_BELOW, SMALL_LOAD_INCREMENT } from './workouts.ts'
 import type { DoneSet, RepRange, RirTarget } from './workouts.ts'
 
@@ -38,7 +38,7 @@ const sentence = (cause: string, text: string) => (cause ? cause + text : text[0
 function loadStep(load: number, direction: 1 | -1): number | null {
   const step = load < SMALL_LOAD_BELOW ? SMALL_LOAD_INCREMENT : LOAD_INCREMENT
   const next = roundKg(load + direction * step)
-  return next > 0 ? next : null
+  return next > 0 && next <= MAX_TYPED ? next : null
 }
 
 function effortChange(previous: RirTarget, next: RirTarget): string {

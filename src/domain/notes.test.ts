@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendNote, editNote, parseTimedNote, toLocalDateTime } from './notes.ts'
-import type { TimedNote } from './notes.ts'
+import { editNote, parseTimedNote, toLocalDateTime } from './notes.ts'
 import { at } from './workoutFixtures.ts'
 
 const T1 = at('2026-10-06T18:50:12')
@@ -35,14 +34,5 @@ describe('timed notes', () => {
     expect(parseTimedNote({ text: ' ', createdAt: '2026-10-06T12:00:00', updatedAt: '2026-10-06T12:00:00' })).toBe(null)
     expect(parseTimedNote({ text: 'Bem', createdAt: '2026-02-30T12:00:00', updatedAt: '2026-10-06T12:00:00' })).toBe(null)
     expect(parseTimedNote({ text: 'Bem', createdAt: '2026-10-06T24:00:00', updatedAt: '2026-10-06T12:00:00' })).toBe(null)
-  })
-
-  it('appends only the lines a note lacks, so appending twice changes nothing', () => {
-    const mood: TimedNote = { text: 'Bem disposto', createdAt: at('2026-10-06T09:00:00'), updatedAt: at('2026-10-06T21:00:00') }
-    const pain: TimedNote = { text: 'Dor: Lombar 5/10 · 14:00', createdAt: at('2026-10-06T14:00:00'), updatedAt: at('2026-10-06T14:00:00') }
-    const once = appendNote(mood, pain)
-    expect(once).toEqual({ text: 'Bem disposto\nDor: Lombar 5/10 · 14:00', createdAt: '2026-10-06T09:00:00', updatedAt: '2026-10-06T21:00:00' })
-    expect(appendNote(once, pain)).toBe(once)
-    expect(appendNote(undefined, pain)).toBe(pain)
   })
 })

@@ -28,17 +28,8 @@ export function ExerciseRunsNotice({ planId, block, due, exercises, today, dispa
   const blockId = block.id
   const days: readonly WorkoutDay[] = block.days
   const daysOf = (run: ExerciseRun) => days.filter((d) => run.dayIds.includes(d.id))
-  const extend = (run: ExerciseRun) => {
-    const weeks = runExtended(run)
-    for (const day of daysOf(run)) {
-      const planned = day.exercises.find((p) => p.exerciseId === run.exerciseId)
-      if (planned) dispatch({ type: 'setPlannedExercise', planId, blockId, dayId: day.id, planned: { ...planned, weeks } })
-    }
-  }
-  const swap = (run: ExerciseRun, name: string) => {
-    const newExerciseId = newId<ExerciseId>()
-    for (const dayId of run.dayIds) dispatch({ type: 'swapPlannedExercise', planId, blockId, dayId, exerciseId: run.exerciseId, name, newExerciseId, today })
-  }
+  const extend = (run: ExerciseRun) => dispatch({ type: 'extendExerciseRun', planId, blockId, exerciseId: run.exerciseId, weeks: runExtended(run) })
+  const swap = (run: ExerciseRun, name: string) => dispatch({ type: 'swapExerciseRun', planId, blockId, exerciseId: run.exerciseId, name, newExerciseId: newId<ExerciseId>(), today })
 
   return (
     <section className="block-notice" aria-label="Exercícios a rever">

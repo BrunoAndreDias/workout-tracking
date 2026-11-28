@@ -1,4 +1,4 @@
-import { isBuiltIn, isCustomEquipmentId } from './equipment.ts'
+import { isCustomEquipmentId, isEquipmentList } from './equipment.ts'
 import type { CustomEquipment, EquipmentId, EquipmentState, Gym } from './equipment.ts'
 import { isId } from './persistence.ts'
 import { isRecord } from './records.ts'
@@ -22,8 +22,7 @@ export function parseEquipment(raw: unknown): EquipmentState | null {
     if (!isRecord(c) || !isCustomEquipmentId(c.id) || !isName(c.name) || custom.some((x) => x.id === c.id)) return null
     custom.push({ id: c.id, name: c.name })
   }
-  const isKnown = (id: unknown): id is EquipmentId => typeof id === 'string' && (isBuiltIn(id) || custom.some((c) => c.id === id))
-  const idList = (v: unknown): EquipmentId[] | null => (Array.isArray(v) && v.every(isKnown) && new Set(v).size === v.length ? v : null)
+  const idList = (v: unknown): EquipmentId[] | null => (isEquipmentList(custom, v) ? v : null)
 
   const gyms: Gym[] = []
   for (const g of rawGyms) {

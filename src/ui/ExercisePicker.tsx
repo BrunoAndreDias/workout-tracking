@@ -74,7 +74,7 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   const detailEntry = detail === null ? undefined : catalogEntry(detail)
   const activation = detailEntry && activationByName(detailEntry.name)
   if (detailEntry && activation) {
-    const missing = missingAt(equipment, detailEntry.name) ?? []
+    const missing = missingAt(equipment, detailEntry.name)
     return (
       <Panel
         eyebrow="Músculos trabalhados"
@@ -150,7 +150,7 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
 
   const row = (name: string, group: string) => {
     const isTaken = takenKeys.has(exerciseKey(name))
-    const missing = missingAt(equipment, name) ?? []
+    const missing = missingAt(equipment, name)
     const worked = activationByName(name)
     return (
       <li key={name} className="pick-row">

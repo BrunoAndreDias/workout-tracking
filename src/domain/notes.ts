@@ -31,22 +31,6 @@ export function editNote(prev: TimedNote | undefined, text: string, now: LocalDa
   return { text, createdAt: prev?.createdAt ?? now, updatedAt: now }
 }
 
-/**
- * `incoming`'s lines that `prev` lacks, appended after its text; `prev` itself when it has them all, so appending
- * the same note twice changes nothing. The result spans both notes' times.
- */
-export function appendNote(prev: TimedNote | undefined, incoming: TimedNote): TimedNote {
-  if (!prev) return incoming
-  const have = new Set(prev.text.split('\n'))
-  const missing = incoming.text.split('\n').filter((line) => line.trim() !== '' && !have.has(line))
-  if (missing.length === 0) return prev
-  return {
-    text: [prev.text, ...missing].join('\n'),
-    createdAt: prev.createdAt < incoming.createdAt ? prev.createdAt : incoming.createdAt,
-    updatedAt: prev.updatedAt > incoming.updatedAt ? prev.updatedAt : incoming.updatedAt,
-  }
-}
-
 export function parseTimedNote(raw: unknown): TimedNote | null {
   if (!isRecord(raw) || typeof raw.text !== 'string' || raw.text.trim() === '') return null
   const createdAt = parseLocalDateTime(raw.createdAt)
@@ -54,8 +38,8 @@ export function parseTimedNote(raw: unknown): TimedNote | null {
   return createdAt && updatedAt && { text: raw.text, createdAt, updatedAt }
 }
 
-/** An optional note field: absent is no note, present must parse. `false` when present and bad. */
-export function parseOptionalNote(raw: unknown): TimedNote | undefined | false {
+/** An optional note field: absent is no note, present must parse. `null` when present and bad. */
+export function parseOptionalNote(raw: unknown): TimedNote | null | undefined {
   if (raw === undefined) return undefined
-  return parseTimedNote(raw) ?? false
+  return parseTimedNote(raw)
 }

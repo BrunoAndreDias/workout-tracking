@@ -1,4 +1,5 @@
-import { catalogById, catalogEntry, resolveExercise } from './exerciseCatalog.ts'
+import { catalogById, catalogEntry } from './exerciseCatalog.ts'
+import { resolveExercise } from './names.ts'
 import type { CatalogId } from './catalogEntries.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId } from './types.ts'
 import type { BlockOf, DaysOf, Exercise, RepRange, RirRange, RirTarget, Role, Split, WorkoutDay } from './workouts.ts'

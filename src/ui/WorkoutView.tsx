@@ -6,6 +6,7 @@ import type { IsoDate, WorkoutSessionId } from '../domain/types.ts'
 import { blockChanges, currentBlock, exerciseRuns, findDay, nextDay } from '../domain/blocks.ts'
 import { sessionsBefore, sessionsOn } from '../domain/sessions.ts'
 import type { BlockPosition } from '../domain/blocks.ts'
+import { nameLookup } from '../domain/workouts.ts'
 import type { Exercise, WorkoutBlock, WorkoutDay, WorkoutState } from '../domain/workouts.ts'
 import type { WorkoutAction } from '../domain/workoutReducer.ts'
 import { DateStepper } from './DateStepper.tsx'
@@ -34,12 +35,12 @@ function blockLine(block: WorkoutBlock, position: BlockPosition | null): string 
 
 function BlockNotice({ block, previous, exercises }: { block: WorkoutBlock; previous: WorkoutBlock; exercises: readonly Exercise[] }) {
   const { entering, leaving } = blockChanges(previous, block)
-  const names = (ids: readonly string[]) => ids.map((id) => exercises.find((e) => e.id === id)?.name ?? 'Exercício desconhecido').join(', ')
+  const nameOf = nameLookup(exercises)
   return (
     <section className="block-notice" aria-label="Novo bloco">
       <p className="block-notice-title">Começa o {block.name} esta semana.</p>
-      {entering.length > 0 && <p>Entram: {names(entering)}</p>}
-      {leaving.length > 0 && <p>Saem: {names(leaving)}</p>}
+      {entering.length > 0 && <p>Entram: {entering.map(nameOf).join(', ')}</p>}
+      {leaving.length > 0 && <p>Saem: {leaving.map(nameOf).join(', ')}</p>}
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { involvement, mainSide, REGIONS, workedOn } from '../domain/anatomy.ts'
-import type { Activation, Region, Side } from '../domain/anatomy.ts'
+import type { Side } from '../domain/anatomy.ts'
+import type { Activation, Region } from '../domain/catalogMuscles.ts'
 import { HALVES, regionsOf } from './bodyHalves.ts'
 import { FIGURE_BOX, MIRROR, SIDE_LABEL } from './bodyShape.ts'
 

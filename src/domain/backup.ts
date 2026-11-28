@@ -4,7 +4,7 @@ import { saveStore, STORE_NAMES, STORES } from './stores.ts'
 import type { AppData, StoreName } from './stores.ts'
 import type { ExerciseId } from './types.ts'
 import { mergeEquipment } from './equipment.ts'
-import { findExercise } from './exerciseCatalog.ts'
+import { findExercise } from './names.ts'
 import { mapPlanDays } from './workoutReducer.ts'
 import { afterEffectKey } from './workouts.ts'
 

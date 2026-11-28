@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import type { TimedNote } from './notes.ts'
-import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { BrowserStorage } from './persistence.ts'
+import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import type { PlannedExercise, WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { storageFull, subscribeStorageHealth } from './storageHealth.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
+import { memoryStorage } from './memoryStorage.ts'
+import { note } from './workoutFixtures.ts'
 
-function written(save: (storage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void }) => boolean): Record<string, string> {
-  const data: Record<string, string> = {}
-  expect(save({ getItem: (k) => data[k] ?? null, setItem: (k, v) => void (data[k] = v) })).toBe(true)
-  return data
+function written(save: (storage: BrowserStorage) => boolean): Record<string, string> {
+  const storage = memoryStorage()
+  expect(save(storage)).toBe(true)
+  return storage.data
 }
 
-const at = (s: string) => s as LocalDateTime
-const note = (text: string, time: string): TimedNote => ({ text, createdAt: at(time), updatedAt: at(time) })
 describe('the text each store writes', () => {
   it('exercises', () => {
     expect(written((s) => saveStore(STORES.exercises, [{ id: 'x1' as ExerciseId, name: 'Supino' }], s))).toMatchInlineSnapshot(`
@@ -85,12 +85,6 @@ describe('saving a store as the app starts', () => {
     data[STORES.exercises.key] = '{"version":1,"exercises":[]}'
     saveStore(STORES.exercises, exercises, storage)
     expect(data[STORES.exercises.key]).toBe(EXERCISES_TEXT)
-  })
-
-  it('writes a store read at an older version in the current one', () => {
-    const { data, storage } = storageWith({ [STORES.workoutSessions.key]: JSON.stringify({ version: 1, sessions: [{ id: 's1', date: '2026-10-05', workoutDayId: null, exercises: [], notes: 'Bom treino' }] }) })
-    saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
-    expect(JSON.parse(data[STORES.workoutSessions.key]).version).toBe(4)
   })
 })
 

@@ -1,33 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { describeBackup, exportBackup, mergeBackup, parseBackup, writeAll } from './backup.ts'
-import { equipmentReducer, freshEquipment, needsOf } from './equipment.ts'
+import { freshEquipment, needsOf } from './equipment.ts'
 import type { EquipmentAction } from './equipment.ts'
-import type { TimedNote } from './notes.ts'
 import type { AppData } from './stores.ts'
-import type { CustomEquipmentId, ExerciseId, GymId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { ExerciseId, GymId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import type { WorkoutPlan, WorkoutSession } from './workouts.ts'
 import { loadAll, saveStore, STORES } from './stores.ts'
-
-function memoryStorage(initial: Record<string, string> = {}) {
-  const data = { ...initial }
-  return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v), removeItem: (k: string) => void delete data[k] }
-}
+import { memoryStorage } from './memoryStorage.ts'
+import { CASA, ELASTICOS, SUPINO, material, note } from './workoutFixtures.ts'
 
 /** Fails like a full localStorage: the nth write throws. */
 function quotaStorage(initial: Record<string, string>, failOn: number) {
   const storage = memoryStorage(initial)
+  const write = storage.setItem
   let writes = 0
-  return {
-    ...storage,
-    setItem: (k: string, v: string) => {
-      if (++writes === failOn) throw new Error('QuotaExceededError')
-      storage.setItem(k, v)
-    },
+  storage.setItem = (k: string, v: string) => {
+    if (++writes === failOn) throw new Error('QuotaExceededError')
+    write(k, v)
   }
+  return storage
 }
 
-const SUPINO = { id: 'ex-supino' as ExerciseId, name: 'Supino' }
-const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO.id, role: 'main' as const, sets: 3, reps: { min: 8, max: 12 }, weeks: null, since: null }] }
+const SUPINO_EXERCISE = { id: SUPINO, name: 'Supino' }
+const PEITO_DAY = { id: 'wd-1' as WorkoutDayId, name: 'Peito', exercises: [{ exerciseId: SUPINO, role: 'main' as const, sets: 3, reps: { min: 8, max: 12 }, weeks: null, since: null }] }
 const restDay = (id: string) => ({ id: id as WorkoutDayId, name: id, exercises: [] })
 const PEITO: WorkoutPlan = {
   id: 'wp-1' as WorkoutPlanId,
@@ -42,18 +37,14 @@ const workout = (id: string, exerciseId: ExerciseId): WorkoutSession => ({
   workoutDayId: null,
   exercises: [{ exerciseId, sets: [{ done: true, reps: 8, kg: 60, rir: null }] }],
 })
-const note = (text: string, at = '2026-05-01T21:00:00'): TimedNote => ({ text, createdAt: at as LocalDateTime, updatedAt: at as LocalDateTime })
-const CASA = 'gym-casa' as GymId
-const ELASTICOS = 'mat:elasticos' as CustomEquipmentId
-const material = (...actions: EquipmentAction[]) => actions.reduce(equipmentReducer, freshEquipment())
 const casaWith = (...actions: EquipmentAction[]) => material({ type: 'addGym', gymId: CASA, name: 'Casa' }, { type: 'addCustom', id: ELASTICOS, name: 'Elásticos' }, ...actions)
 const EMPTY: AppData = { exercises: [], workoutPlans: { plans: [], activePlanId: null }, workoutSessions: [], equipment: freshEquipment() }
 
 function filled() {
   const storage = memoryStorage()
-  saveStore(STORES.exercises, [SUPINO], storage)
+  saveStore(STORES.exercises, [SUPINO_EXERCISE], storage)
   saveStore(STORES.workoutPlans, { plans: [PEITO], activePlanId: PEITO.id }, storage)
-  saveStore(STORES.workoutSessions, [workout('ws-1', SUPINO.id)], storage)
+  saveStore(STORES.workoutSessions, [workout('ws-1', SUPINO)], storage)
   saveStore(STORES.equipment, casaWith({ type: 'toggleHas', gymId: CASA, equipmentId: ELASTICOS }), storage)
   return storage
 }
@@ -92,17 +83,17 @@ describe('backup', () => {
 
   it.each([
     ['not a backup', { foo: 1 }, 'Este ficheiro não é uma cópia de segurança do Treino.'],
-    ['a meal app Backup', { app: 'plano-alimentar', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO] } } }, 'Este ficheiro não é uma cópia de segurança do Treino.'],
+    ['a meal app Backup', { app: 'plano-alimentar', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO_EXERCISE] } } }, 'Este ficheiro não é uma cópia de segurança do Treino.'],
     ['an unknown version', { app: 'workout-tracking', version: 2, stores: {} }, 'Esta cópia de segurança é de uma versão que a app não conhece.'],
     ['no stores', { app: 'workout-tracking', version: 1 }, 'A cópia de segurança está danificada: faltam os dados.'],
     [
       'a set with fractional reps',
-      { app: 'workout-tracking', version: 1, stores: { workoutSessions: { version: 1, sessions: [{ ...workout('s', SUPINO.id), exercises: [{ exerciseId: 'x', sets: [{ reps: 2.5, kg: null }] }] }] } } },
+      { app: 'workout-tracking', version: 1, stores: { workoutSessions: { version: 1, sessions: [{ ...workout('s', SUPINO), exercises: [{ exerciseId: 'x', sets: [{ reps: 2.5, kg: null }] }] }] } } },
       'A cópia de segurança está danificada: os dados de treinos não são válidos. Não foi alterado nada.',
     ],
     [
       'two exercises with the same name',
-      { app: 'workout-tracking', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO, { id: 'other', name: 'supino ' }] } } },
+      { app: 'workout-tracking', version: 1, stores: { exercises: { version: 1, exercises: [SUPINO_EXERCISE, { id: 'other', name: 'supino ' }] } } },
       'A cópia de segurança está danificada: os dados de exercícios não são válidos. Não foi alterado nada.',
     ],
     [
@@ -115,7 +106,7 @@ describe('backup', () => {
   })
 
   it('imports workout plans saved before Training Splits as their split, and drops a plan that fits none instead of rejecting the file', () => {
-    const v2Day = (id: string) => ({ id, name: id, exercises: [{ exerciseId: SUPINO.id, sets: 3, reps: { min: 8, max: 12 } }] })
+    const v2Day = (id: string) => ({ id, name: id, exercises: [{ exerciseId: SUPINO, sets: 3, reps: { min: 8, max: 12 } }] })
     const v2Plan = (id: string, n: number) => ({ id, name: id, blocks: [{ id: `${id}-b`, name: 'Bloco A', weeks: 1, rir: [null], days: Array.from({ length: n }, (_, i) => v2Day(`${id}-${i}`)) }], start: null })
     const v2 = { version: 2, plans: [v2Plan('cinco', 5), v2Plan('quatro', 4)], activePlanId: 'cinco' }
     const data = parsed({ app: 'workout-tracking', version: 1, stores: { workoutPlans: v2 } })
@@ -131,8 +122,8 @@ describe('backup', () => {
       feel: 2,
       after: [{ date: '2026-05-02' as IsoDate, exerciseId: theirSupino.id, note: note('Ombro dói', at) }, { date: '2026-05-02' as IsoDate, exerciseId: null, note: note('Cansado', at) }],
     }
-    const data = mergeBackup(loadAll(filled()), { ...EMPTY, exercises: [theirSupino], workoutSessions: [{ ...workout('ws-1', SUPINO.id), feel: 5 }, theirs] })
-    expect(data.exercises).toEqual([SUPINO])
+    const data = mergeBackup(loadAll(filled()), { ...EMPTY, exercises: [theirSupino], workoutSessions: [{ ...workout('ws-1', SUPINO), feel: 5 }, theirs] })
+    expect(data.exercises).toEqual([SUPINO_EXERCISE])
     expect(data.workoutSessions.map((s) => [s.id, s.feel, s.after?.map((a) => [a.exerciseId, a.note.text])])).toEqual([
       ['ws-1', undefined, undefined],
       ['ws-2', 2, [['ex-supino', 'Ombro dói'], [null, 'Cansado']]],
@@ -170,7 +161,7 @@ describe('backup', () => {
       delete storage.data[STORES.exercises.key]
       return { ...storage.data }
     }
-    const incoming = (): AppData => ({ ...EMPTY, exercises: [SUPINO] })
+    const incoming = (): AppData => ({ ...EMPTY, exercises: [SUPINO_EXERCISE] })
 
     it('replace restores every key when a write throws', () => {
       const initial = before()

@@ -1,24 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { memoryStorage } from './domain/memoryStorage.ts'
 import { startSync } from './sync.ts'
 
 const PLANS = 'workout-tracking:workout-plans'
 const EXERCISES = 'workout-tracking:exercises'
 const THEME = 'workout-tracking:theme'
 const EQUIPMENT = 'workout-tracking:equipment'
-
-function memoryStorage(initial: Record<string, string> = {}) {
-  const data: Record<string, string> = { ...initial }
-  return {
-    data,
-    getItem: (k: string) => data[k] ?? null,
-    setItem: (k: string, v: string) => void (data[k] = v),
-    removeItem: (k: string) => void delete data[k],
-    key: (i: number) => Object.keys(data)[i] ?? null,
-    get length() {
-      return Object.keys(data).length
-    },
-  }
-}
 
 /** The store API's rules over a map: a write needs the current rev, and `up: false` refuses every request. */
 function fakeServer(initial: Record<string, { doc: string; rev: number }> = {}) {

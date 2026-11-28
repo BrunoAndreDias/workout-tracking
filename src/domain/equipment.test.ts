@@ -3,12 +3,11 @@ import { equipmentLabel, equipmentReducer, freshEquipment, isChanged, missingAt,
 import type { EquipmentAction } from './equipment.ts'
 import { CATALOG } from './catalogEntries.ts'
 import { loadStore, saveStore, STORES } from './stores.ts'
-import type { CustomEquipmentId, GymId } from './types.ts'
+import type { GymId } from './types.ts'
+import { memoryStorage } from './memoryStorage.ts'
+import { CASA, ELASTICOS, material } from './workoutFixtures.ts'
 
-const CASA = 'gym-casa' as GymId
 const GINASIO = 'gym-ginasio' as GymId
-const ELASTICOS = 'mat:elasticos' as CustomEquipmentId
-const material = (...actions: EquipmentAction[]) => actions.reduce(equipmentReducer, freshEquipment())
 const casa = (...actions: EquipmentAction[]) =>
   material(
     { type: 'addGym', gymId: CASA, name: 'Casa' },
@@ -108,11 +107,6 @@ describe('the user’s own material', () => {
     expect(needsOf(state, 'Face Pulls')).toEqual([])
   })
 })
-
-function memoryStorage() {
-  const data: Record<string, string> = {}
-  return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v) }
-}
 
 describe('material store', () => {
   it('saves and reads back Gyms, own material and corrections', () => {

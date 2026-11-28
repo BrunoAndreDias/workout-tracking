@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { appendNote, editNote, parseTimedNote, toLocalDateTime } from './notes.ts'
 import type { TimedNote } from './notes.ts'
-import type { LocalDateTime } from './types.ts'
+import { at } from './workoutFixtures.ts'
 
-const at = (s: string) => s as LocalDateTime
 const T1 = at('2026-10-06T18:50:12')
 const T2 = at('2026-10-06T19:02:40')
 

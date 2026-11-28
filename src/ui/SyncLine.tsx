@@ -4,11 +4,11 @@ import type { Sync } from '../sync.ts'
 import { Notice } from './Notice.tsx'
 
 const noSync = () => () => {}
-const connected = () => 'ligado' as const
+const connected = () => 'connected' as const
 
-function SyncStatus({ sync }: { sync: Sync | null }) {
+function SyncState({ sync }: { sync: Sync | null }) {
   const status = useSyncExternalStore(sync?.subscribe ?? noSync, sync?.status ?? connected)
-  if (!sync || status === 'ligado') return null
+  if (!sync || status === 'connected') return null
   if (status === 'offline') {
     return (
       <Notice tone="warning" className="sync-line">
@@ -16,7 +16,7 @@ function SyncStatus({ sync }: { sync: Sync | null }) {
       </Notice>
     )
   }
-  if (status === 'recusado') {
+  if (status === 'refused') {
     return (
       <Notice tone="error" className="sync-line">
         O servidor recusou uma alteração. Fica guardada neste navegador. Exporta os dados e recarrega.{' '}
@@ -53,7 +53,7 @@ export function SyncLine({ sync }: { sync: Sync | null }) {
           Não foi possível guardar neste navegador: o armazenamento está cheio. Exporta os dados.
         </Notice>
       )}
-      <SyncStatus sync={sync} />
+      <SyncState sync={sync} />
     </div>
   )
 }

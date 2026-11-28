@@ -1,12 +1,8 @@
 import { chromium } from 'playwright'
-import { addGym, appUrl, assert, closePicker, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openPicker, openWorkoutTab, readStored, reloadApp, synced, workoutDay } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { addGym, appUrl, assert, closePicker, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openPage, openPicker, openWorkoutTab, readStored, reloadApp, SHOTS, synced, workoutDay } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser)
 page.on('dialog', (d) => d.accept())
 await openFresh(page, URL + '#treino')
 
@@ -27,14 +23,14 @@ await openPicker(push, 'curl')
 assert(await dialog.getByText('Marca o material que tens em Treino → Material').count() === 1, 'with no Gym, the picker points to Treino → Material')
 assert(await dialog.locator('.result.is-missing').count() === 0, 'and flags nothing')
 assert((await result(DB_CURLS).locator('.result-sub').textContent()) === 'Bíceps · Halteres', 'each row shows its muscle group and its material')
-await page.screenshot({ path: `${S}/equipment-picker-no-gym.png` })
+await page.screenshot({ path: `${SHOTS}/equipment-picker-no-gym.png` })
 await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
 await addGym(page, 'Casa', ['Halteres', 'Banco plano'])
 assert(await page.getByRole('group', { name: 'Local ativo' }).getByRole('button', { name: 'Casa', pressed: true }).count() === 1, 'the new Gym Casa is the active one')
 assert(await page.locator('.equipment-exercise').count() === 16, 'Exercícios opens on Peito’s 16, not the whole catalog')
-await page.screenshot({ path: `${S}/equipment-material-tab.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/equipment-material-tab.png`, fullPage: true })
 
 await openWorkoutTab(page, 'Plano de treino')
 push = await workoutDay(page, 'Push')
@@ -46,7 +42,7 @@ assert(names.indexOf(DB_CURLS) < names.indexOf(BB_CURLS), 'the dumbbell curl Cas
 assert(!(await flagged(DB_CURLS)) && (await flagged(BB_CURLS)), 'only the barbell curl is flagged')
 assert((await result(BB_CURLS).locator('.missing-line').textContent()) === 'Falta: Barra', 'and it says it lacks a Barra')
 assert(await result(BB_CURLS).isEnabled(), 'a flagged Exercise can still be picked')
-await page.screenshot({ path: `${S}/equipment-picker-casa.png` })
+await page.screenshot({ path: `${SHOTS}/equipment-picker-casa.png` })
 await closePicker(page)
 
 await openWorkoutTab(page, 'Material')
@@ -58,7 +54,7 @@ assert(await exerciseRow(BB_CURLS).getByText('Alterado').count() === 1, 'and is 
 await page.getByRole('group', { name: 'Mostrar' }).getByRole('button', { name: 'Alterados' }).click()
 assert((await page.locator('.equipment-exercise .result-name').allTextContents()).join('|') === BB_CURLS, 'Alterados lists only the corrected Exercise')
 await findExercise(BB_CURLS)
-await exerciseRow(BB_CURLS).screenshot({ path: `${S}/equipment-exercise-changed.png` })
+await exerciseRow(BB_CURLS).screenshot({ path: `${SHOTS}/equipment-exercise-changed.png` })
 
 await synced(page)
 await reloadApp(page)
@@ -96,7 +92,7 @@ await closePicker(page)
 await openWorkoutTab(page, 'Material')
 await page.setViewportSize({ width: 375, height: 812 })
 assert(await noHorizontalScroll(page), 'Material has no horizontal scroll at 375 px')
-await page.screenshot({ path: `${S}/equipment-material-mobile.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/equipment-material-mobile.png`, fullPage: true })
 
-assert(errors.length === 0, `no console errors (${errors.join(' | ')})`)
+noErrors()
 await browser.close()

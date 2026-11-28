@@ -3,20 +3,22 @@
 //   --profile prints the top self-time functions of one reopen and of 20 kg keystrokes, then exits; it never writes.
 //   Writes perf/latest.json, appends perf/history.jsonl and regenerates perf/STATUS.md, unless --no-write.
 //   --against alternates runs between this tree and another built worktree, and prints both sides; it never writes.
-import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+//   A --weeks other than 52 never writes either, so perf/ only ever records a year of history.
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { createWorkoutPlan, daysAgo, putStore, readStored, synced, todayIso, toIsoDate } from '../e2e/_driver.mjs'
-import { freePort } from './testServer.mjs'
+import { addDays } from '../src/domain/dates.ts'
+import { createWorkoutPlan, mondayWeeksAgo, openPage, openWorkoutTab, putSessions, putStore, readStored, synced, todayIso } from '../e2e/_driver.mjs'
+import { startTestServer } from './testServer.mjs'
 import { METRICS, writeStatus } from './perfStatus.mjs'
 
 const arg = (name, fallback) => { const i = process.argv.indexOf(`--${name}`); return i < 0 ? fallback : process.argv[i + 1] }
 const flag = (name) => process.argv.includes(`--${name}`)
 const RUNS = Number(arg('runs', 7))
 const CPU_SLOWDOWN = 4
-const HISTORY_WEEKS = Number(arg('weeks', 52))
+const RECORDED_WEEKS = 52
+const HISTORY_WEEKS = Number(arg('weeks', RECORDED_WEEKS))
 const here = process.cwd()
 const against = arg('against') && resolve(arg('against'))
 
@@ -24,25 +26,14 @@ const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.lengt
 
 async function startServer(dir) {
   if (!flag('no-build')) execFileSync('npx', ['vite', 'build', '--logLevel', 'error', ...(flag('profile') ? ['--minify', 'false'] : [])], { cwd: dir, stdio: 'inherit' })
-  const port = await freePort()
-  const dbDir = mkdtempSync(join(tmpdir(), 'workout-perf-'))
-  const env = { ...process.env, PORT: port, HOST: '127.0.0.1', WORKOUT_TEST: '1', WORKOUT_DB: join(dbDir, 'workout.sqlite'), NODE_NO_WARNINGS: '1' }
-  const server = spawn('node', ['server/serve.ts'], { cwd: dir, stdio: 'ignore', detached: true, env })
-  const url = `http://127.0.0.1:${port}/`
-  const stop = () => { try { process.kill(-server.pid) } catch { /* gone */ } rmSync(dbDir, { recursive: true, force: true }) }
-  for (let i = 0; ; i++) {
-    try { if ((await fetch(url)).ok) break } catch { /* not yet */ }
-    if (i > 100) { stop(); throw new Error(`${dir}: server/serve.ts did not answer on ${url}`) }
-    await new Promise((r) => setTimeout(r, 100))
-  }
-  return { dir, url, stop }
+  return { dir, ...(await startTestServer({ cwd: dir, mode: 'serve' })) }
 }
 
 /** A year of a 4-day Upper/Lower plan, four sessions a week, built on the server. */
 async function seed(browser, url) {
-  const page = await browser.newPage()
+  const { page } = await openPage(browser)
   await page.goto(url + '#treino')
-  await page.getByRole('navigation', { name: 'Treino' }).getByRole('button', { name: 'Plano de treino' }).click()
+  await openWorkoutTab(page, 'Plano de treino')
   await createWorkoutPlan(page, { name: 'Upper/Lower', days: 4 })
   for (let i = 0; i < 5; i++) await page.getByRole('button', { name: '+ Novo bloco' }).click()
   await page.locator('.block-card').first().click()
@@ -51,17 +42,16 @@ async function seed(browser, url) {
   const stored = await readStored(page)
   const plans = structuredClone(stored.workoutPlans)
   const plan = plans.plans[0]
-  const start = daysAgo(HISTORY_WEEKS * 7 + ((daysAgo(0).getDay() + 6) % 7))
-  plan.start = { ...plan.start, since: toIsoDate(start) }
+  const start = mondayWeeksAgo(HISTORY_WEEKS)
+  plan.start = { ...plan.start, since: start }
   const sessions = []
   let n = 0
   for (let week = 0; week < HISTORY_WEEKS; week++) {
     const block = plan.blocks[Math.floor(week / plan.blocks[0].weeks) % plan.blocks.length]
     for (const [k, offset] of [0, 1, 3, 4].entries()) {
-      const d = new Date(start); d.setDate(d.getDate() + week * 7 + offset)
-      if (toIsoDate(d) >= todayIso()) continue
+      const date = addDays(start, week * 7 + offset)
+      if (date >= todayIso()) continue
       const day = block.days[k]
-      const date = toIsoDate(d)
       const id = `perf-${n++}`
       sessions.push({
         id, date, workoutDayId: day.id,
@@ -76,7 +66,7 @@ async function seed(browser, url) {
     }
   }
   await putStore(page, url, 'workoutPlans', plans)
-  await putStore(page, url, 'workoutSessions', { version: 4, sessions })
+  await putSessions(page, url, sessions)
   await page.close()
   return { sessions: sessions.length, sets: sessions.reduce((a, s) => a + s.exercises.reduce((b, e) => b + e.sets.length, 0), 0) }
 }
@@ -88,29 +78,26 @@ const PAINT_OBSERVER = () => {
   new MutationObserver(seen).observe(document, { childList: true, subtree: true })
 }
 
-/** Runs `act` in the page and returns the main-thread ms until `ready` holds and layout is done, polling one task at a time. */
-const timed = (page, act, ready) =>
-  page.evaluate(async ([act, ready]) => {
+/** Runs `act(arg)` in the page and returns the main-thread ms until `ready` holds and layout is done, polling one task at a time. */
+const timed = (page, act, ready, arg) =>
+  page.evaluate(async ([act, ready, arg]) => {
     const fn = (src) => new Function(`return (${src})`)()
     const [a, r] = [fn(act), fn(ready)]
     const before = r.length ? r(null) : null
     const channel = new MessageChannel()
     const task = () => new Promise((res) => { channel.port1.onmessage = res; channel.port2.postMessage(0) })
     const t0 = performance.now()
-    a()
+    a(arg)
     for (let i = 0; i < 5000; i++) {
       if (r(before)) { void document.body.offsetHeight; return performance.now() - t0 }
       await task()
     }
     throw new Error(`never ready: ${ready}`)
-  }, [act.toString(), ready.toString()])
+  }, [act.toString(), ready.toString(), arg])
 
 async function measureOnce(browser, url, expected) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  const page = await context.newPage()
-  const errors = []
-  page.on('pageerror', (e) => errors.push(e.message))
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  const { page, errors } = await openPage(browser, { mobile: true })
+  const context = page.context()
   page.on('response', (r) => r.status() >= 400 && errors.push(`${r.status()} ${r.url()}`))
   const cdp = await context.newCDPSession(page)
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_SLOWDOWN })
@@ -148,9 +135,9 @@ async function measureOnce(browser, url, expected) {
       input.dispatchEvent(new Event('input', { bubbles: true }))
     }, () => true))
   }
-  const tab = (name) => `() => [...document.querySelectorAll('nav[aria-label="Treino"] button')].find((b) => b.textContent.trim() === '${name}').click()`
-  const planTab = await timed(page, new Function(`return ${tab('Plano de treino')}`)(), () => !!document.querySelector('.block-card'))
-  const registoTab = await timed(page, new Function(`return ${tab('Registo')}`)(), () => document.querySelectorAll('.set-row, .lift-summary').length > 0)
+  const tab = (name) => [...document.querySelectorAll('nav[aria-label="Treino"] button')].find((b) => b.textContent.trim() === name).click()
+  const planTab = await timed(page, tab, () => !!document.querySelector('.block-card'), 'Plano de treino')
+  const registoTab = await timed(page, tab, () => document.querySelectorAll('.set-row, .lift-summary').length > 0, 'Registo')
   const today = todayIso()
   const doneSets = (await readStored(page)).workoutSessions.sessions.filter((s) => s.date === today).flatMap((s) => s.exercises.flatMap((e) => e.sets)).filter((s) => s.done).length
   if (doneSets < 6) errors.push(`expected 6 sets ticked today, the store has ${doneSets}`)
@@ -181,9 +168,8 @@ async function profile(page, cdp, label, work) {
 
 async function profileRun(url) {
   const browser = await chromium.launch()
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
-  const page = await context.newPage()
-  const cdp = await context.newCDPSession(page)
+  const { page } = await openPage(browser, { mobile: true })
+  const cdp = await page.context().newCDPSession(page)
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_SLOWDOWN })
   await page.addInitScript(PAINT_OBSERVER)
   await page.goto(url + '#treino')
@@ -241,6 +227,8 @@ try {
       const [a, b] = [results[0].metrics[key].median, results[1].metrics[key].median]
       console.log(`  ${label.padEnd(30)} ${b} → ${a}  (${b ? (((a - b) / b) * 100).toFixed(1) : '0'}%)`)
     }
+  } else if (HISTORY_WEEKS !== RECORDED_WEEKS) {
+    console.log(`\nnot writing perf/: --weeks ${HISTORY_WEEKS} is not the recorded ${RECORDED_WEEKS}`)
   } else if (!flag('no-write')) {
     const commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim()
     const dirty = execFileSync('git', ['status', '--porcelain', '--', 'src', 'index.html', 'server', 'vite.config.ts'], { encoding: 'utf8' }).trim() !== ''

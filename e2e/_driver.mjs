@@ -3,6 +3,7 @@
 
 import { addDays, mondayOf, toIsoDate } from '../src/domain/dates.ts'
 import { DEVICE_KEY, STORE_KEY } from '../src/domain/storeKeys.ts'
+import { WORKOUT_SESSIONS_SCHEMA_VERSION } from '../src/domain/workoutStorage.ts'
 
 export { toIsoDate }
 
@@ -15,6 +16,18 @@ export function appUrl() {
 }
 
 export const assert = (ok, msg) => { if (!ok) throw new Error('FAIL: ' + msg); console.log('ok:', msg) }
+
+export const SHOTS = process.env.SHOTS ?? 'e2e/shots'
+export const PHONE = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
+export const DESKTOP = { viewport: { width: 1280, height: 900 } }
+
+export async function openPage(browser, { mobile = false, allowFailedLoads = false, ...options } = {}) {
+  const page = await browser.newPage({ ...(mobile ? PHONE : DESKTOP), ...options })
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('console', (m) => m.type() === 'error' && !(allowFailedLoads && m.text().startsWith('Failed to load resource')) && errors.push(m.text()))
+  return { page, errors, noErrors: () => assert(errors.length === 0, 'no console errors: ' + errors.join(' / ')) }
+}
 
 /** A flow failed for a reason the caller can act on; `fix` says how. Playwright's own timeouts say neither. */
 export class FlowError extends Error {
@@ -75,6 +88,8 @@ export async function putStore(page, url, name, doc) {
   const res = await page.request.put(storesUrl(url, name), { data: { doc: JSON.stringify(doc), baseRev: current?.rev ?? null } })
   if (!res.ok()) throw new FlowError(`the server refused ${name} (${res.status()})`, 'check the server log')
 }
+
+export const putSessions = (page, url, sessions) => putStore(page, url, 'workoutSessions', { version: WORKOUT_SESSIONS_SCHEMA_VERSION, sessions })
 
 /** Puts `state` (the readStored shape) on an emptied server, so the next page load boots from it. Call before page.goto. */
 export async function seedStored(page, url, state) {

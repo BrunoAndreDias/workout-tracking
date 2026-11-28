@@ -1,12 +1,11 @@
 import { chromium } from 'playwright'
 import { readFileSync } from 'node:fs'
-import { appUrl, assert, rendered, seedStored } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { appUrl, assert, openPage, rendered, seedStored, SHOTS } from './_driver.mjs'
 const URL = appUrl()
 const fixture = JSON.parse(readFileSync('e2e/fixtures/treino-backup.json', 'utf8'))
 
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true })
+const { page } = await openPage(browser, { mobile: true, acceptDownloads: true })
 const crash = page.getByRole('heading', { name: 'Algo correu mal no Treino.' })
 
 await seedStored(page, URL, fixture.stores)
@@ -14,7 +13,7 @@ await page.route('**/src/App.tsx*', (route) => route.abort())
 await page.goto(URL)
 await crash.waitFor()
 assert(await page.getByText('Os teus dados continuam neste navegador.').count() === 1, 'a failed start shows the crash page')
-await page.screenshot({ path: `${S}/crash-start.png` })
+await page.screenshot({ path: `${SHOTS}/crash-start.png` })
 
 const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Exportar dados' }).click()])
 const file = JSON.parse(readFileSync(await download.path(), 'utf8'))

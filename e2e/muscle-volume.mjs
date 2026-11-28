@@ -1,12 +1,8 @@
 import { chromium } from 'playwright'
-import { appUrl, assert, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openWorkoutTab } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { appUrl, assert, createWorkoutPlan, exactly, noHorizontalScroll, openFresh, openPage, openWorkoutTab, SHOTS } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser)
 await openFresh(page, URL)
 
 await openWorkoutTab(page, 'Plano de treino')
@@ -40,7 +36,7 @@ await front.locator('[data-group="chest"]').nth(2).click()
 assert(await pressed() === '', 'the mirrored half takes the tap too, and clears it')
 await front.locator('[data-group="forearms"]').first().click()
 assert(await pressed() === 'Antebraços' && await text(rowOf('Antebraços'), '.volume-detail') === 'Nenhum exercício do plano trabalha este grupo.', 'an untrained group says no Exercise trains it')
-await weekly.screenshot({ path: `${S}/muscle-volume.png` })
+await weekly.screenshot({ path: `${SHOTS}/muscle-volume.png` })
 
 const notes = await weekly.locator('.volume-notes li').allTextContents()
 assert(notes.join(' / ') === 'Sem séries no plano: Antebraços. / Abaixo de 10 séries por semana: Peito (6), Quadríceps (3), Posteriores (3), Bíceps (6), Tríceps (6), Abdominais (6), Glúteos (3), Gémeos (3). / Costas tem 2,0× as séries de Peito.', 'Onde podes olhar notes the gaps, what is under 10 sets and an uneven pair')
@@ -50,7 +46,7 @@ for (const width of [390, 375]) {
   await page.setViewportSize({ width, height: 844 })
   assert(await noHorizontalScroll(page), `Músculos por semana has no horizontal scroll at ${width} px`)
 }
-await weekly.screenshot({ path: `${S}/muscle-volume-mobile.png` })
+await weekly.screenshot({ path: `${SHOTS}/muscle-volume-mobile.png` })
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
 await browser.close()

@@ -1,12 +1,8 @@
 import { chromium } from 'playwright'
-import { addExercise, appUrl, assert, closePicker, createWorkoutPlan, openFresh, openPicker, openWorkoutTab, workoutDay } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { addExercise, appUrl, assert, closePicker, createWorkoutPlan, openFresh, openPage, openPicker, openWorkoutTab, SHOTS, workoutDay } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser)
 await openFresh(page, URL + '#treino')
 
 const INCLINE = 'Incline Barbell Bench Press'
@@ -36,7 +32,7 @@ assert(names.length > 100 && JSON.stringify(figures) === JSON.stringify(names.ma
 const own = dialog.getByRole('region', { name: 'Os teus' })
 assert((await own.locator('.result-name').allTextContents()).join('|') === 'Supino', 'the user’s own Supino lists under Os teus')
 assert(await own.getByRole('button', { name: /^Ver músculos de/ }).count() === 0, 'and has no Ver músculos button')
-await page.screenshot({ path: `${S}/muscle-map-picker.png` })
+await page.screenshot({ path: `${SHOTS}/muscle-map-picker.png` })
 
 await search.fill('incline')
 await openDetail(INCLINE)
@@ -56,7 +52,7 @@ await dialog.getByRole('img', { name: /^Frente:/ }).locator('.bm-region[data-inv
 assert((await readout()) === 'Peito (parte de cima)Alvo: onde deves sentir', 'hovering the lit chest on the figure names it')
 assert(await dialog.locator('.md-region[data-active]').textContent() === 'Peito (parte de cima)', 'and highlights its pill')
 await settled()
-await page.screenshot({ path: `${S}/muscle-map-detail.png` })
+await page.screenshot({ path: `${SHOTS}/muscle-map-detail.png` })
 const shoulder = dialog.getByRole('button', { name: 'Ombro (frente)', exact: true })
 await shoulder.click()
 await page.mouse.move(5, 5)
@@ -89,8 +85,8 @@ await search.fill('lateral')
 await openDetail('Dumbbell Lateral Raises')
 assert(await noHorizontalScroll(), 'the detail has no horizontal scroll at 390 px')
 await settled()
-await page.screenshot({ path: `${S}/muscle-map-detail-mobile.png` })
+await page.screenshot({ path: `${SHOTS}/muscle-map-detail-mobile.png` })
 await closePicker(page)
 
-assert(errors.length === 0, `no console errors (${errors.join(' | ')})`)
+noErrors()
 await browser.close()

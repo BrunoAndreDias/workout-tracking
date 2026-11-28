@@ -7,7 +7,7 @@
   "e2e/pwa.mjs": 1,
   "scripts/build-icons.mjs": 4,
   "scripts/e2e.mjs": 2,
-  "scripts/perf.mjs": 9,
+  "scripts/perf.mjs": 8,
   "scripts/perfStatus.mjs": 1,
   "scripts/testServer.mjs": 5,
   "server/compress.ts": 3,

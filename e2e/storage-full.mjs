@@ -1,15 +1,11 @@
 import { chromium } from 'playwright'
 import { STORE_KEY } from '../src/domain/storeKeys.ts'
-import { addGym, appUrl, assert, noHorizontalScroll, openFresh, openWorkoutTab, readStored, synced } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { addGym, appUrl, assert, noHorizontalScroll, openFresh, openPage, openWorkoutTab, readStored, SHOTS, synced } from './_driver.mjs'
 const URL = appUrl()
 const FULL = 'Não foi possível guardar neste navegador: o armazenamento está cheio. Exporta os dados.'
 
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser, { mobile: true })
 await openFresh(page, URL + '#treino')
 await openWorkoutTab(page, 'Material')
 
@@ -25,7 +21,7 @@ await addGym(page, 'Casa')
 const full = page.getByRole('alert').filter({ hasText: FULL })
 await full.waitFor()
 assert(((await readStored(page)).equipment?.gyms ?? []).length === 0, 'the Local could not be saved')
-await page.screenshot({ path: `${S}/storage-full-390.png` })
+await page.screenshot({ path: `${SHOTS}/storage-full-390.png` })
 assert(await noHorizontalScroll(page), 'the line fits a 390 px phone')
 
 await page.evaluate(() => window.restoreSetItem())
@@ -34,5 +30,5 @@ await full.waitFor({ state: 'detached' })
 await synced(page)
 assert((await readStored(page)).equipment.gyms.map((g) => g.name).join() === 'Casa,Ginásio', 'the next save that succeeds keeps both Locais and clears the line')
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
 await browser.close()

@@ -1,8 +1,8 @@
 import { chromium } from 'playwright'
-import { appUrl, assert, openFresh } from './_driver.mjs'
+import { appUrl, assert, openFresh, openPage } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+const { page, noErrors } = await openPage(browser, { mobile: true })
 await openFresh(page, URL)
 
 const head = await page.evaluate(() => {
@@ -42,4 +42,5 @@ for (const { url, size } of icons) {
   const { w, h } = pngSize(await r.body())
   assert(w === size && h === size, `${url} is ${size}x${size} (got ${w}x${h})`)
 }
+noErrors()
 await browser.close()

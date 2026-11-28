@@ -1,12 +1,8 @@
 import { chromium } from 'playwright'
-import { appUrl, assert, createWorkoutPlan, mondayWeeksAgo, noHorizontalScroll, openFresh, openWorkoutTab, putStore, readStored, reloadApp, swapExercise, todayIso, workoutDay } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { appUrl, assert, createWorkoutPlan, mondayWeeksAgo, noHorizontalScroll, openFresh, openPage, openWorkoutTab, putSessions, putStore, readStored, reloadApp, SHOTS, swapExercise, todayIso, workoutDay } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser)
 await openFresh(page, URL + '#treino')
 
 const notice = page.getByRole('region', { name: 'Exercícios a rever' })
@@ -24,15 +20,15 @@ const sessions = [8, 7, 6, 5, 4, 3, 2, 1].map((n) => ({ id: `w${n}`, date: monda
 const backdated = structuredClone(created.workoutPlans)
 for (const day of backdated.plans[0].blocks[0].days) for (const p of day.exercises) if ([bench, raises, curls].includes(p.exerciseId)) p.since = mondayWeeksAgo(9)
 await putStore(page, URL, 'workoutPlans', backdated)
-await putStore(page, URL, 'workoutSessions', { version: 4, sessions })
+await putSessions(page, URL, sessions)
 await reloadApp(page)
 
 await openWorkoutTab(page, 'Registo')
 assert((await noticeRows()).join('|') === 'Dumbbell Lateral Raises · 8 semanas feitas|Standing Barbell Curls · 8 semanas feitas', 'after 8 training weeks the accessories are up for review, the main lift is not')
-await page.screenshot({ path: `${S}/runs-registo-desktop.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/runs-registo-desktop.png`, fullPage: true })
 await page.setViewportSize({ width: 390, height: 844 })
 assert(await noHorizontalScroll(page), 'Registo with Exercícios a rever has no horizontal scroll at 390 px')
-await page.screenshot({ path: `${S}/runs-registo-mobile.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/runs-registo-mobile.png`, fullPage: true })
 
 await openWorkoutTab(page, 'Plano de treino')
 const push = await workoutDay(page, 'Push')
@@ -42,7 +38,7 @@ assert(await push.getByLabel('Semanas de Flat Barbell Bench Press').inputValue()
 assert(await push.getByLabel('Semanas de Cable Press-Downs').inputValue() === '8', 'an accessory runs 8 weeks')
 assert(await row(push, 'Cable Press-Downs').locator('.run-line').textContent() === 'semana 1 de 8', 'and one never done is in its first week')
 assert(await noHorizontalScroll(page), 'Plano de treino with weeks fields has no horizontal scroll at 390 px')
-await page.screenshot({ path: `${S}/runs-plan-mobile.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/runs-plan-mobile.png`, fullPage: true })
 await page.setViewportSize({ width: 1280, height: 900 })
 
 await openWorkoutTab(page, 'Registo')
@@ -63,5 +59,5 @@ assert(await row(pull, 'Standing Dumbbell Curls').locator('.run-line').textConte
 await pull.getByLabel('Semanas de Standing Dumbbell Curls').fill('')
 assert(await row(pull, 'Standing Dumbbell Curls').locator('.run-line').textContent() === 'semana 1 · sem limite', 'emptying its weeks runs it with no limit')
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
 await browser.close()

@@ -1,11 +1,8 @@
 import { chromium } from 'playwright'
-import { appUrl, assert, longDate, openFresh, todayIso } from './_driver.mjs'
+import { appUrl, assert, longDate, openFresh, openPage, todayIso } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser, { mobile: true })
 await openFresh(page, URL)
 
 const tabs = page.getByRole('navigation', { name: 'Treino' })
@@ -23,5 +20,5 @@ await page.goto(`${URL}#treino/2026-05-01`)
 await page.locator('.date-title').first().waitFor()
 assert(await page.locator('.date-title').first().textContent() === longDate.format(new Date(2026, 4, 1)), 'a dated #treino hash opens Treino on that date')
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
 await browser.close()

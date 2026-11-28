@@ -1,18 +1,14 @@
 import { chromium } from 'playwright'
 import { writeFileSync } from 'node:fs'
-import { appUrl, assert, clickAndReload, openFresh, readStored } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { appUrl, assert, clickAndReload, openFresh, openPage, readStored, SHOTS } from './_driver.mjs'
 const URL = appUrl()
 const FIXTURE = 'e2e/fixtures/treino-backup.json'
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser, { mobile: true })
 await openFresh(page, URL)
 
 const data = page.getByRole('region', { name: 'Dados' })
-const mealApp = `${S}/backup-meal-app.json`
+const mealApp = `${SHOTS}/backup-meal-app.json`
 writeFileSync(mealApp, JSON.stringify({ app: 'plano-alimentar', version: 1, stores: { exercises: { version: 1, exercises: [{ id: 'ex-supino', name: 'Supino' }] } } }))
 await data.getByLabel('Ficheiro de dados').setInputFiles(mealApp)
 const rejected = data.getByRole('alert')
@@ -24,7 +20,7 @@ const panel = page.getByRole('dialog')
 await panel.locator('.backup-summary').waitFor()
 const summary = await panel.locator('.backup-summary').textContent()
 assert(summary === '1 plano de treino, 1 treino, 1 local de treino', `a Treino Backup reads as its stores (got ${summary})`)
-await page.screenshot({ path: `${S}/backup-import-preview.png` })
+await page.screenshot({ path: `${SHOTS}/backup-import-preview.png` })
 await clickAndReload(page, panel.getByRole('button', { name: 'Juntar aos meus dados' }))
 
 const stored = await readStored(page)
@@ -34,7 +30,7 @@ assert(stored.equipment.gyms.map((g) => g.name).join() === 'Casa', 'the material
 
 await page.goto(`${URL}#treino/2026-05-01`)
 await page.getByRole('heading', { name: 'Push' }).first().waitFor()
-await page.screenshot({ path: `${S}/backup-import-session.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/backup-import-session.png`, fullPage: true })
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
 await browser.close()

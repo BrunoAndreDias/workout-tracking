@@ -1,12 +1,8 @@
 import { chromium } from 'playwright'
-import { addExercise, appUrl, assert, createWorkoutPlan, exactly, mondayWeeksAgo, noHorizontalScroll, openFresh, openWorkoutTab, planTabs, putStore, readStored, reloadApp, rendered, seedStored, synced, todayIso, workoutDay } from './_driver.mjs'
-const S = process.env.SHOTS ?? 'e2e/shots'
+import { addExercise, appUrl, assert, createWorkoutPlan, exactly, mondayWeeksAgo, noHorizontalScroll, openFresh, openPage, openWorkoutTab, planTabs, putSessions, putStore, readStored, reloadApp, rendered, seedStored, SHOTS, synced, todayIso, workoutDay } from './_driver.mjs'
 const URL = appUrl()
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
-const errors = []
-page.on('pageerror', (e) => errors.push(e.message))
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page, noErrors } = await openPage(browser)
 page.on('dialog', (d) => d.accept())
 await openFresh(page, URL + '#treino')
 
@@ -42,7 +38,7 @@ await light().check()
 assert(await light().isChecked(), 'Semana leve makes Bloco B a light block')
 await page.getByLabel('Semanas de Bloco B').fill('4')
 assert(await light().isChecked(), 'and changing its weeks keeps it light')
-await page.screenshot({ path: `${S}/blocks-plan-desktop.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/blocks-plan-desktop.png`, fullPage: true })
 
 await card('Bloco A').click()
 assert(await names(await workoutDay(page, 'Upper A')) === UPPER_A, 'selecting Bloco A shows its own days, unchanged')
@@ -70,17 +66,17 @@ const seeded = { id: 'seeded', date: mondayWeeksAgo(1), workoutDayId: upperADay,
   { exerciseId: bench, sets: [{ done: true, kg: 60, reps: 7, rir: 2 }], target: { kg: 60, reps: 7, rir: 2 } },
   { exerciseId: pressDowns, sets: [{ done: true, kg: 20, reps: 12, rir: 1 }] },
 ] }
-await putStore(page, URL, 'workoutSessions', { version: 4, sessions: [seeded] })
+await putSessions(page, URL, [seeded])
 await reloadApp(page)
 
 const notice = page.getByRole('region', { name: 'Novo bloco' })
 assert((await notice.locator('p').allTextContents()).join('|') === 'Começa o Bloco B esta semana.|Entram: Cable Curls|Saem: Standing Barbell Curls', 'after a week without training and one with, Bloco B starts with what comes in and goes')
 assert(await startCard().locator('.block-line').textContent() === 'Bloco B · semana 1 de 4 · leve', 'Registo names Bloco B, its week 1, and that it is light')
 assert((await startButtons()).join('|') === 'Começar Lower A|Upper A|Upper B|Lower B|Treino livre', 'the rotation carries into Bloco B: after Upper A comes Lower A')
-await page.screenshot({ path: `${S}/blocks-registo-desktop.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/blocks-registo-desktop.png`, fullPage: true })
 await page.setViewportSize({ width: 390, height: 844 })
 assert(await noHorizontalScroll(page), 'Registo with the notice has no horizontal scroll at 390 px')
-await page.screenshot({ path: `${S}/blocks-registo-mobile.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/blocks-registo-mobile.png`, fullPage: true })
 await startCard().getByRole('button', { name: 'Upper A', exact: true }).click()
 const session = page.getByRole('region', { name: 'Upper A', exact: true })
 assert((await session.locator('.lift-name').allTextContents()).at(-1) === 'Cable Curls', 'starting Upper A logs Bloco B’s exercises')
@@ -101,7 +97,7 @@ assert((await targetChips('Cable Press-Downs')).join(' ') === '3 4 5+', 'its RIR
 await openWorkoutTab(page, 'Plano de treino')
 assert(await card('Bloco B').getAttribute('aria-current') === 'true', 'the plan marks Bloco B as current')
 assert(await noHorizontalScroll(page), 'Plano de treino with two blocks has no horizontal scroll at 390 px')
-await page.screenshot({ path: `${S}/blocks-plan-mobile.png`, fullPage: true })
+await page.screenshot({ path: `${SHOTS}/blocks-plan-mobile.png`, fullPage: true })
 
 await page.getByRole('button', { name: 'Remover bloco' }).click()
 assert((await blocks.locator('.block-card-name').allTextContents()).join('|') === 'Bloco A', 'Remover bloco removes the selected block')
@@ -109,9 +105,7 @@ assert(await page.getByRole('button', { name: 'Remover bloco' }).count() === 0, 
 
 await synced(page)
 await page.close()
-const fresh = await browser.newPage()
-fresh.on('pageerror', (e) => errors.push(e.message))
-fresh.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+const { page: fresh, noErrors: freshNoErrors } = await openPage(browser)
 const v2Day = (id, name, rows) => ({ id, name, exercises: rows.map((exerciseId) => ({ exerciseId, sets: 3, reps: { min: 8, max: 12 } })) })
 const v2Block = (id, days) => ({ id, name: 'Bloco A', weeks: 6, rir: Array(6).fill(null), days })
 await seedStored(fresh, URL, {
@@ -143,5 +137,6 @@ const dropped = fresh.locator('.session-title', { hasText: 'Dia de treino elimin
 await dropped.waitFor()
 assert((await dropped.count()) === 1, 'a session from a dropped plan reads Dia de treino eliminado')
 
-assert(errors.length === 0, 'no console errors: ' + errors.join(' / '))
+noErrors()
+freshNoErrors()
 await browser.close()

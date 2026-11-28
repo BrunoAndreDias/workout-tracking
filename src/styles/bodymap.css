@@ -1,6 +1,7 @@
 /* body map: regions lit by the custom properties BodyMap sets; the gap between them is the colour behind the figure */
-.bm { --bm-gap: var(--surface); --bm-base: var(--track); --bm-idle: var(--border); --bm-target: var(--accent); --bm-assist: color-mix(in srgb, var(--accent) 34%, var(--bm-gap)); display: block; overflow: visible; }
-:root[data-theme='dark'] .bm { --bm-base: var(--border-soft); --bm-idle: var(--input-border); --bm-assist: color-mix(in srgb, var(--accent) 42%, var(--bm-gap)); }
+.bm, .md-swatch { --bm-gap: var(--surface); --bm-base: var(--track); --bm-idle: var(--border); --bm-target: var(--accent); --bm-assist: color-mix(in srgb, var(--accent) 34%, var(--bm-gap)); }
+:root[data-theme='dark'] :is(.bm, .md-swatch) { --bm-base: var(--border-soft); --bm-idle: var(--input-border); --bm-assist: color-mix(in srgb, var(--accent) 42%, var(--bm-gap)); }
+.bm { display: block; overflow: visible; }
 .bm-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .bm-base { fill: var(--bm-base); pointer-events: none; }
 .bm-region { stroke: var(--bm-gap); stroke-width: var(--bm-gap-width, 1.1); stroke-linejoin: round; }
@@ -47,7 +48,7 @@ button.muscles-btn:hover { background: var(--accent-tint); --bm-gap: var(--accen
 .md-region:focus-visible { border-radius: 999px; }
 .md-swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; }
 .md-swatch[data-inv='target'] { background: var(--accent); }
-.md-swatch[data-inv='assist'] { background: color-mix(in srgb, var(--accent) 34%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+.md-swatch[data-inv='assist'] { background: var(--bm-assist); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
 .md-pick { width: 100%; min-height: 48px; font-size: 15px; }
 
 @media (max-width: 640px) {

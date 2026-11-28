@@ -22,7 +22,7 @@ export function RecentSessions({ state, date, dispatch }: Props) {
   if (sessions.length === 0) return null
   const names = new Map(state.exercises.map((e) => [e.id, e.name]))
   return (
-    <section className="card session recent" aria-labelledby="treinos-anteriores">
+    <section className="card session" aria-labelledby="treinos-anteriores">
       <h2 id="treinos-anteriores" className="session-title">Treinos anteriores</h2>
       {sessions.map((s) => (
         <Recent key={`${s.id} ${date}`} session={s} title={sessionTitle(s, state.plans)} date={date} names={names} dispatch={dispatch} />

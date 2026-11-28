@@ -1,4 +1,4 @@
-/* Plano design system shared components. Tokens only: no colour literals. Generated source of truth lives in plano-design-system. */
+/* Plano design system shared components. Treino owns this copy of the meal app's plano-design-system. Edit it here. Use tokens, not colour literals. */
 
 /* base */
 *, *::before, *::after { box-sizing: border-box; }
@@ -28,21 +28,14 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 .quiet-btn:hover:not(:disabled) { background: var(--track); }
 .quiet-btn.danger { color: var(--danger); }
 
-/* views */
-.views { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--track); }
-.view-link { min-height: 36px; padding: 0 16px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-2); text-decoration: none; }
-.view-link:hover { color: var(--ink); }
-.view-link[aria-current='page'] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow-segment); }
-
 /* tabs */
 .tabs { display: flex; gap: 24px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .tab { flex: none; text-decoration: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; padding: 10px 2px 12px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
 .tab:hover { color: var(--ink); }
-.tab[aria-current='page'], .tab[aria-selected='true'] { border-bottom-color: var(--ink); font-weight: 600; color: var(--ink); }
+.tab[aria-current='page'] { border-bottom-color: var(--ink); font-weight: 600; color: var(--ink); }
 
 /* track */
 .track { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
-.track > div { height: 100%; border-radius: 3px; }
 
 /* stepper */
 .stepper-caret { font-size: 10px; }
@@ -54,14 +47,11 @@ button:disabled { cursor: not-allowed; opacity: 0.4; }
 /* field */
 .field { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .field-label { font-size: 13px; font-weight: 500; color: var(--ink-2); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.field-label small { font-weight: 400; }
 .field-input { width: 100%; min-width: 0; height: 44px; border: 1px solid var(--input-border); border-radius: 10px; padding: 0 12px; background: var(--surface); }
 .field-input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
-.field-input[aria-invalid='true'] { border-color: var(--danger); color: var(--danger); }
 
 /* tiles */
 .tile { margin: 0; padding: 14px 16px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--field); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.tile dd { margin: 0; }
 .tile-sub { font-size: 12px; color: var(--muted); }
 
 /* panel */

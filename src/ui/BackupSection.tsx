@@ -74,7 +74,7 @@ export function BackupSection() {
       {warning && <Notice tone="warning">{warning}</Notice>}
       {incoming && (
         <Panel eyebrow="Importar dados" title="Cópia de segurança" onClose={() => setIncoming(null)}>
-          <div className="panel-body backup-body">
+          <div className="panel-body">
             <p className="backup-summary">{describeBackup(incoming)}</p>
             <p className="hint-text">
               “Juntar” mantém os teus planos de treino, treinos e material; do ficheiro só entram os que ainda não tens. “Substituir tudo” apaga o que tens agora.

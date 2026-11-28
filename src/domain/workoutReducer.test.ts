@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { ExerciseId, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from './types.ts'
+import type { ExerciseId, WorkoutBlockId, WorkoutDayId, WorkoutPlanId } from './types.ts'
 import { findDay } from './blocks.ts'
 import { emptyWorkouts } from './workouts.ts'
 import type { WorkoutState } from './workouts.ts'
 import type { WorkoutAction } from './workoutReducer.ts'
-import { SUPINO, REMO, date, done, pending, session, run, P, B, S1, TODAY, created, PUSH, BENCH, day } from './workoutFixtures.ts'
+import { SUPINO, REMO, date, done, pending, session, run, P, B, S1, TODAY, created, PUSH, BENCH, day, at } from './workoutFixtures.ts'
 
 describe('Workout Plans', () => {
   it('a new plan is its split’s template in one Bloco A, and becomes the active plan', () => {
@@ -194,7 +194,6 @@ describe('logging sets', () => {
 })
 
 describe('exercise notes', () => {
-  const at = (s: string) => s as LocalDateTime
   const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
 
   it('gives one exercise its own note with when it was written and last edited, leaving the others alone', () => {
@@ -224,7 +223,6 @@ describe('exercise notes', () => {
 })
 
 describe('end feel and After-effects', () => {
-  const at = (s: string) => s as LocalDateTime
   const start: WorkoutState = { ...emptyWorkouts(), sessions: [session('s1', '2026-10-06', [{ exerciseId: SUPINO, sets: [] }, { exerciseId: REMO, sets: [] }])] }
   const after = (on: string, exerciseId: ExerciseId | null, text: string, now: string): WorkoutAction => ({ type: 'setAfterEffect', sessionId: S1, date: date(on), exerciseId, text, now: at(now) })
 

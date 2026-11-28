@@ -1,5 +1,8 @@
-import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
+import type { CustomEquipmentId, ExerciseId, GymId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { blockPosition } from './blocks.ts'
+import { equipmentReducer, freshEquipment } from './equipment.ts'
+import type { EquipmentAction } from './equipment.ts'
+import type { TimedNote } from './notes.ts'
 import { emptyWorkouts } from './workouts.ts'
 import { workoutReducer } from './workoutReducer.ts'
 import type { BlockOf, LoggedSet, PlanOf, PlannedExercise, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
@@ -12,6 +15,16 @@ export const REMO = 'ex-remo' as ExerciseId
 export const SQUAT = 'ex-agachamento' as ExerciseId
 
 export const date = (s: string) => s as IsoDate
+
+export const at = (s: string) => s as LocalDateTime
+
+export const note = (text: string, time = '2026-05-01T21:00:00'): TimedNote => ({ text, createdAt: at(time), updatedAt: at(time) })
+
+export const CASA = 'gym-casa' as GymId
+
+export const ELASTICOS = 'mat:elasticos' as CustomEquipmentId
+
+export const material = (...actions: EquipmentAction[]) => actions.reduce(equipmentReducer, freshEquipment())
 
 export const done = (reps: number, kg: number | null, rir: number | null = null): LoggedSet => ({ done: true, reps, kg, rir })
 

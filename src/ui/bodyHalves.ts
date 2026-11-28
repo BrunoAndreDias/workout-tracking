@@ -1,4 +1,5 @@
-import type { Region, Side } from '../domain/anatomy.ts'
+import type { Side } from '../domain/anatomy.ts'
+import type { Region } from '../domain/catalogMuscles.ts'
 import { BACK } from './bodyBack.ts'
 import { FRONT } from './bodyFront.ts'
 

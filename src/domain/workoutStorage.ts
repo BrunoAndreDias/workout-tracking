@@ -5,7 +5,7 @@ import type { TimedNote } from './notes.ts'
 import { isId } from './persistence.ts'
 import { isRecord } from './records.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
-import { exerciseKey } from './exerciseCatalog.ts'
+import { nameKey } from './names.ts'
 import { ROLE_WEEKS, ROLES, splitForDayCount, SPLITS } from './splits.ts'
 import { afterEffectFits, afterEffectKey, isBlockWeeks, isKg, isRepRange, isReps, isRir, isSetCount } from './workouts.ts'
 import { isRunWeeks } from './blocks.ts'
@@ -42,7 +42,7 @@ export function parseExercises(raw: unknown): Exercise[] | null {
   const version = isRecord(raw) ? EXERCISE_VERSIONS.find((v) => v === raw.version) : undefined
   if (!isRecord(raw) || version === undefined) return null
   const exercises = parseList(raw.exercises, parseExercise, (e) => e.id)
-  return exercises && new Set(exercises.map((e) => exerciseKey(e.name))).size === exercises.length ? exercises : null
+  return exercises && new Set(exercises.map((e) => nameKey(e.name))).size === exercises.length ? exercises : null
 }
 
 const isRole = (v: unknown): v is Role => ROLES.includes(v as Role)

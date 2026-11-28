@@ -1,16 +1,18 @@
-import { useContext, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useContext, useLayoutEffect, useRef, useState } from 'react'
 import { activationByName } from '../domain/anatomy.ts'
 import { activeGym, missingAt, needsOf, readyFirst } from '../domain/equipment.ts'
-import { catalogEntry, exerciseKey, MUSCLE_LABEL, pickerList } from '../domain/exerciseCatalog.ts'
-import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
+import type { CatalogEntry, Muscle } from '../domain/catalogEntries.ts'
+import { catalogEntry, MUSCLE_LABEL, pickerList } from '../domain/exerciseCatalog.ts'
 import { MUSCLES } from '../domain/muscles.ts'
+import { nameKey, nameMatcher } from '../domain/names.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'
 import { materialText } from './format.ts'
 import { BodySprite, BodyThumb } from './BodyMap.tsx'
-import { ChevronIcon, SearchIcon } from './icons.tsx'
+import { ChevronIcon } from './icons.tsx'
 import { MuscleDetail } from './MuscleDetail.tsx'
 import { Panel } from './Panel.tsx'
+import { SearchField } from './SearchField.tsx'
 
 interface Props {
   eyebrow: string
@@ -30,7 +32,6 @@ interface Props {
  * figure opens where it should be felt, inside the panel; going back keeps the search, the filter and the scroll.
  */
 export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onClose }: Props) {
-  const searchId = useId()
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<Muscle | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
@@ -41,13 +42,13 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   const listed = pickerList(query, muscle, current)
   const same = readyFirst(equipment, listed.same, (e) => e.name)
   const others = readyFirst(equipment, listed.others, (e) => e.name)
-  const words = exerciseKey(query).split(/\s+/).filter(Boolean)
-  const own = muscle !== null ? [] : readyFirst(equipment, exercises.filter((e) => !catalogEntry(e.name) && words.every((w) => exerciseKey(e.name).includes(w))), (e) => e.name)
+  const matches = nameMatcher(query)
+  const own = muscle !== null ? [] : readyFirst(equipment, exercises.filter((e) => !catalogEntry(e.name) && matches(e.name)), (e) => e.name)
   const gym = activeGym(equipment)
-  const takenKeys = new Set(taken.map(exerciseKey))
+  const takenKeys = new Set(taken.map(nameKey))
   const q = query.trim()
-  const exact = q !== '' && (catalogEntry(q) !== undefined || exercises.some((e) => exerciseKey(e.name) === exerciseKey(q)))
-  const first = [...same, ...others].find((e) => !takenKeys.has(exerciseKey(e.name)))?.name ?? own.find((e) => !takenKeys.has(exerciseKey(e.name)))?.name
+  const exact = q !== '' && (catalogEntry(q) !== undefined || exercises.some((e) => nameKey(e.name) === nameKey(q)))
+  const first = [...same, ...others].find((e) => !takenKeys.has(nameKey(e.name)))?.name ?? own.find((e) => !takenKeys.has(nameKey(e.name)))?.name
   const pick = (name: string) => {
     onPick(name)
     onClose()
@@ -92,7 +93,7 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
           activation={activation}
           sub={sub(detailEntry.name, MUSCLE_LABEL[detailEntry.muscle])}
           missing={missing.length > 0 ? materialText(equipment, missing) : null}
-          taken={takenKeys.has(exerciseKey(detailEntry.name))}
+          taken={takenKeys.has(nameKey(detailEntry.name))}
           onPick={() => pick(detailEntry.name)}
         />
       </Panel>
@@ -101,28 +102,15 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
 
   const head = (
     <>
-      <div className="search-field">
-        <label htmlFor={searchId} className="search-label">Pesquisar exercício</label>
-        <div className="search-box">
-          <SearchIcon />
-          <input
-            id={searchId}
-            type="search"
-            className="search-input"
-            autoComplete="off"
-            placeholder="Ex.: bench, row, curl"
-            autoFocus={current === null}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return
-              e.preventDefault()
-              const name = first ?? (q && !exact ? q : undefined)
-              if (name) pick(name)
-            }}
-          />
-        </div>
-      </div>
+      <SearchField
+        value={query}
+        onChange={setQuery}
+        autoFocus={current === null}
+        onEnter={() => {
+          const name = first ?? (q && !exact ? q : undefined)
+          if (name) pick(name)
+        }}
+      />
       {equipment.gyms.length > 1 && (
         <div className="filter-chips" role="group" aria-label="Local">
           <span className="filter-label" aria-hidden="true">
@@ -149,7 +137,7 @@ export function ExercisePicker({ eyebrow, current, exercises, taken, onPick, onC
   )
 
   const row = (name: string, group: string) => {
-    const isTaken = takenKeys.has(exerciseKey(name))
+    const isTaken = takenKeys.has(nameKey(name))
     const missing = missingAt(equipment, name)
     const worked = activationByName(name)
     return (

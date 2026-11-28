@@ -1,4 +1,4 @@
-import type { Muscle } from './exerciseCatalog.ts'
+import type { Muscle } from './catalogEntries.ts'
 import type { MuscleVolume } from './muscles.ts'
 
 /** The Reference Range: the weekly sets a muscle group commonly gets to grow. It only informs: nothing is held to it. */

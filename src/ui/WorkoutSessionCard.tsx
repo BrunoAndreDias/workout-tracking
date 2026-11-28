@@ -30,7 +30,6 @@ interface Props {
 
 export function WorkoutSessionCard({ session, before, day, title, exercises, dispatch }: Props) {
   const [picking, setPicking] = useState(false)
-  const names = new Map(exercises.map((e) => [e.id, e.name]))
   const nameOf = nameLookup(exercises)
   const trained = doneMuscleSets([session], nameOf).muscles
   const muscles = MUSCLES.filter((m) => trained[m] > 0)
@@ -88,7 +87,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
             eyebrow={title}
             current={null}
             exercises={exercises}
-            taken={session.exercises.map((e) => names.get(e.exerciseId) ?? '')}
+            taken={session.exercises.map((e) => nameOf(e.exerciseId))}
             onPick={(name) => dispatch({ type: 'addSessionExercise', sessionId, name, newExerciseId: newId<ExerciseId>() })}
             onClose={() => setPicking(false)}
           />
@@ -101,7 +100,7 @@ export function WorkoutSessionCard({ session, before, day, title, exercises, dis
         {session.after && (
           <div className="after" role="group" aria-label="Depois do treino">
             <span className="rating-label">Depois do treino</span>
-            <AfterEffects session={session} effects={session.after} names={names} />
+            <AfterEffects session={session} effects={session.after} nameOf={nameOf} />
           </div>
         )}
         <TimedNoteField

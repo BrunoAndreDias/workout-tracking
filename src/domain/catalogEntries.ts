@@ -1,6 +1,26 @@
-import type { CatalogEntry } from './exerciseCatalog.ts'
+export type Muscle = 'abs' | 'back' | 'biceps' | 'calves' | 'chest' | 'forearms' | 'glutes' | 'hamstrings' | 'quadriceps' | 'shoulders' | 'triceps'
 
-// Generated from just-workout's src/plan-builder/exercise-catalog.ts; names stay in English.
+export type Pattern =
+  | 'horizontal_push'
+  | 'horizontal_pull'
+  | 'vertical_push'
+  | 'vertical_pull'
+  | 'elbow_flexion'
+  | 'elbow_extension'
+  | 'quad_dominant'
+  | 'hip_hamstring_dominant'
+  | 'calves_accessories'
+  | 'core'
+
+export interface CatalogEntry {
+  readonly id: string
+  readonly name: string
+  readonly muscle: Muscle
+  readonly primary: readonly Muscle[]
+  readonly pattern: Pattern
+  readonly kind: 'compound' | 'isolation'
+}
+
 export const CATALOG = [
   { id: 'flat-barbell-bench-press', name: 'Flat Barbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },
   { id: 'flat-dumbbell-bench-press', name: 'Flat Dumbbell Bench Press', muscle: 'chest', primary: ['chest'], pattern: 'horizontal_push', kind: 'compound' },

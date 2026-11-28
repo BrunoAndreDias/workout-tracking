@@ -1,17 +1,18 @@
-import { useContext, useId, useState } from 'react'
+import { useContext, useState } from 'react'
 import { activeGym, allEquipment, equipmentLabel, isChanged, missingAt, needsOf, newCustomEquipmentId } from '../domain/equipment.ts'
 import type { EquipmentId } from '../domain/equipment.ts'
 import { CATALOG } from '../domain/catalogEntries.ts'
-import { catalogEntry, exerciseKey, MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
-import type { CatalogEntry, Muscle } from '../domain/exerciseCatalog.ts'
+import type { CatalogEntry, Muscle } from '../domain/catalogEntries.ts'
+import { catalogEntry, MUSCLE_LABEL } from '../domain/exerciseCatalog.ts'
 import { MUSCLES } from '../domain/muscles.ts'
 import { newId } from '../domain/ids.ts'
+import { nameMatcher } from '../domain/names.ts'
 import type { GymId } from '../domain/types.ts'
 import type { Exercise } from '../domain/workouts.ts'
 import { EquipmentContext } from './equipmentContext.ts'
 import { materialText } from './format.ts'
-import { SearchIcon } from './icons.tsx'
 import { InlineName } from './InlineName.tsx'
+import { SearchField } from './SearchField.tsx'
 
 /** A name field and its button; Enter adds too. The field empties once a name is added. */
 function AddName({ label, button, onAdd }: { label: string; button: string; onAdd: (name: string) => void }) {
@@ -195,12 +196,10 @@ type Shelf = Muscle | 'changed' | 'own'
 /** One shelf at a time keeps the list short; a search looks through every Exercise instead. */
 function ExerciseList({ exercises }: { exercises: readonly Exercise[] }) {
   const { state } = useContext(EquipmentContext)
-  const searchId = useId()
   const [query, setQuery] = useState('')
   const [shelf, setShelf] = useState<Shelf>('chest')
-  const words = exerciseKey(query).split(/\s+/).filter(Boolean)
-  const searching = words.length > 0
-  const matches = (name: string) => words.every((w) => exerciseKey(name).includes(w))
+  const searching = query.trim() !== ''
+  const matches = nameMatcher(query)
   const onShelf = (name: string, entry?: CatalogEntry) => (shelf === 'changed' ? isChanged(state, name) : shelf === 'own' ? !entry : entry?.muscle === shelf)
   const shown = (name: string, entry?: CatalogEntry) => (searching ? matches(name) : onShelf(name, entry))
   const own = exercises.filter((e) => !catalogEntry(e.name) && shown(e.name))
@@ -216,15 +215,7 @@ function ExerciseList({ exercises }: { exercises: readonly Exercise[] }) {
         Exercícios
       </h2>
       <p className="muted hint">Cada exercício vem com o material que costuma pedir. Se não bate certo com o que fazes, tira ou junta material.</p>
-      <div className="search-field">
-        <label htmlFor={searchId} className="search-label">
-          Pesquisar exercício
-        </label>
-        <div className="search-box">
-          <SearchIcon />
-          <input id={searchId} type="search" className="search-input" autoComplete="off" placeholder="Ex.: bench, row, curl" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-      </div>
+      <SearchField value={query} onChange={setQuery} />
       <div className="filter-chips" role="group" aria-label="Mostrar">
         {chip('changed', 'Alterados')}
         {exercises.some((e) => !catalogEntry(e.name)) && chip('own', 'Os teus')}

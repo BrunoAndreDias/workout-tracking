@@ -1,5 +1,5 @@
 import { catalogEntry, MUSCLE_LABEL } from './exerciseCatalog.ts'
-import type { Muscle } from './exerciseCatalog.ts'
+import type { Muscle } from './catalogEntries.ts'
 import type { ExerciseId } from './types.ts'
 import { doneSets } from './workouts.ts'
 import type { WorkoutDay, WorkoutSession } from './workouts.ts'

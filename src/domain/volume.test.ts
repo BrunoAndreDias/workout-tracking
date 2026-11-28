@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Muscle } from './exerciseCatalog.ts'
+import type { Muscle } from './catalogEntries.ts'
 import { MUSCLES } from './muscles.ts'
 import type { MuscleVolume } from './muscles.ts'
 import { rankedVolumes, volumeNotes, volumeZone } from './volume.ts'

@@ -1,5 +1,7 @@
 import type { Rating } from './rating.ts'
 import type { TimedNote } from './notes.ts'
+import { MAX_TYPED } from './numbers.ts'
+import { isRecord } from './records.ts'
 import type { ExerciseId, IsoDate, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 
 export interface Exercise {
@@ -154,8 +156,8 @@ export function parseRepRange(text: string): RepRange | null {
   const m = /^\s*(\d+)\s*(?:[-–a]\s*(\d+)\s*)?$/.exec(text)
   if (!m) return null
   const min = Number(m[1])
-  const max = m[2] === undefined ? min : Number(m[2])
-  return min >= 1 && max >= min ? { min, max } : null
+  const range = { min, max: m[2] === undefined ? min : Number(m[2]) }
+  return isRepRange(range) ? range : null
 }
 
 /** The one rule for what counts: a set is logged when it is done. */
@@ -171,4 +173,23 @@ export function loggedCounts(session: WorkoutSession): { exercises: number; sets
 
 export const emptyWorkouts = (): WorkoutState => ({ exercises: [], plans: [], activePlanId: null, sessions: [] })
 
-export const isBlockWeeks = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= MAX_BLOCK_WEEKS
+const isWhole = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max
+
+export const isBlockWeeks = (v: unknown): v is number => isWhole(v, 1, MAX_BLOCK_WEEKS)
+
+export const isKg = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= MAX_TYPED
+
+export const isReps = (v: unknown): v is number => isWhole(v, 0, MAX_TYPED)
+
+export const isRir = (v: unknown): v is number => isWhole(v, 0, MAX_RIR)
+
+export const isSetValues = (set: { readonly kg: unknown; readonly reps: unknown; readonly rir: unknown }): boolean =>
+  (set.kg === null || isKg(set.kg)) && (set.reps === null || isReps(set.reps)) && (set.rir === null || isRir(set.rir))
+
+export const isSetCount = (v: unknown): v is number => isWhole(v, 1, MAX_TYPED)
+
+export function isRepRange(v: unknown): v is RepRange {
+  if (!isRecord(v)) return false
+  const { min, max } = v
+  return isWhole(min, 1, MAX_TYPED) && isWhole(max, min, MAX_TYPED)
+}

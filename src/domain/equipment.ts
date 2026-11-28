@@ -187,6 +187,11 @@ const CUSTOM_PREFIX = 'mat:'
 export const isCustomEquipmentId = (v: unknown): v is CustomEquipmentId => typeof v === 'string' && v.startsWith(CUSTOM_PREFIX) && v.length > CUSTOM_PREFIX.length
 export const newCustomEquipmentId = (): CustomEquipmentId => `${CUSTOM_PREFIX}${newId<string>()}` as CustomEquipmentId
 
+export const isKnownEquipment = (custom: readonly CustomEquipment[], id: unknown): id is EquipmentId => typeof id === 'string' && (isBuiltIn(id) || custom.some((c) => c.id === id))
+
+export const isEquipmentList = (custom: readonly CustomEquipment[], v: unknown): v is EquipmentId[] =>
+  Array.isArray(v) && v.every((id) => isKnownEquipment(custom, id)) && new Set(v).size === v.length
+
 /** Every material the user can mark: the built-in list, then their own. */
 export const allEquipment = (state: EquipmentState): readonly { id: EquipmentId; label: string }[] => [
   ...EQUIPMENT,
@@ -208,17 +213,17 @@ export const isChanged = (state: EquipmentState, name: string): boolean => exerc
 
 export const activeGym = (state: EquipmentState): Gym | undefined => state.gyms.find((g) => g.id === state.activeGymId)
 
-/** The material the Exercise needs that the active Gym lacks; null with no active Gym, when nothing is judged. */
-export function missingAt(state: EquipmentState, name: string): readonly EquipmentId[] | null {
+/** The material the Exercise needs that the active Gym lacks; none with no active Gym, when nothing is judged. */
+export function missingAt(state: EquipmentState, name: string): readonly EquipmentId[] {
   const gym = activeGym(state)
-  if (!gym) return null
+  if (!gym) return []
   return needsOf(state, name).filter((id) => !gym.has.includes(id))
 }
 
 /** The items whose Exercise the active Gym has everything for first, each group in its own order. */
 export function readyFirst<T>(state: EquipmentState, items: readonly T[], nameOf: (item: T) => string): readonly T[] {
   if (!activeGym(state)) return items
-  const ready = items.filter((item) => missingAt(state, nameOf(item))!.length === 0)
+  const ready = items.filter((item) => missingAt(state, nameOf(item)).length === 0)
   return [...ready, ...items.filter((item) => !ready.includes(item))]
 }
 
@@ -257,14 +262,15 @@ export function equipmentReducer(state: EquipmentState, action: EquipmentAction)
     case 'setActiveGym':
       return state.gyms.some((g) => g.id === action.gymId) ? { ...state, activeGymId: action.gymId } : state
     case 'toggleHas':
+      if (!isKnownEquipment(state.custom, action.equipmentId)) return state
       return editGym(action.gymId, (g) => ({ ...g, has: g.has.includes(action.equipmentId) ? g.has.filter((id) => id !== action.equipmentId) : [...g.has, action.equipmentId] }))
     case 'setAllHas':
       return editGym(action.gymId, (g) => ({ ...g, has: allEquipment(state).map((e) => e.id) }))
     case 'clearHas':
       return editGym(action.gymId, (g) => ({ ...g, has: [] }))
     case 'addCustom': {
-      const taken = allEquipment(state).some((e) => exerciseKey(e.label) === exerciseKey(name))
-      return !name || taken ? state : { ...state, custom: [...state.custom, { id: action.id, name }] }
+      const taken = allEquipment(state).some((e) => e.id === action.id || exerciseKey(e.label) === exerciseKey(name))
+      return !name || taken || !isCustomEquipmentId(action.id) ? state : { ...state, custom: [...state.custom, { id: action.id, name }] }
     }
     case 'renameCustom': {
       const taken = allEquipment(state).some((e) => e.id !== action.id && exerciseKey(e.label) === exerciseKey(name))
@@ -280,6 +286,7 @@ export function equipmentReducer(state: EquipmentState, action: EquipmentAction)
       }
     }
     case 'setNeeds': {
+      if (!action.needs.every((id) => isKnownEquipment(state.custom, id))) return state
       const key = exerciseKey(action.name)
       const needs = [...new Set(action.needs)]
       // Back to the default is no correction, so "Alterado" only marks a real difference.

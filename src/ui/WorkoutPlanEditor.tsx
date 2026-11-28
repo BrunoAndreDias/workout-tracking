@@ -338,7 +338,7 @@ function DayEditor({ planId, blockId, day, before, exercises, runs, today, dispa
           {day.exercises.map((p) => {
             const name = nameOf(p.exerciseId)
             const isNew = before !== null && !before.has(p.exerciseId)
-            const missing = missingAt(equipment, name) ?? []
+            const missing = missingAt(equipment, name)
             const set = (change: Partial<typeof p>) => dispatch({ type: 'setPlannedExercise', planId, blockId, dayId, planned: { ...p, ...change } })
             return (
               <li key={p.exerciseId} className="planned">

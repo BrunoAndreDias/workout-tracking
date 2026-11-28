@@ -25,12 +25,33 @@ export type StoreList = Partial<Record<StoreKey, Stored>>
 
 export type StoreListReply = Partial<Record<StoreKey, Stored | PutReply>>
 
+export type StoreRevs = Partial<Record<StoreKey, number>>
+
+export const isRev = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 1
+
+export function formatHave(revs: StoreRevs): string {
+  return Object.entries(revs)
+    .map(([key, rev]) => `${key}:${rev}`)
+    .join(',')
+}
+
+export function parseHave(text: string | null): StoreRevs {
+  const revs: StoreRevs = {}
+  for (const pair of (text ?? '').split(',')) {
+    const at = pair.lastIndexOf(':')
+    const key = pair.slice(0, at)
+    const rev = Number(pair.slice(at + 1))
+    if (isStoreKey(key) && isRev(rev)) revs[key] = rev
+  }
+  return revs
+}
+
 export function parsePut(text: string): PutBody | null {
   try {
     const body: unknown = JSON.parse(text)
     if (!isRecord(body)) return null
     const { doc, baseRev } = body
-    if (typeof doc !== 'string' || (baseRev !== null && !(typeof baseRev === 'number' && Number.isInteger(baseRev) && baseRev > 0))) return null
+    if (typeof doc !== 'string' || (baseRev !== null && !isRev(baseRev))) return null
     JSON.parse(doc)
     return { doc, baseRev }
   } catch {
@@ -40,7 +61,7 @@ export function parsePut(text: string): PutBody | null {
 
 export function parsePutReply(body: unknown): PutReply | null {
   const rev = isRecord(body) ? body.rev : undefined
-  return typeof rev === 'number' && Number.isInteger(rev) && rev >= 0 ? { rev } : null
+  return isRev(rev) ? { rev } : null
 }
 
 export function parseStoreList(raw: unknown, unchanged: (key: StoreKey, rev: number) => string | null): StoreList | null {
@@ -49,7 +70,7 @@ export function parseStoreList(raw: unknown, unchanged: (key: StoreKey, rev: num
   for (const [key, value] of Object.entries(raw)) {
     if (!isStoreKey(key) || !isRecord(value)) continue
     const { doc, rev } = value
-    if (typeof rev !== 'number' || !Number.isInteger(rev)) continue
+    if (!isRev(rev)) continue
     const known = typeof doc === 'string' ? doc : doc === undefined ? unchanged(key, rev) : null
     if (known !== null) list[key] = { doc: known, rev }
   }

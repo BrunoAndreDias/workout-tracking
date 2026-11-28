@@ -2,19 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseId } from './types.ts'
 import { parseWorkoutPlans, parseWorkoutSessions } from './workoutStorage.ts'
 import { loadAll, loadStore, saveStore, STORES } from './stores.ts'
-
-function memoryStorage(initial: Record<string, string> = {}) {
-  const data = { ...initial }
-  return {
-    data,
-    getItem: (k: string) => data[k] ?? null,
-    setItem: (k: string, v: string) => void (data[k] = v),
-    get length() {
-      return Object.keys(data).length
-    },
-    key: (i: number) => Object.keys(data)[i] ?? null,
-  }
-}
+import { memoryStorage } from './memoryStorage.ts'
 
 const SET = { done: true, kg: 62.5, reps: 8, rir: 2 }
 const SESSION = {
@@ -261,13 +249,5 @@ describe('migrating Workout Plans to Training Splits', () => {
       ],
       activePlanId: 'p1',
     })
-  })
-
-  it('keeps the version 2 text aside when it loads, so a dropped plan is not lost', () => {
-    const text = JSON.stringify(v2('five', v2Plan('five', 5)))
-    const storage = memoryStorage({ [STORES.workoutPlans.key]: text })
-    expect(loadStore(STORES.workoutPlans, storage)).toEqual({ plans: [], activePlanId: null })
-    const copies = Object.entries(storage.data).filter(([k]) => k.startsWith(`${STORES.workoutPlans.key}:migrated:`))
-    expect(copies.map(([, v]) => v)).toEqual([text])
   })
 })

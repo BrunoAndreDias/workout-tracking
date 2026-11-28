@@ -1,18 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { loadStore, saveStore, STORES } from './stores.ts'
-
-function enumerableStorage(initial: Record<string, string>) {
-  const data = { ...initial }
-  return {
-    data,
-    getItem: (k: string) => data[k] ?? null,
-    setItem: (k: string, v: string) => void (data[k] = v),
-    key: (i: number) => Object.keys(data)[i] ?? null,
-    get length() {
-      return Object.keys(data).length
-    },
-  }
-}
+import { memoryStorage } from './memoryStorage.ts'
 
 const copies = (data: Record<string, string>, key: string) =>
   Object.entries(data)
@@ -42,7 +30,7 @@ const WORKOUT_PLANS_V3 = JSON.stringify({
 
 describe('a stored document of an older version', () => {
   it('keeps the version 1 workout plans aside before the plans with a split are saved over them', () => {
-    const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V1 })
+    const storage = memoryStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V1 })
     saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
     expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V1])
     const saved = JSON.parse(storage.data[STORES.workoutPlans.key])
@@ -52,14 +40,14 @@ describe('a stored document of an older version', () => {
   })
 
   it('keeps a version 2 plan that fits no split aside before the plans without it are saved over them', () => {
-    const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V2 })
+    const storage = memoryStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V2 })
     saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
     expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V2])
     expect(JSON.parse(storage.data[STORES.workoutPlans.key])).toEqual({ version: 4, plans: [], activePlanId: null })
   })
 
   it('keeps the version 3 plans aside before the blocks without their RIR per week are saved over them', () => {
-    const storage = enumerableStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V3 })
+    const storage = memoryStorage({ [STORES.workoutPlans.key]: WORKOUT_PLANS_V3 })
     saveStore(STORES.workoutPlans, loadStore(STORES.workoutPlans, storage), storage)
     expect(copies(storage.data, STORES.workoutPlans.key)).toEqual([WORKOUT_PLANS_V3])
     const saved = JSON.parse(storage.data[STORES.workoutPlans.key])
@@ -67,21 +55,21 @@ describe('a stored document of an older version', () => {
   })
 
   it('keeps the version 1 sessions aside before the converted sessions are saved over them', () => {
-    const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
+    const storage = memoryStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     expect(copies(storage.data, STORES.workoutSessions.key)).toEqual([SESSIONS_V1])
     expect(JSON.parse(storage.data[STORES.workoutSessions.key]).version).toBe(4)
   })
 
   it('keeps one copy when this build starts again after converting', () => {
-    const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
+    const storage = memoryStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     expect(copies(storage.data, STORES.workoutSessions.key)).toEqual([SESSIONS_V1])
   })
 
   it('keeps both version 1 texts when an older device writes its sessions after this build converted them', () => {
-    const storage = enumerableStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
+    const storage = memoryStorage({ [STORES.workoutSessions.key]: SESSIONS_V1 })
     saveStore(STORES.workoutSessions, loadStore(STORES.workoutSessions, storage), storage)
     const olderDevice = JSON.stringify({ version: 1, sessions: [] })
     storage.data[STORES.workoutSessions.key] = olderDevice
@@ -90,7 +78,7 @@ describe('a stored document of an older version', () => {
   })
 
   it('keeps nothing for a current document or a store with no older version', () => {
-    const storage = enumerableStorage({
+    const storage = memoryStorage({
       [STORES.workoutSessions.key]: JSON.stringify({ version: 4, sessions: [] }),
       [STORES.exercises.key]: '{"version":1,"exercises":[]}',
     })

@@ -5,7 +5,7 @@ import { blockDayId, DEFAULT_SETS, mapDays, ROLE_REPS, ROLE_WEEKS, templateBlock
 import type { ExerciseId, IsoDate, LocalDateTime, WorkoutBlockId, WorkoutDayId, WorkoutPlanId, WorkoutSessionId } from './types.ts'
 import { isRunWeeks } from './blocks.ts'
 import { lastDoneSets, startSession } from './sessions.ts'
-import { afterEffectFits, EMPTY_SET, isBlockWeeks } from './workouts.ts'
+import { afterEffectFits, EMPTY_SET, isBlockWeeks, isRepRange, isSetCount, isSetValues } from './workouts.ts'
 import type { BlockOf, Exercise, LoggedSet, PendingSet, PlannedExercise, PlanOf, Role, SessionExercise, Split, WorkoutDay, WorkoutPlan, WorkoutSession, WorkoutState } from './workouts.ts'
 
 /** What the user types or taps into a set; whether it is done is set apart. */
@@ -29,6 +29,8 @@ export type WorkoutAction =
   | { type: 'addPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; name: string; role: Role; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'swapPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'setPlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; planned: PlannedExercise }
+  | { type: 'extendExerciseRun'; planId: WorkoutPlanId; blockId: WorkoutBlockId; exerciseId: ExerciseId; weeks: number }
+  | { type: 'swapExerciseRun'; planId: WorkoutPlanId; blockId: WorkoutBlockId; exerciseId: ExerciseId; name: string; newExerciseId: ExerciseId; today: IsoDate }
   | { type: 'removePlannedExercise'; planId: WorkoutPlanId; blockId: WorkoutBlockId; dayId: WorkoutDayId; exerciseId: ExerciseId }
   | { type: 'startSession'; sessionId: WorkoutSessionId; date: IsoDate; day: WorkoutDay | null; light: boolean }
   | { type: 'addSessionExercise'; sessionId: WorkoutSessionId; name: string; newExerciseId: ExerciseId }
@@ -107,10 +109,10 @@ function newPlan(action: Extract<WorkoutAction, { type: 'createPlan' }>, exercis
   const { planId, blockId, name } = action
   const exerciseId = (catalogId: string) => `${blockId}-${catalogId}` as ExerciseId
   if (action.split === 'ppf') {
-    const made = templateBlock('ppf', blockId, 'Bloco A', action.today, exercises, exerciseId)
+    const made = templateBlock('ppf', blockId, nextBlockName([]), action.today, exercises, exerciseId)
     return { plan: { id: planId, name, split: 'ppf', blocks: [made.block], start: null }, exercises: made.exercises }
   }
-  const made = templateBlock('ul', blockId, 'Bloco A', action.today, exercises, exerciseId)
+  const made = templateBlock('ul', blockId, nextBlockName([]), action.today, exercises, exerciseId)
   return { plan: { id: planId, name, split: 'ul', blocks: [made.block], start: null }, exercises: made.exercises }
 }
 
@@ -122,9 +124,18 @@ function updateBlock(state: WorkoutState, planId: WorkoutPlanId, blockId: Workou
   return updatePlan(state, planId, (p) => ({ ...p, blocks: mapBlocks(p.blocks, (b) => (b.id === blockId ? fn(b) : b)) }))
 }
 
-function updateDay(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, dayId: WorkoutDayId, fn: (day: WorkoutDay) => WorkoutDay): WorkoutState {
-  return updateBlock(state, planId, blockId, (b) => ({ ...b, days: mapDays(b, (d) => (d.id === dayId ? fn(d) : d)) }))
+function updateBlockDays(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, fn: (day: WorkoutDay) => WorkoutDay): WorkoutState {
+  return updateBlock(state, planId, blockId, (b) => ({ ...b, days: mapDays(b, fn) }))
 }
+
+function updateDay(state: WorkoutState, planId: WorkoutPlanId, blockId: WorkoutBlockId, dayId: WorkoutDayId, fn: (day: WorkoutDay) => WorkoutDay): WorkoutState {
+  return updateBlockDays(state, planId, blockId, (d) => (d.id === dayId ? fn(d) : d))
+}
+
+const swapIn = (day: WorkoutDay, exerciseId: ExerciseId, newId: ExerciseId, today: IsoDate): WorkoutDay =>
+  day.exercises.some((p) => p.exerciseId === newId) ? day : { ...day, exercises: day.exercises.map((p) => (p.exerciseId === exerciseId ? { ...p, exerciseId: newId, since: today } : p)) }
+
+const plannedFits = (p: PlannedExercise): boolean => isSetCount(p.sets) && isRepRange(p.reps) && isRunWeeks(p.weeks)
 
 function updateSession(state: WorkoutState, sessionId: WorkoutSessionId, fn: (session: WorkoutSession) => WorkoutSession): WorkoutState {
   return { ...state, sessions: state.sessions.map((s) => (s.id === sessionId ? fn(s) : s)) }
@@ -194,12 +205,21 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
     case 'swapPlannedExercise': {
       const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
       if (!resolved) return state
-      return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) =>
-        d.exercises.some((p) => p.exerciseId === resolved.id) ? d : { ...d, exercises: d.exercises.map((p) => (p.exerciseId === action.exerciseId ? { ...p, exerciseId: resolved.id, since: action.today } : p)) },
-      )
+      return updateDay({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, action.dayId, (d) => swapIn(d, action.exerciseId, resolved.id, action.today))
     }
+    case 'swapExerciseRun': {
+      const resolved = resolveExercise(state.exercises, action.name, action.newExerciseId)
+      if (!resolved) return state
+      return updateBlockDays({ ...state, exercises: resolved.exercises }, action.planId, action.blockId, (d) => swapIn(d, action.exerciseId, resolved.id, action.today))
+    }
+    case 'extendExerciseRun':
+      if (!isRunWeeks(action.weeks)) return state
+      return updateBlockDays(state, action.planId, action.blockId, (d) => ({
+        ...d,
+        exercises: d.exercises.map((p) => (p.exerciseId === action.exerciseId ? { ...p, weeks: action.weeks } : p)),
+      }))
     case 'setPlannedExercise':
-      if (!isRunWeeks(action.planned.weeks)) return state
+      if (!plannedFits(action.planned)) return state
       return updateDay(state, action.planId, action.blockId, action.dayId, (d) => ({
         ...d,
         exercises: d.exercises.map((p) => (p.exerciseId === action.planned.exerciseId ? action.planned : p)),
@@ -229,6 +249,7 @@ export function workoutReducer(state: WorkoutState, action: WorkoutAction): Work
         return [...sets, last ? { ...last, done: false } : EMPTY_SET]
       })
     case 'setSet':
+      if (!isSetValues(action.set)) return state
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => setValues(sets, action.index, action.set))
     case 'setSetDone':
       return updateSets(state, action.sessionId, action.exerciseId, (sets) => setDone(sets, action.index, action.done))

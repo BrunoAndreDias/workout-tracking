@@ -1,18 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { loadStore, STORES } from './stores.ts'
-
-function enumerableStorage(initial: Record<string, string>) {
-  const data = { ...initial }
-  return {
-    data,
-    getItem: (k: string) => data[k] ?? null,
-    setItem: (k: string, v: string) => void (data[k] = v),
-    key: (i: number) => Object.keys(data)[i] ?? null,
-    get length() {
-      return Object.keys(data).length
-    },
-  }
-}
+import { memoryStorage } from './memoryStorage.ts'
 
 const copies = (data: Record<string, string>, key: string) => Object.entries(data).filter(([k]) => k.startsWith(`${key}:unreadable:`))
 
@@ -24,7 +12,7 @@ describe('an unreadable stored document', () => {
     ['material', STORES.equipment.key, '{"version":99}', STORES.equipment],
     ['workout sessions, corrupt JSON', STORES.workoutSessions.key, '{nope', STORES.workoutSessions],
   ])('is preserved under an unreadable key for %s, once across reloads', (_label, key, raw, def) => {
-    const storage = enumerableStorage({ [key]: raw })
+    const storage = memoryStorage({ [key]: raw })
     loadStore<unknown>(def, storage)
     const [[copyKey, copy]] = copies(storage.data, key)
     expect(copy).toBe(raw)
@@ -36,13 +24,13 @@ describe('an unreadable stored document', () => {
 
   it('a v99 sessions document loads as no sessions and its raw text survives', () => {
     const raw = JSON.stringify({ version: 99, sessions: [{ id: 'a' }] })
-    const storage = enumerableStorage({ [STORES.workoutSessions.key]: raw })
+    const storage = memoryStorage({ [STORES.workoutSessions.key]: raw })
     expect(loadStore(STORES.workoutSessions, storage)).toEqual([])
     expect(copies(storage.data, STORES.workoutSessions.key).map(([, v]) => v)).toEqual([raw])
   })
 
   it('preserves a different unreadable text separately', () => {
-    const storage = enumerableStorage({ [STORES.exercises.key]: '{"version":98}' })
+    const storage = memoryStorage({ [STORES.exercises.key]: '{"version":98}' })
     loadStore(STORES.exercises, storage)
     storage.data[STORES.exercises.key] = '{"version":99}'
     loadStore(STORES.exercises, storage)
@@ -50,7 +38,7 @@ describe('an unreadable stored document', () => {
   })
 
   it('preserves nothing for a missing or valid document', () => {
-    const storage = enumerableStorage({ [STORES.exercises.key]: '{"version":1,"exercises":[]}' })
+    const storage = memoryStorage({ [STORES.exercises.key]: '{"version":1,"exercises":[]}' })
     loadStore(STORES.exercises, storage)
     loadStore(STORES.workoutSessions, storage)
     expect(Object.keys(storage.data)).toEqual([STORES.exercises.key])

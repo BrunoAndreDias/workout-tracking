@@ -10,6 +10,7 @@ let out
 try {
   out = execFileSync('npx', ['oxlint', '-f', 'json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
 } catch (e) {
+  if (!e.stdout) throw e
   out = e.stdout
 }
 const counts = {}

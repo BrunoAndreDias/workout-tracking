@@ -56,9 +56,9 @@ APP_URL=$APP_URL RUN_DIR=$RUN_DIR node "$RUN_DIR/workouts.mjs"
 
 `openApp` also takes `init`, a function (or `[function, arg]`) run in the page before the app's first load, to plant a browser-only store such as data from before the server, and `mic: true`, which adds a fake microphone and the `fakeWhisper` worker; `app.say(text)` then sets the next transcription.
 
-The helper gives you `page`, `dialog`, `region(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, `errors`, `say(text)` (with `mic`), and `close()`. `window.confirm` prompts are accepted automatically and recorded in `confirms`. `workoutTab('Material')` clicks a Treino tab and waits until it is current. The other helpers don't navigate.
+The helper gives you `page`, `dialog`, `region(name)`, `workoutTab(name)`, `check(ok, msg)`, `stored()`, `saveStored(name)`, `shot(name)`, `aria(name, locator?)`, `confirms`, `errors`, `say(text)` (with `mic`), `download(locator)`, and `close()`. `download` clicks, saves the file in `$RUN_DIR/<feature>/` under its suggested name, and returns `{ filename, path, json }` (`json` is `null` for a file that is not JSON). `window.confirm` prompts are accepted automatically and recorded in `confirms`. `workoutTab('Material')` clicks a Treino tab and waits until it is current. The other helpers don't navigate.
 
-The shared flows live once in `e2e/_driver.mjs`: `createWorkoutPlan`, `workoutDay`, `addExercise`, `swapExercise`, `pickExercise`, `addGym`, `openWorkoutTab`, `reloadApp`, `synced`, `putStore`, `seedStored` and `fakeWhisper`. Import them instead of copying them.
+The shared flows live once in `e2e/_driver.mjs`: `createWorkoutPlan`, `workoutDay`, `addExercise`, `swapExercise`, `pickExercise`, `openPicker`, `closePicker`, `addGym`, `openWorkoutTab`, `planTabs`, `reloadApp`, `clickAndReload`, `synced`, `putStore`, `seedStored`, `noHorizontalScroll` and `fakeWhisper`. Import them instead of copying them. `clickAndReload(page, button)` clicks a button that reloads the page and waits for the render.
 
 Handles. Use accessible names, not CSS position:
 
@@ -69,16 +69,14 @@ Handles. Use accessible names, not CSS position:
 
 Each feature file lists the exact names its flow uses.
 
-Full regressions already exist. Each one also works against your instance, and each starts by emptying your instance's database. Always pass `APP_URL`: without it every `e2e/*.mjs` script falls back to `http://localhost:5180/`, the user's own server:
+Full regressions already exist. Run them against your instance with `e2e.sh`, never by hand: without `APP_URL` every `e2e/*.mjs` script falls back to `http://localhost:5180/`, the user's own server. Each script starts by emptying your instance's database.
 
 ```sh
-APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e node e2e/workout.mjs      # mkdir -p $RUN_DIR/e2e first
-APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e node e2e/backup.mjs
-APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e node e2e/mobile.mjs
-APP_URL=$APP_URL SHOTS=$RUN_DIR/e2e WORKOUT_DB=$RUN_DIR/workout.sqlite node e2e/disk-store.mjs   # reads the instance's database
+.claude/skills/verify-treino/scripts/e2e.sh "$RUN_DIR"                    # every e2e/*.mjs
+.claude/skills/verify-treino/scripts/e2e.sh "$RUN_DIR" backup crash       # only these
 ```
 
-The other `e2e/*.mjs` (`blocks`, `dictation`, `equipment`, `muscle-map`, `muscle-volume`, `navigation`, `plan-rename`, `pwa`, `runs`) run the same way; `npm run check` runs them all.
+It runs `doctor.sh` first, then each script with `APP_URL`, `SHOTS=$RUN_DIR/e2e/<name>` and `WORKOUT_DB=$RUN_DIR/workout.sqlite`, which `disk-store` reads. It creates each `SHOTS` folder and prints `ok` or `FAIL` per script, with the output in `$RUN_DIR/e2e/<name>.log`. It exits 1 if any script failed. `dictation` downloads the real Whisper model once, about 250 MB. `npm run check` runs the same scripts on a server of its own.
 
 Isolation: each run uses its own port and its own database, so its own origin, localStorage and stores, plus a fresh browser context. Two runs on different ports never share state, and none of them touches the user's browser, the user's dev server or the user's database in `~/.workout-tracking`. Two `openApp` calls in one drive share the server: the second one empties it unless you pass `{ fresh: false }`, which opens a second device on the same data.
 
@@ -88,7 +86,7 @@ Everything goes to `$RUN_DIR/<feature>/`, which is gitignored under `e2e/shots/`
 
 - **Real user path.** Click the real buttons and type into the real fields. The behaviour under test goes through the UI: never dispatch reducer actions, never use `page.evaluate` to change state. The one exception is setup, and only through `seedStored` or `putStore` (the app boots from the server), never by writing localStorage yourself. `page.evaluate` is only for reading, through `stored()`.
 - **Action and result.** Capture the state before and after: the sets before and after a tick, a screenshot of the open panel and of the view after confirming.
-- **Side effects.** A change that persists is proven by `reloadApp(page)` from `e2e/_driver.mjs` (a reload that waits for the app to render, which happens after it fetches the stores) followed by the same assertions, plus `saveStored()` showing the stored value. A status line on screen alone is not proof.
+- **Side effects.** A change that persists is proven by `reloadApp(page)` from `e2e/_driver.mjs` (a reload that waits for the app to render, which happens after it fetches the stores) followed by the same assertions, plus `saveStored()` showing the stored value. A status line on screen alone is not proof. To show what reached the server's database, run `scripts/stores.sh "$RUN_DIR"`. It prints one line per store with its rev, last write and size. `scripts/stores.sh "$RUN_DIR" workout-plans` prints that store's document, and `--snapshots` prints the daily copies instead. It opens only `$RUN_DIR/workout.sqlite`, read-only; save its output in the feature folder.
 - **Numbers.** Assert exact rendered values: kg, reps, set counts. "Something changed" is not an assertion. Numbers use pt-PT formatting: a decimal comma, and a narrow no-break space as the thousands separator.
 - **Phone layout.** A layout change also needs `{ mobile: true }`, a screenshot, and `page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)`.
 - **Console.** `close()` must pass, which means no console errors.

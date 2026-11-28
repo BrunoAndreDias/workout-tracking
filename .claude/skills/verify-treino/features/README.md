@@ -16,9 +16,11 @@ This directory is the maintained source for verifying what a user can do in Trei
 - Gram fields commit on every keystroke. `fill('150')` is enough, and you don't need Enter or blur.
 - Destructive actions use `window.confirm`. The harness accepts it and records the message in `app.confirms`, so assert on that text.
 - The app renders only after it has fetched the server's stores, after the page's `load` event. After a reload use `reloadApp(page)` from `e2e/_driver.mjs`, or a locator that waits, before `.count()`.
-- A raw `localStorage.setItem` from the page is overwritten by the server's copy on the next load. To plant a document, write it on the server with `putStore(page, APP_URL, '<store>', doc)` from `e2e/_driver.mjs` (`<store>` is a `STORE_KEY` name such as `workoutPlans`), then reload.
+- A raw `localStorage.setItem` from the page never reaches the server. It survives a reload while the server's copy is unchanged, because the app asks with the rev it holds and the server answers with the rev alone. The first change on the server replaces it. To plant a document, write it on the server with `putStore(page, APP_URL, '<store>', doc)` from `e2e/_driver.mjs` (`<store>` is a `STORE_KEY` name such as `workoutPlans`), then reload.
 - Build the state under test through the UI (`createWorkoutPlan`, `addExercise` and the other flows in `e2e/_driver.mjs`), never by writing localStorage. Setup that is not under test may be planted with `seedStored(page, APP_URL, state)` before the first load.
 - Switch Treino's tabs with `app.workoutTab('Registo' | 'Plano de treino' | 'Material')`, which waits until the tab is current. The hash is `#treino[/YYYY-MM-DD]`; any other hash, such as the old `#relogio`, opens Treino.
+- `locator.count()` and `textContent()` on a locator that has not rendered yet do not wait: after a click that opens a panel or a notice, `await locator.waitFor()` first.
+- Two `role=alert` lines can be up at once: the storage-full line and a sync or backup error. Scope an alert to its region or `.filter({ hasText })` it.
 - Numbers group thousands with U+202F, a narrow no-break space. Compare text after `.replace(/\s/g, ' ')`, or strip whitespace.
 
 ## Proof and skip reporting

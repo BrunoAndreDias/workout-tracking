@@ -7,7 +7,8 @@ import type { AppData } from '../domain/stores.ts'
 import { AFTER_EFFECT_DAYS } from '../domain/sessions.ts'
 import { findDay } from '../domain/blocks.ts'
 import { rangeText } from '../domain/numbers.ts'
-import type { WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
+import type { Split, WorkoutPlan, WorkoutSession } from '../domain/workouts.ts'
+import { SPLITS } from '../domain/splits.ts'
 
 const longDate = new Intl.DateTimeFormat('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -18,6 +19,8 @@ export const formatLongDate = (date: IsoDate) => longDate.format(fromIsoDate(dat
 export const formatPlanned = ({ sets, reps }: { sets: number; reps: { min: number; max: number } }) => `${sets} × ${rangeText(reps)}`
 
 /** "1 série", "3 séries" */
+export const splitDayNames = (split: Split) => (SPLITS[split].days as readonly { name: string }[]).map((d) => d.name).join(' · ')
+
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 export const describeBackup = ({ workoutPlans, workoutSessions, equipment }: AppData): string =>

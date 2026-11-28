@@ -3,7 +3,7 @@
 //   const app = await openApp({ feature: 'workouts' })
 // Reads APP_URL and RUN_DIR from the environment (printed by launch.sh).
 // Every check and artifact path is appended to <RUN_DIR>/<feature>/steps.log.
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from 'playwright'
 import { fakeWhisper, openWorkoutTab, readStored, rendered, resetServer } from '../../../../e2e/_driver.mjs'
 
@@ -78,6 +78,22 @@ export async function openApp({ feature, mobile = false, fresh = true, init, mic
       const path = `${dir}/${name}.json`
       writeFileSync(path, JSON.stringify(await app.stored(), null, 2))
       log(`storage ${path}`)
+    },
+    async download(locator) {
+      const [file] = await Promise.all([page.waitForEvent('download'), locator.click()])
+      const filename = file.suggestedFilename()
+      const path = `${dir}/${filename}`
+      await file.saveAs(path)
+      log(`download ${path}`)
+      const text = readFileSync(path, 'utf8')
+      const json = (() => {
+        try {
+          return JSON.parse(text)
+        } catch {
+          return null
+        }
+      })()
+      return { filename, path, json }
     },
     /** Fails the drive on any console error, then closes the browser. */
     async close() {

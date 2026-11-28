@@ -6,7 +6,7 @@ The app can be added to the iPhone home screen. Safari reads a web app manifest,
 
 - `pwa-manifest` serves `/manifest.webmanifest` with the name `Treino`, short name `Treino`, `display` `standalone`, `start_url` and `scope` `/`, and `lang` `pt-PT`.
 - `pwa-icons` serves the manifest icons (192, 512, maskable 512) and `/apple-touch-icon.png` (180) as opaque PNGs of exactly those sizes.
-- `pwa-head` has the web-app-capable metas, the home-screen name `Treino` in `apple-mobile-web-app-title` (the page `<title>` is `Treino` too), and one `theme-color` per colour scheme.
+- `pwa-head` has the web-app-capable metas, the home-screen name `Treino` in `apple-mobile-web-app-title` (the page `<title>` is `Treino` too), and one `theme-color` per colour scheme: `(prefers-color-scheme: light)` `#f7f5ef` and `(prefers-color-scheme: dark)` `#161512`.
 
 ## How to get to it (user POV)
 

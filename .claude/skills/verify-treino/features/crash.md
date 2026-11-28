@@ -17,9 +17,10 @@ When the app fails to start, or a render throws, the page shows `Algo correu mal
 
 Preconditions: a fresh `openApp`, or a server seeded with `e2e/fixtures/treino-backup.json`'s stores. Faults are injected through Playwright routes, never a hook in the app.
 
-- **Failed start.** `page.route('**/src/App.tsx*', (r) => r.abort())` before the load: the heading `Algo correu mal no Treino.` shows.
+- **Failed start.** `openApp` has already loaded the app, so add `page.route('**/src/App.tsx*', (r) => r.abort())`, then `page.reload()` and wait for the heading `Algo correu mal no Treino.`.
 - **Render throws.** `page.route('**/src/ui/SyncLine.tsx*', (r) => r.fulfill({ contentType: 'text/javascript', body: "export function SyncLine() { throw new Error('x') }" }))` and reload: the same heading shows.
-- **Export.** `Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Exportar dados' }).click()])`: the file's `stores` equal what the server held. `e2e/crash.mjs` drives all of this.
+- **Export.** `app.download(page.getByRole('button', { name: 'Exportar dados' }))`: `treino-<today>.json`, and its `stores` equal what the server held. `e2e/crash.mjs` drives all of this, but not the skipped store.
+- **Skipped store.** `putStore(page, APP_URL, 'equipment', { version: 999 })`, then the failed start and `Exportar dados`: `getByRole('alert')` reads `Não foi possível exportar: material.`, and the file has no `equipment`.
 
 ## Gotchas
 

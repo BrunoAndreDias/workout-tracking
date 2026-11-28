@@ -9,7 +9,7 @@ A button at the end of the `Treino` tab row (`Registo`, `Plano de treino`, `Mate
 
 ## How to get to it (user POV)
 
-- The icon button (☾ in light, ☀ in dark) at the end of the `Treino` tab row (there is no header).
+- The icon button (☾ in light, ☀ in dark) at the end of the `Treino` tab row (there is no header). It sits beside the `nav`, not in it: find it with `page.getByRole('button', …)`.
 
 ## Driving it with session.mjs
 
@@ -18,9 +18,11 @@ Preconditions:
 - Fresh context. Playwright's default colour scheme is light, so the button reads `Mudar para modo escuro`.
 
 - **Toggle.** Click `Mudar para modo escuro`. `page.evaluate(() => document.documentElement.dataset.theme)` is `'dark'`, and a button `Mudar para modo claro` exists.
-- **Persist.** `page.evaluate(() => localStorage.getItem('workout-tracking:theme'))` is `'dark'`. After `page.reload()`, the theme is still `dark`.
+- **Persist.** `page.evaluate(() => localStorage.getItem('workout-tracking:theme'))` is `'dark'`. After `reloadApp(page)`, the theme is still `dark`.
 - **Back.** Click `Mudar para modo claro`. The theme is `light`.
 - **Proof.** Capture `app.shot('dark')` in dark mode.
+
+- **System scheme.** Remove the key, `page.emulateMedia({ colorScheme: 'dark' })` and `reloadApp(page)`: the theme is `dark`. The scheme is read once at load.
 
 ## Gotchas
 

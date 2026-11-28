@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { Dispatch } from 'react'
 import { ratingWord } from '../domain/rating.ts'
 import type { ExerciseId, IsoDate, LocalDateTime } from '../domain/types.ts'
-import { doneSets } from '../domain/workouts.ts'
+import { doneSets, nameLookup } from '../domain/workouts.ts'
 import { recentSessions } from '../domain/sessions.ts'
 import type { AfterEffect, WorkoutSession, WorkoutState } from '../domain/workouts.ts'
 import type { WorkoutAction } from '../domain/workoutReducer.ts'
@@ -20,12 +20,12 @@ interface Props {
 export function RecentSessions({ state, date, dispatch }: Props) {
   const sessions = recentSessions(state.sessions, date)
   if (sessions.length === 0) return null
-  const names = new Map(state.exercises.map((e) => [e.id, e.name]))
+  const nameOf = nameLookup(state.exercises)
   return (
     <section className="card session recent" aria-labelledby="treinos-anteriores">
       <h2 id="treinos-anteriores" className="session-title">Treinos anteriores</h2>
       {sessions.map((s) => (
-        <Recent key={`${s.id} ${date}`} session={s} title={sessionTitle(s, state.plans)} date={date} names={names} dispatch={dispatch} />
+        <Recent key={`${s.id} ${date}`} session={s} title={sessionTitle(s, state.plans)} date={date} nameOf={nameOf} dispatch={dispatch} />
       ))}
     </section>
   )
@@ -35,11 +35,11 @@ interface RecentProps {
   session: WorkoutSession
   title: string
   date: IsoDate
-  names: ReadonlyMap<ExerciseId, string>
+  nameOf: (id: ExerciseId) => string
   dispatch: Dispatch<WorkoutAction>
 }
 
-function Recent({ session, title, date, names, dispatch }: RecentProps) {
+function Recent({ session, title, date, nameOf, dispatch }: RecentProps) {
   const forDate = new Map((session.after ?? []).filter((a) => a.date === date).map((a) => [a.exerciseId, a]))
   const earlier = (session.after ?? []).filter((a) => a.date !== date)
   const edit = (exerciseId: ExerciseId | null) => (text: string, now: LocalDateTime) =>
@@ -57,12 +57,12 @@ function Recent({ session, title, date, names, dispatch }: RecentProps) {
       <span className="rating-label" aria-hidden="true">Como está o corpo</span>
       <TimedNoteField note={forDate.get(null)?.note} label="Como está o corpo" placeholder="Dores, cansaço, recuperação" onEdit={edit(null)} />
       {session.exercises.map((e) => (
-        <ExerciseAfter key={e.exerciseId} name={names.get(e.exerciseId) ?? 'Exercício desconhecido'} sets={doneSets(e)} effect={forDate.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
+        <ExerciseAfter key={e.exerciseId} name={nameOf(e.exerciseId)} sets={doneSets(e)} effect={forDate.get(e.exerciseId)} onEdit={edit(e.exerciseId)} />
       ))}
       {earlier.length > 0 && (
         <>
           <span className="rating-label">Noutros dias</span>
-          <AfterEffects session={session} effects={earlier} names={names} />
+          <AfterEffects session={session} effects={earlier} nameOf={nameOf} />
         </>
       )}
     </div>

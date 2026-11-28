@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { REGIONS, workedRegions } from '../domain/anatomy.ts'
-import type { Activation, Involvement, Region } from '../domain/anatomy.ts'
+import type { Involvement } from '../domain/anatomy.ts'
+import type { Activation, Region } from '../domain/catalogMuscles.ts'
 import { BodyFigure } from './BodyMap.tsx'
 import { SIDE_LABEL } from './bodyShape.ts'
 

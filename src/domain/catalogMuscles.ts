@@ -1,5 +1,30 @@
-import type { Activation, Region } from './anatomy.ts'
 import type { CatalogId } from './catalogEntries.ts'
+
+export type Region =
+  | 'chest-upper'
+  | 'chest'
+  | 'delt-front'
+  | 'delt-side'
+  | 'delt-rear'
+  | 'traps'
+  | 'upper-back'
+  | 'lats'
+  | 'lower-back'
+  | 'biceps'
+  | 'triceps'
+  | 'forearms'
+  | 'abs'
+  | 'obliques'
+  | 'glutes'
+  | 'quads'
+  | 'adductors'
+  | 'hamstrings'
+  | 'calves'
+
+export interface Activation {
+  readonly target: readonly Region[]
+  readonly assist: readonly Region[]
+}
 
 const a = (target: readonly Region[], assist: readonly Region[] = []): Activation => ({ target, assist })
 
@@ -29,7 +54,6 @@ const closePress = a(['triceps'], ['chest', 'delt-front'])
 const extension = a(['triceps'])
 const crunch = a(['abs'], ['obliques'])
 
-/** What each catalog Exercise works, by its id. */
 export const CATALOG_MUSCLES: Readonly<Record<CatalogId, Activation>> = {
   'flat-barbell-bench-press': flatPress,
   'flat-dumbbell-bench-press': flatPress,
